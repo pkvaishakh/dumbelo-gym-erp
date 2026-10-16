@@ -21,7 +21,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Front-desk check-in, one per person per local day, expired/frozen turned away
 - [x] Wall QR per branch and member/staff self check-in
 - [x] Turnstile/biometric punches at `/api/devices/punch/`
-- [ ] Device screen: register a device, see its key and last punch (today only in Django admin)
+- [ ] Device screen: register a device, see its key and last punch (no API or screen yet; only the demo seed creates devices)
 - [x] Attendance by session; members, trainers and receptionists counted apart
 
 ## Staff work
