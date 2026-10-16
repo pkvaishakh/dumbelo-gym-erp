@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, formatDistanceToNowStrict, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay, parseISO } from "date-fns";
 
 /** ₹3,05,340 — Indian grouping, no paise unless there are some. */
 export function rupees(paise: number | null | undefined) {
@@ -20,6 +20,12 @@ export const ago = (iso: string) => formatDistanceToNowStrict(parseISO(iso), { a
 /** When a device last spoke to us: "2 hours ago", or "Never" for one that never has. */
 export const seen = (iso: string | null | undefined) => (iso ? ago(iso) : "Never");
 export const daysLeft = (iso: string) => differenceInCalendarDays(parseISO(iso), new Date());
+/** The clock time something runs out: "6:00 PM" today, "6:00 PM on 18 Oct" any other day. */
+export function until(iso: string, now = new Date()) {
+  const end = parseISO(iso);
+  const time = format(end, "h:mm a");
+  return isSameDay(end, now) ? time : `${time} on ${format(end, "d MMM")}`;
+}
 
 /** "6:30 AM" from "06:30:00" */
 export function clock(t: string | null | undefined) {

@@ -2,12 +2,11 @@
 import {
   Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, LifeBuoy, LogOut, QrCode, Receipt, Repeat, ScanLine, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
-import { useState } from "react";
 
 import { PageBar } from "@/components/shell";
-import { Details, ErrorText, Field, Icon, MenuRow, Section, Sheet } from "@/components/ui";
+import { Details, Icon, MenuRow, Section } from "@/components/ui";
 import { phone, plural, rupees } from "@/lib/format";
-import { useAction, useGet } from "@/lib/hooks";
+import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import type { Collection, Summary } from "@/lib/types";
 
@@ -17,7 +16,6 @@ export default function MorePage() {
   const label = { admin: "Admin", receptionist: "Receptionist", trainer: "Trainer", member: "Member" }[r];
   const summary = useGet<Summary>("/api/reports/summary/", undefined, r === "admin");
   const col = useGet<Collection>("/api/payments/collection/", undefined, r === "admin" || r === "receptionist");
-  const [support, setSupport] = useState(false);
   return (
     <div className="rl-app rl-root">
       <PageBar title="More" sub={`${me.name} • ${label}`} />
@@ -34,7 +32,7 @@ export default function MorePage() {
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
-              <MenuRow icon={LifeBuoy} title="Rackline support access" onClick={() => setSupport(true)} />
+              <MenuRow icon={LifeBuoy} title="Support access" href="/support" />
             </ul>
           </Section>
         )}
@@ -86,30 +84,6 @@ export default function MorePage() {
           </ul>
         </Section>
       </main>
-      {r === "admin" && <SupportSheet open={support} onClose={() => setSupport(false)} />}
     </div>
-  );
-}
-
-function SupportSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const list = useGet<{ results: { id: number; starts: string; ends: string }[] }>("/api/support-access/", undefined, open);
-  const [hours, setHours] = useState("4");
-  const a = useAction();
-  const active = (list.data?.results ?? []).find((w) => new Date(w.ends) > new Date());
-  async function grant() { try { await a.run("/api/support-access/", { hours: Number(hours) }, { refresh: ["/api/support-access/"] }); } catch { /* shown */ } }
-  return (
-    <Sheet open={open} onClose={onClose} title="Rackline support access">
-      <p className="rl-row__meta">Rackline&apos;s team can only look inside your gym while you allow it. They can read but not change anything, and every look is recorded.</p>
-      {active ? (
-        <p className="rl-statusline">Support can look until {new Date(active.ends).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.</p>
-      ) : (
-        <Field label="Allow for (hours)">{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} max={72} value={hours} onChange={(e) => setHours(e.target.value)} />}</Field>
-      )}
-      <ErrorText>{a.error?.message}</ErrorText>
-      <div className="rl-sheet__actions">
-        {!active && <button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={grant}>Allow Support</button>}
-        <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={onClose}>Close</button>
-      </div>
-    </Sheet>
   );
 }

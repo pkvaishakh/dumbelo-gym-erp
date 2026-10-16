@@ -6,7 +6,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Sign in by email (staff) or phone (member), JWT with refresh and logout
 - [x] Gyms, branches and named opening sessions; `X-Gym` tenancy with 404 for other gyms
 - [x] Staff: add, edit, deactivate; one role per gym, several branches
-- [ ] Support access: admin screen to grant and end a read-only window (session 3)
+- [x] Support access: admin screen to grant and end a read-only window (session 3)
 
 ## Members, plans and money
 - [x] Plans and offers (admin creates; receptionist applies fixed offers)

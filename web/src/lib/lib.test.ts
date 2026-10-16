@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { plural, rupees, seen, toPaise } from "./format";
+import { plural, rupees, seen, toPaise, until } from "./format";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
 
@@ -29,6 +29,16 @@ describe("when a device was last seen", () => {
   });
   it("counts back from now for one that has", () => {
     expect(seen(new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())).toBe("2 hours ago");
+  });
+});
+
+describe("when access runs out", () => {
+  const now = new Date("2026-10-16T12:00:00");
+  it("gives the clock time on the same day", () => {
+    expect(until("2026-10-16T18:00:00", now)).toBe("6:00 PM");
+  });
+  it("names the day when it is a later one", () => {
+    expect(until("2026-10-18T09:30:00", now)).toBe("9:30 AM on 18 Oct");
   });
 });
 

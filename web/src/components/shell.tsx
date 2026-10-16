@@ -153,7 +153,7 @@ export function TabBar() {
   const tabs = TABS[role.role];
   if (/\/(new|edit)(\/|$)/.test(path)) return null; // task screens have their own action bar
   const hasCreate = role.role === "admin" || role.role === "receptionist";
-  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
+  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
   const render = (t: Tab) => (
     <Link key={t.href} className="rl-tab" href={t.href} aria-current={current(t.href) ? "page" : undefined}>
       <span className="rl-tab__icon"><Icon as={t.icon} /></span>{t.label}

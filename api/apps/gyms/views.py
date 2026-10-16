@@ -1,7 +1,12 @@
+from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from apps.audit.models import record
+from apps.core.errors import RuleBroken
 from apps.core.tenancy import ADMIN, ALL, STAFF, GymViewMixin
 
 from .models import Branch, GymRole, SupportAccess
@@ -51,10 +56,32 @@ class StaffViewSet(GymViewMixin, viewsets.ModelViewSet):
 
 
 class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    """An admin lets Rackline support look inside the gym for a few hours."""
+    """An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+
+    A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
+    written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
+    what really happened."""
 
     serializer_class = SupportAccessSerializer
     roles = {"*": ADMIN}
 
     def get_queryset(self):
-        return SupportAccess.objects.filter(gym=self.gym)
+        return SupportAccess.objects.filter(gym=self.gym).select_related("granted_by")
+
+    def perform_create(self, serializer):
+        window = serializer.save()
+        record(self.request, "support.granted", window, None, {"starts": window.starts.isoformat(), "ends": window.ends.isoformat()})
+
+    @extend_schema(request=None, responses=SupportAccessSerializer)
+    @action(detail=True, methods=["post"])
+    def end(self, request, pk=None):
+        """Take the access back now. Rackline loses the gym on its next call."""
+        window = self.get_object()
+        now = timezone.now()
+        if window.ends <= now:
+            raise RuleBroken("not_open", "This access has already ended")
+        before = {"ends": window.ends.isoformat()}
+        window.ends = now
+        window.save(update_fields=["ends", "updated_at"])
+        record(request, "support.ended", window, before, {"ends": window.ends.isoformat()})
+        return Response(self.get_serializer(window).data)
