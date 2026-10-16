@@ -24,6 +24,13 @@ First time: see README.md (venv, `pip install -r requirements-dev.txt`, `migrate
 Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
 `@rackline.demo`, member `9800000001`. `python manage.py seed_demo --reset` rebuilds the demo gym.
 
+## Cloud sessions (Linux)
+
+`scripts/cloud-setup.sh` runs at session start (hook in `.claude/settings.json`): it makes `api/.venv`, writes
+`api/.env` without `DATABASE_URL` (so SQLite), migrates, seeds the demo gym and runs `npm ci` in `web/`.
+Use Linux syntax there: `cd api && pytest`, `cd web && npm run typecheck && npm run lint && npm run test`.
+The venv is already on `PATH`. To run the app: `cd api && python manage.py runserver &` and `cd web && npm run dev &`.
+
 ## Checks before you say something is done
 
 - API: `cd api; pytest`
