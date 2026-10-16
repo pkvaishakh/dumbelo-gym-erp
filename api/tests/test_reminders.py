@@ -6,32 +6,14 @@ import pytest
 
 from apps.core import clock
 from apps.members.models import Member
-from apps.members.services import sell, take_payment
 from apps.reminders.models import ReminderDue
 from apps.reminders.services import due_for, gyms_at_reminder_hour, queue_for
 from apps.reminders.tasks import sweep_reminders
 
 
 def ending_in(w, days, name="Ending", phone="9811111111", paid=True):
-    """A member at branch A whose plan runs out `days` from the gym's today."""
-    m = w.new_member(name, phone, w.a)
-    sub = sell(m, w.monthly, by=w.desk, starts=w.today + timedelta(days=days) - timedelta(days=w.monthly.months * 30 - 1))
-    sub.ends = w.today + timedelta(days=days)
-    sub.save(update_fields=["ends"])
-    if paid:
-        take_payment(m, sub.price_paise, "cash", by=w.desk)
-    return m
-
-
-def plan_ending_on(w, day, name, phone, paid=True):
-    """A member whose plan runs out on an exact date, for the days the test fixes rather than today's."""
-    m = w.new_member(name, phone, w.a)
-    sub = sell(m, w.monthly, by=w.desk, starts=day - timedelta(days=30))
-    sub.ends = day
-    sub.save(update_fields=["ends"])
-    if paid:
-        take_payment(m, sub.price_paise, "cash", by=w.desk)
-    return m
+    """A member whose plan runs out `days` from the gym's today (World.plan_ending_on fixes an exact date)."""
+    return w.plan_ending_on(w.today + timedelta(days=days), name, phone, paid)
 
 
 def kinds_for(gym, day, member):
@@ -149,7 +131,7 @@ def test_the_scheduled_job_writes_the_rows_for_the_gyms_it_wakes(w, other):
     w.gym.save(update_fields=["timezone"])
     other.gym.save(update_fields=["timezone"])
     sweep_day = datetime(2026, 6, 1).date()
-    member = plan_ending_on(w, sweep_day + timedelta(days=7), "Seven", "9811111117")
+    member = w.plan_ending_on(sweep_day + timedelta(days=7), "Seven", "9811111117")
 
     at = datetime(2026, 6, 1, 0, 30, tzinfo=ZoneInfo("UTC")).isoformat()
     assert sweep_reminders.apply(kwargs={"at": at}).get() == 1

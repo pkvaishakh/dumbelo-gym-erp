@@ -33,6 +33,8 @@ export interface Member {
    * @maxLength 20
    */
   device_user_id?: string;
+  /** This member asked not to be sent reminders */
+  reminders_opted_out?: boolean;
   is_archived?: boolean;
   readonly status: MemberStatusEnum;
   readonly balance_paise: number;

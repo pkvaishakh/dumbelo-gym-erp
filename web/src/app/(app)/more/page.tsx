@@ -1,6 +1,6 @@
 "use client";
 import {
-  Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, LifeBuoy, LogOut, QrCode, Receipt, Repeat, ScanLine, Tag, UserRound, Users, Wallet,
+  Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, LifeBuoy, LogOut, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 
 import { PageBar } from "@/components/shell";
@@ -32,6 +32,7 @@ export default function MorePage() {
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
+              <MenuRow icon={SlidersHorizontal} title="Settings" href="/settings" />
               <MenuRow icon={LifeBuoy} title="Support access" href="/support" />
             </ul>
           </Section>

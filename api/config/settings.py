@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.reports",
     "apps.reminders",
+    "apps.messages",
 ]
 
 MIDDLEWARE = [
@@ -138,12 +139,21 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TIMEZONE = "UTC"  # beat ticks in UTC; each gym's own clock decides when its day starts (apps/core/clock.py)
 CELERY_BEAT_SCHEDULE = {
     "reminders": {
-        "task": "apps.reminders.tasks.sweep_reminders",
+        # Writes the day's reminder list and sends it; apps.reminders.tasks.sweep_reminders writes a list
+        # on its own, for a morning that has to be rebuilt by hand.
+        "task": "apps.messages.tasks.send_reminders",
         # Every quarter hour, not every hour: India is UTC+5:30 and Nepal +5:45, so a tick on the hour would
         # reach them at 6:30 and 6:45 their own time. The sweep is safe to repeat, so the extra ticks cost nothing.
         "schedule": crontab(minute="*/15"),
     },
 }
+
+# ---- Reminders to members (see apps/messages/senders.py) ----
+# `fake` sends nothing and keeps what it would have sent, so a laptop and the tests need no WhatsApp account.
+# A server that really sends sets WHATSAPP_PROVIDER=whatsapp_cloud and the two keys below.
+WHATSAPP_PROVIDER = env("WHATSAPP_PROVIDER", default="fake")
+WHATSAPP_TOKEN = env("WHATSAPP_TOKEN", default="")
+WHATSAPP_PHONE_ID = env("WHATSAPP_PHONE_ID", default="")
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_HEADERS = ["authorization", "content-type", "x-gym", "x-device-token"]

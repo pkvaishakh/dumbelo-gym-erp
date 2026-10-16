@@ -7,6 +7,7 @@ from apps.accounts.models import User
 from apps.core import clock
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Plan
+from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
 
 
@@ -39,9 +40,27 @@ class World:
     def new_member(self, name, phone, branch, trainer=None):
         return Member.objects.create(gym=self.gym, code=f"M-{phone[-4:]}", name=name, phone="+91" + phone, home_branch=branch, trainer=trainer)
 
+    def plan_ending_on(self, day, name, phone, paid=True):
+        """A member at branch A whose monthly plan runs out on `day`, paid up unless the test says otherwise."""
+        member = self.new_member(name, phone, self.a)
+        sub = sell(member, self.monthly, by=self.desk, starts=day - timedelta(days=30))
+        sub.ends = day
+        sub.save(update_fields=["ends"])
+        if paid:
+            take_payment(member, sub.price_paise, "cash", by=self.desk)
+        return member
+
     def client(self, role):
         c = APIClient()
         c.force_authenticate(role.user)
+        c.credentials(HTTP_X_GYM=self.gym.slug)
+        return c
+
+    def member_client(self):
+        """The gym's own member, signed in to the app: what a member can reach, and what they can't."""
+        set_login(self.member, "secret12345")
+        c = APIClient()
+        c.force_authenticate(self.member.user)
         c.credentials(HTTP_X_GYM=self.gym.slug)
         return c
 
@@ -57,6 +76,14 @@ def fresh_throttles():
     from django.core.cache import cache
 
     cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def empty_outbox():
+    """The fake WhatsApp sender keeps what it would have sent; every test starts with nothing in it."""
+    from apps.messages.senders import FakeSender
+
+    FakeSender.outbox.clear()
 
 
 @pytest.fixture

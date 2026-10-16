@@ -35,7 +35,16 @@ What was decided, so code and screens stay consistent. Change this file when a d
   post updates and mark them done; admins see each step and can reopen or delete.
 
 ## Messages
-- WhatsApp renewal and dues reminders, from Rackline's number first, the gym's own number later. (Not built yet.)
+- WhatsApp renewal and dues reminders, from Rackline's number first, the gym's own number later. The keys belong
+  to the server (`WHATSAPP_PROVIDER` and its two keys), not to a gym.
+- The daily 6 AM job writes who needs a nudge (`ReminderDue`) and then sends it. A member gets **one message a
+  day** at most: a plan ending today comes before money owed, which comes before the 3- and 7-day warnings.
+- Nobody is messaged twice for the same day, with no number, after asking us to stop (the opt-out on their
+  profile), or while the gym has reminders off (More → Settings). Turning the gym's switch off stops the
+  messages, not the list, so the desk still sees who to chase.
+- Every send is kept as a `Message` row with the exact words, so the desk can see what a member read, and a send
+  that failed is kept the same way with the provider's reason. One member's failure never stops the morning.
+- SMS and email are not in the MVP, and nothing is sent when a payment is recorded (no automatic receipts yet).
 
 ## Stack and hosting
 - Backend: Django 5 + DRF + Postgres, JWT (simplejwt), drf-spectacular for OpenAPI. Redis/Celery for jobs (later).

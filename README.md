@@ -38,7 +38,7 @@ Tests: `pytest` (in `api/`).
 
 ### Background jobs
 
-Scheduled work (today's reminder list, and more later) runs on Celery with Redis as the broker. **You don't need
+Scheduled work (the morning's reminders, and more later) runs on Celery with Redis as the broker. **You don't need
 it to develop**: with `CELERY_BROKER_URL` empty, a job runs in the process that asks for it, so the API and the
 tests behave the same as a server with a worker.
 
@@ -53,11 +53,17 @@ celery -A config beat   --loglevel=info      # the clock that hands them out, in
 
 Or let Docker run both against the same Redis: `docker compose up -d worker beat`.
 
-Beat ticks every quarter hour. Each gym gets its reminder list when **its own** clock strikes 6 AM, so a gym in
-Dubai and one in Bengaluru are each woken at their own six (quarter hours, because India is UTC+5:30 — an hourly
-tick would reach it at 6:30). Later ticks in the same hour find the rows already written and add nothing. The job writes a `ReminderDue` row per member who needs a
-nudge — a plan ending in 7, 3 or 0 days, or money owed — and sends nothing yet; WhatsApp is the next step.
-Running the job twice in a day adds nothing, and archived members and frozen plans are left alone.
+Beat ticks every quarter hour. Each gym is woken when **its own** clock strikes 6 AM, so a gym in Dubai and one
+in Bengaluru are each done at their own six (quarter hours, because India is UTC+5:30 — an hourly tick would
+reach it at 6:30). The job writes a `ReminderDue` row per member who needs a nudge — a plan ending in 7, 3 or 0
+days, or money owed — and then sends those reminders on WhatsApp. Running it again in the same day adds nothing
+and sends nothing: later ticks in the same hour find the rows written and the messages sent. Archived members
+and frozen plans are left alone.
+
+Nothing leaves your laptop: `WHATSAPP_PROVIDER=fake` (the default) keeps what it would have sent in memory
+instead of calling a provider. A member hears from the gym at most once a day, never if they have asked not to,
+and not at all while the gym has reminders switched off (More → Settings). What went out is on the member's
+profile, under Reminders.
 
 To see it work without waiting for 6 AM:
 

@@ -139,7 +139,7 @@ class MemberSerializer(serializers.ModelSerializer):
         model = Member
         fields = [
             "id", "code", "name", "phone", "email", "home_branch", "trainer", "trainer_name", "goal", "joined_on",
-            "device_user_id", "is_archived", "status", "balance_paise", "plan", "has_login",
+            "device_user_id", "reminders_opted_out", "is_archived", "status", "balance_paise", "plan", "has_login",
             "first_plan", "offer", "paid_paise", "method", "password",
         ]
 

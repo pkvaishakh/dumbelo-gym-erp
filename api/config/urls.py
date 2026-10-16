@@ -6,8 +6,9 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import LoginView, LogoutView, MeView, RefreshView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
 from apps.expenses.views import ExpenseViewSet
-from apps.gyms.views import BranchViewSet, StaffViewSet, SupportAccessViewSet
+from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, SubscriptionViewSet
+from apps.messages.views import MessageViewSet
 from apps.reports.views import SummaryView
 from apps.tasks.views import TaskViewSet
 
@@ -24,6 +25,7 @@ router.register("checkins", CheckInViewSet, basename="checkin")
 router.register("devices", DeviceViewSet, basename="device")
 router.register("tasks", TaskViewSet, basename="task")
 router.register("expenses", ExpenseViewSet, basename="expense")
+router.register("messages", MessageViewSet, basename="message")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -34,6 +36,7 @@ urlpatterns = [
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
     path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/
     path("api/reports/summary/", SummaryView.as_view(), name="summary"),
+    path("api/gym/settings/", GymSettingsView.as_view(), name="gym-settings"),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),

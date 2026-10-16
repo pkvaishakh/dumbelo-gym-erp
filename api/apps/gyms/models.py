@@ -18,6 +18,7 @@ class Gym(TimeStamped):
     status = models.CharField(max_length=12, choices=STATUS, default="trial")
     timezone = models.CharField(max_length=40, default="Asia/Kolkata")
     billing_email = models.EmailField(blank=True)
+    reminders_on = models.BooleanField(default=True, help_text="Send members their renewal and dues reminders")
 
     def __str__(self):
         return self.name

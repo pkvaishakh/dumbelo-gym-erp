@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 from apps.core.errors import RuleBroken
 
-from .models import Branch, BranchSession, GymRole, SupportAccess
+from .models import Branch, BranchSession, Gym, GymRole, SupportAccess
 
 User = get_user_model()
 
@@ -75,6 +75,15 @@ class BranchSerializer(serializers.ModelSerializer):
             branch.sessions.all().delete()
             BranchSession.objects.bulk_create([BranchSession(branch=branch, **s) for s in sessions])
         return branch
+
+
+class GymSettingsSerializer(serializers.ModelSerializer):
+    """The gym's own rules. Only the switches can be changed here; the name, slug and time zone are Rackline's."""
+
+    class Meta:
+        model = Gym
+        fields = ["name", "slug", "timezone", "reminders_on"]
+        read_only_fields = ["name", "slug", "timezone"]
 
 
 class StaffSerializer(serializers.ModelSerializer):

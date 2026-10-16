@@ -1,6 +1,6 @@
 "use client";
 import {
-  CalendarCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, UserRound,
+  BellRing, CalendarCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -8,10 +8,11 @@ import { useState } from "react";
 
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useMembersRetrieve } from "@/api/gen/members/members";
+import { useMessagesList } from "@/api/gen/messages/messages";
 import type { Member, Note, Payment, Subscription } from "@/api/gen/model";
 import { useStaffList } from "@/api/gen/staff/staff";
 import { DetailBar } from "@/components/shell";
-import { Details, ErrorText, Field, Icon, Photo, Section, Sheet, SkeletonRows, Status } from "@/components/ui";
+import { Details, ErrorText, Field, Icon, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { CheckInResult, useCheckIn } from "@/features/checkin";
 import { day, daysLeft, isoDate, phone, rupees } from "@/lib/format";
 import { useAction, useGet } from "@/lib/hooks";
@@ -129,6 +130,7 @@ export default function MemberProfile() {
                 </ul>
               ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No visits yet.</p></div>}
             </Section>
+            {desk && <RemindersCard member={m} />}
             {role.role !== "member" && (
               <Section title="Notes" aside={<button className="rl-link rl-link--plain" type="button" onClick={() => setSheet("note")}><span>Add Note</span></button>}>
                 {notes.data?.length ? (
@@ -161,6 +163,53 @@ export default function MemberProfile() {
       <ArchiveSheet open={sheet === "archive"} member={m} onClose={() => setSheet(null)} />
       <VoidSheet payment={typeof sheet === "object" && sheet ? sheet.void : null} onClose={() => setSheet(null)} />
     </div>
+  );
+}
+
+/** What the gym has messaged this member lately, and whether to go on messaging them. */
+function RemindersCard({ member }: { member: Member }) {
+  const q = useMessagesList({ member: member.id, limit: 5 });
+  const rows = q.data?.data.results ?? [];
+  const a = useAction();
+  async function setOn(on: boolean) {
+    try {
+      await a.run(`/api/members/${member.id}/`, { reminders_opted_out: !on }, { method: "PATCH", refresh: [`/api/members/${member.id}/`] });
+    } catch { /* shown under the switch */ }
+  }
+  return (
+    <Section title="Reminders">
+      {q.isLoading ? <SkeletonRows n={2} /> : (
+        <div className="rl-card">
+          {rows.length ? (
+            <ul className="rl-mlist rl-mlist--compact">
+              {rows.map((msg) => (
+                <li key={msg.id}><div className="rl-mrow">
+                  <span className="rl-chipicon rl-mrow__lead" aria-hidden="true"><Icon as={BellRing} size="sm" /></span>
+                  <span className="rl-row__title rl-mrow__name">{msg.kind_label}</span>
+                  <span className="rl-row__meta rl-mrow__meta">{msg.status === "failed" ? msg.error || "It didn't go" : msg.text}</span>
+                  <span className={`rl-mrow__note${msg.status === "failed" ? " rl-mrow__note--alert" : ""}`}>
+                    {msg.status === "failed" ? "Didn't send" : day(msg.for_date)}
+                  </span>
+                </div></li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rl-row__meta" style={{ margin: 0, padding: "var(--space-3) var(--space-4)" }}>
+              {member.reminders_opted_out ? "Reminders are off for this member." : "Nothing sent yet. Reminders go out at 6 am when a plan is ending or money is owed."}
+            </p>
+          )}
+          <Setting
+            name="member-reminders"
+            title="Send this member reminders"
+            note={member.reminders_opted_out ? "Off: they are never messaged" : "Renewals and payments due, on WhatsApp"}
+            checked={!member.reminders_opted_out}
+            disabled={a.busy}
+            onChange={setOn}
+          />
+        </div>
+      )}
+      <ErrorText>{a.error?.message}</ErrorText>
+    </Section>
   );
 }
 

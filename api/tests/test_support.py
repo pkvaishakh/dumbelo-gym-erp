@@ -18,14 +18,6 @@ def support_client(gym_slug="iron"):
     return c
 
 
-def member_client(w):
-    w.client(w.desk).post(f"/api/members/{w.member.id}/set-login/", {"password": "secret1"}, format="json")
-    c = APIClient()
-    c.force_authenticate(User.objects.get(phone=w.member.phone))
-    c.credentials(HTTP_X_GYM=w.gym.slug)
-    return c
-
-
 def grant(client, hours=2):
     return client.post("/api/support-access/", {"hours": hours}, format="json")
 
@@ -69,7 +61,7 @@ def test_a_window_that_ran_out_closes_itself(w):
 
 def test_only_admins_grant_or_end(w):
     window = grant(w.client(w.admin)).json()
-    for c in (w.client(w.desk), w.client(w.trainer), member_client(w)):
+    for c in (w.client(w.desk), w.client(w.trainer), w.member_client()):
         assert c.get("/api/support-access/").status_code == 403
         assert grant(c).status_code == 403
         assert c.post(f"/api/support-access/{window['id']}/end/").status_code == 403

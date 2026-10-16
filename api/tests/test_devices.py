@@ -1,18 +1,6 @@
 """The Device API: who may manage turnstiles, and what happens at the door when a token changes."""
-from rest_framework.test import APIClient
-
-from apps.accounts.models import User
 from apps.attendance.models import Device
 from apps.audit.models import AuditLog
-
-
-def member_client(w):
-    """A signed-in member of the gym, to prove members can't reach the device list."""
-    w.client(w.desk).post(f"/api/members/{w.member.id}/set-login/", {"password": "secret1"}, format="json")
-    c = APIClient()
-    c.force_authenticate(User.objects.get(phone=w.member.phone))
-    c.credentials(HTTP_X_GYM=w.gym.slug)
-    return c
 
 
 def add(client, branch, name="Front door", serial="ZK-1"):
@@ -43,7 +31,7 @@ def test_devices_are_admin_only(w):
         c = w.client(who)
         assert c.get("/api/devices/").status_code == 403
         assert add(c, w.a, serial="ZK-9").status_code == 403
-    m = member_client(w)
+    m = w.member_client()
     assert m.get("/api/devices/").status_code == 403
     assert add(m, w.a, serial="ZK-9").status_code == 403
 
