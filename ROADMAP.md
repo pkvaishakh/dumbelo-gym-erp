@@ -21,7 +21,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Front-desk check-in, one per person per local day, expired/frozen turned away
 - [x] Wall QR per branch and member/staff self check-in
 - [x] Turnstile/biometric punches at `/api/devices/punch/`
-- [ ] Device API: add, deactivate, rotate token (session 1)
+- [x] Device API: add, deactivate, rotate token (session 1)
 - [ ] Devices screen (session 2)
 - [x] Attendance by session; members, trainers and receptionists counted apart
 

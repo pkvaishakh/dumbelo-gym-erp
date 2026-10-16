@@ -8,7 +8,7 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.gyms.models import GymRole
 
-from .models import CheckIn
+from .models import CheckIn, _token
 
 
 def check_in(branch, *, member=None, staff=None, source, by=None, at=None):
@@ -70,3 +70,19 @@ def count_by_session(checkins, gym):
     starts = dict(BranchSession.objects.filter(branch__gym=gym).values("name").annotate(m=Min("starts")).values_list("name", "m"))
     order = sorted(by_session, key=lambda name: (name not in starts, starts.get(name) or name))
     return totals, [{"session": name, **by_session[name]} for name in order]
+
+
+def rotate_device_token(device):
+    """Give a turnstile a new token. The old one stops working at once, so it has to be set on the device."""
+    device.token = _token()
+    device.save(update_fields=["token", "updated_at"])
+    return device
+
+
+def deactivate_device(device):
+    """Switch a turnstile off: its token is refused at the door. Devices are never deleted."""
+    if not device.is_active:
+        raise RuleBroken("already_off", "This device is already switched off")
+    device.is_active = False
+    device.save(update_fields=["is_active", "updated_at"])
+    return device

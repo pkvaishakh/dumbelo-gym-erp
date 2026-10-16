@@ -6,17 +6,34 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
-  useMutation
+  useMutation,
+  useQuery
 } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
-  UseMutationResult
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  Device,
+  DeviceEdit,
+  DeviceEditRequest,
+  DeviceRequest,
+  DeviceWithToken,
+  DevicesListParams,
   DevicesPunchCreate200,
+  PaginatedDeviceList,
+  PatchedDeviceEditRequest,
   PunchRequest
 } from '.././model';
 
@@ -28,6 +45,651 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+stay part of the gym's history.
+ */
+export type devicesListResponse200 = {
+  data: PaginatedDeviceList
+  status: 200
+}
+    
+export type devicesListResponseSuccess = (devicesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type devicesListResponse = (devicesListResponseSuccess)
+
+export const getDevicesListUrl = (params?: DevicesListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/devices/?${stringifiedParams}` : `/api/devices/`
+}
+
+export const devicesList = async (params?: DevicesListParams, options?: RequestInit): Promise<devicesListResponse> => {
+  
+  return apiFetch<devicesListResponse>(getDevicesListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getDevicesListQueryKey = (params?: DevicesListParams,) => {
+    return [
+    `/api/devices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getDevicesListQueryOptions = <TData = Awaited<ReturnType<typeof devicesList>>, TError = unknown>(params?: DevicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDevicesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof devicesList>>> = ({ signal }) => devicesList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof devicesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DevicesListQueryResult = NonNullable<Awaited<ReturnType<typeof devicesList>>>
+export type DevicesListQueryError = unknown
+
+
+export function useDevicesList<TData = Awaited<ReturnType<typeof devicesList>>, TError = unknown>(
+ params: undefined |  DevicesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof devicesList>>,
+          TError,
+          Awaited<ReturnType<typeof devicesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDevicesList<TData = Awaited<ReturnType<typeof devicesList>>, TError = unknown>(
+ params?: DevicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof devicesList>>,
+          TError,
+          Awaited<ReturnType<typeof devicesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDevicesList<TData = Awaited<ReturnType<typeof devicesList>>, TError = unknown>(
+ params?: DevicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useDevicesList<TData = Awaited<ReturnType<typeof devicesList>>, TError = unknown>(
+ params?: DevicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDevicesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+stay part of the gym's history.
+ */
+export type devicesCreateResponse201 = {
+  data: DeviceWithToken
+  status: 201
+}
+    
+export type devicesCreateResponseSuccess = (devicesCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type devicesCreateResponse = (devicesCreateResponseSuccess)
+
+export const getDevicesCreateUrl = () => {
+
+
+  
+
+  return `/api/devices/`
+}
+
+export const devicesCreate = async (deviceRequest: DeviceRequest, options?: RequestInit): Promise<devicesCreateResponse> => {
+  
+  return apiFetch<devicesCreateResponse>(getDevicesCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deviceRequest,)
+  }
+);}
+
+
+
+
+export const getDevicesCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesCreate>>, TError,{data: DeviceRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devicesCreate>>, TError,{data: DeviceRequest}, TContext> => {
+
+const mutationKey = ['devicesCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devicesCreate>>, {data: DeviceRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  devicesCreate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevicesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof devicesCreate>>>
+    export type DevicesCreateMutationBody = DeviceRequest
+    export type DevicesCreateMutationError = unknown
+
+    export const useDevicesCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesCreate>>, TError,{data: DeviceRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof devicesCreate>>,
+        TError,
+        {data: DeviceRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getDevicesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+stay part of the gym's history.
+ */
+export type devicesRetrieveResponse200 = {
+  data: Device
+  status: 200
+}
+    
+export type devicesRetrieveResponseSuccess = (devicesRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type devicesRetrieveResponse = (devicesRetrieveResponseSuccess)
+
+export const getDevicesRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/devices/${id}/`
+}
+
+export const devicesRetrieve = async (id: number, options?: RequestInit): Promise<devicesRetrieveResponse> => {
+  
+  return apiFetch<devicesRetrieveResponse>(getDevicesRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getDevicesRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/devices/${id}/`
+    ] as const;
+    }
+
+    
+export const getDevicesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof devicesRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDevicesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof devicesRetrieve>>> = ({ signal }) => devicesRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof devicesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DevicesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof devicesRetrieve>>>
+export type DevicesRetrieveQueryError = unknown
+
+
+export function useDevicesRetrieve<TData = Awaited<ReturnType<typeof devicesRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof devicesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof devicesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDevicesRetrieve<TData = Awaited<ReturnType<typeof devicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof devicesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof devicesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDevicesRetrieve<TData = Awaited<ReturnType<typeof devicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useDevicesRetrieve<TData = Awaited<ReturnType<typeof devicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof devicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDevicesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+stay part of the gym's history.
+ */
+export type devicesUpdateResponse200 = {
+  data: DeviceEdit
+  status: 200
+}
+    
+export type devicesUpdateResponseSuccess = (devicesUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type devicesUpdateResponse = (devicesUpdateResponseSuccess)
+
+export const getDevicesUpdateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/devices/${id}/`
+}
+
+export const devicesUpdate = async (id: number,
+    deviceEditRequest: DeviceEditRequest, options?: RequestInit): Promise<devicesUpdateResponse> => {
+  
+  return apiFetch<devicesUpdateResponse>(getDevicesUpdateUrl(id),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deviceEditRequest,)
+  }
+);}
+
+
+
+
+export const getDevicesUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesUpdate>>, TError,{id: number;data: DeviceEditRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devicesUpdate>>, TError,{id: number;data: DeviceEditRequest}, TContext> => {
+
+const mutationKey = ['devicesUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devicesUpdate>>, {id: number;data: DeviceEditRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  devicesUpdate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevicesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof devicesUpdate>>>
+    export type DevicesUpdateMutationBody = DeviceEditRequest
+    export type DevicesUpdateMutationError = unknown
+
+    export const useDevicesUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesUpdate>>, TError,{id: number;data: DeviceEditRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof devicesUpdate>>,
+        TError,
+        {id: number;data: DeviceEditRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getDevicesUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+stay part of the gym's history.
+ */
+export type devicesPartialUpdateResponse200 = {
+  data: DeviceEdit
+  status: 200
+}
+    
+export type devicesPartialUpdateResponseSuccess = (devicesPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type devicesPartialUpdateResponse = (devicesPartialUpdateResponseSuccess)
+
+export const getDevicesPartialUpdateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/devices/${id}/`
+}
+
+export const devicesPartialUpdate = async (id: number,
+    patchedDeviceEditRequest: PatchedDeviceEditRequest, options?: RequestInit): Promise<devicesPartialUpdateResponse> => {
+  
+  return apiFetch<devicesPartialUpdateResponse>(getDevicesPartialUpdateUrl(id),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedDeviceEditRequest,)
+  }
+);}
+
+
+
+
+export const getDevicesPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesPartialUpdate>>, TError,{id: number;data: PatchedDeviceEditRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devicesPartialUpdate>>, TError,{id: number;data: PatchedDeviceEditRequest}, TContext> => {
+
+const mutationKey = ['devicesPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devicesPartialUpdate>>, {id: number;data: PatchedDeviceEditRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  devicesPartialUpdate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevicesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof devicesPartialUpdate>>>
+    export type DevicesPartialUpdateMutationBody = PatchedDeviceEditRequest
+    export type DevicesPartialUpdateMutationError = unknown
+
+    export const useDevicesPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesPartialUpdate>>, TError,{id: number;data: PatchedDeviceEditRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof devicesPartialUpdate>>,
+        TError,
+        {id: number;data: PatchedDeviceEditRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getDevicesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Switch a device off. Its token stops working at the door straight away.
+ */
+export type devicesDeactivateCreateResponse200 = {
+  data: Device
+  status: 200
+}
+    
+export type devicesDeactivateCreateResponseSuccess = (devicesDeactivateCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type devicesDeactivateCreateResponse = (devicesDeactivateCreateResponseSuccess)
+
+export const getDevicesDeactivateCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/devices/${id}/deactivate/`
+}
+
+export const devicesDeactivateCreate = async (id: number, options?: RequestInit): Promise<devicesDeactivateCreateResponse> => {
+  
+  return apiFetch<devicesDeactivateCreateResponse>(getDevicesDeactivateCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getDevicesDeactivateCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesDeactivateCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devicesDeactivateCreate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['devicesDeactivateCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devicesDeactivateCreate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  devicesDeactivateCreate(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevicesDeactivateCreateMutationResult = NonNullable<Awaited<ReturnType<typeof devicesDeactivateCreate>>>
+    
+    export type DevicesDeactivateCreateMutationError = unknown
+
+    export const useDevicesDeactivateCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesDeactivateCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof devicesDeactivateCreate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDevicesDeactivateCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Give the device a new token, for a reader that was replaced or a token that got out.
+ */
+export type devicesRotateTokenCreateResponse200 = {
+  data: DeviceWithToken
+  status: 200
+}
+    
+export type devicesRotateTokenCreateResponseSuccess = (devicesRotateTokenCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type devicesRotateTokenCreateResponse = (devicesRotateTokenCreateResponseSuccess)
+
+export const getDevicesRotateTokenCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/devices/${id}/rotate-token/`
+}
+
+export const devicesRotateTokenCreate = async (id: number, options?: RequestInit): Promise<devicesRotateTokenCreateResponse> => {
+  
+  return apiFetch<devicesRotateTokenCreateResponse>(getDevicesRotateTokenCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getDevicesRotateTokenCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesRotateTokenCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof devicesRotateTokenCreate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['devicesRotateTokenCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof devicesRotateTokenCreate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  devicesRotateTokenCreate(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DevicesRotateTokenCreateMutationResult = NonNullable<Awaited<ReturnType<typeof devicesRotateTokenCreate>>>
+    
+    export type DevicesRotateTokenCreateMutationError = unknown
+
+    export const useDevicesRotateTokenCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof devicesRotateTokenCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof devicesRotateTokenCreate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDevicesRotateTokenCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * A turnstile or biometric reader posts each punch here with its token in X-Device-Token.
 
 Answers {"open": true} to let them through. A second punch the same day is fine (open, not recorded again);

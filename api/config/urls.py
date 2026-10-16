@@ -4,7 +4,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import LoginView, LogoutView, MeView, RefreshView
-from apps.attendance.views import CheckInViewSet, DevicePunchView, QRCheckInView
+from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
 from apps.expenses.views import ExpenseViewSet
 from apps.gyms.views import BranchViewSet, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, SubscriptionViewSet
@@ -21,6 +21,7 @@ router.register("members", MemberViewSet, basename="member")
 router.register("subscriptions", SubscriptionViewSet, basename="subscription")
 router.register("payments", PaymentViewSet, basename="payment")
 router.register("checkins", CheckInViewSet, basename="checkin")
+router.register("devices", DeviceViewSet, basename="device")
 router.register("tasks", TaskViewSet, basename="task")
 router.register("expenses", ExpenseViewSet, basename="expense")
 
@@ -31,7 +32,7 @@ urlpatterns = [
     path("api/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/me/", MeView.as_view(), name="me"),
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
-    path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),
+    path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/
     path("api/reports/summary/", SummaryView.as_view(), name="summary"),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

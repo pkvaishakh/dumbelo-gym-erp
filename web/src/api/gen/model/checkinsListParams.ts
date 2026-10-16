@@ -28,7 +28,7 @@ member?: number;
 offset?: number;
 q?: string;
 /**
- * Session name, e.g. Morning
+ * Session name, e.g. Morning; Other for outside every session
  */
 session?: string;
 source?: string;
