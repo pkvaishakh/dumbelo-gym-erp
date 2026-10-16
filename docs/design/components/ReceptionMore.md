@@ -1,0 +1,33 @@
+# ReceptionMore
+
+The front desk's More tab: what is not on the other four tabs.
+
+A tab screen with the person's name and role under the title. Three sections. Follow up: shortcuts into the Members list, already filtered to Expiring this week, Payment due and Frozen memberships, each with its count. Your shift: branch, shift and day off, which only the gym's owner can change. Account: Account Details and Sign Out. From 768px, Account moves to a second column.
+
+The script in `preview.html` sends `rl:more-members` with the status to filter by, `rl:more-go` for Account Details, and `rl:sign-out`.
+
+- A shortcut row shows the same count as the matching chip on the Members list and the matching row in Needs attention.
+- No revenue, reports, staff or expenses here: those are admin-only.
+- Related: TrainerMore, MemberMore, AdminMore, MoreWide.
+- My Tasks, at the top, opens MyTasks: the tasks the admin has given them, with how many are open.
+
+## Markup (from the design system preview)
+
+```html
+<div class="rl-app rl-root" data-morescreen="desk">
+<header class="rl-appbar"><div class="rl-appbar__in">
+  <div class="rl-appbar__who"><h1 class="rl-pagetitle">More</h1><p class="rl-appbar__branch">Alex D’Souza • Receptionist</p></div>
+  <button class="rl-avatar rl-pressable" type="button" aria-label="Profile: Alex D’Souza">AD</button>
+</div></header>
+<main class="rl-app__main">
+<div class="rl-app__cols"><div class="rl-app__col"><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Tasks</h2></div><ul class="rl-card rl-remind"><li><button class="rl-remind__row" type="button" data-tasks-open><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">My Tasks</span></span><span class="rl-menu__value">2 open</span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Follow up</h2><p class="rl-section__aside">Indiranagar</p></div><ul class="rl-card rl-remind"><li><button class="rl-remind__row" type="button" data-members="expiring"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Expiring this week</span></span><span class="rl-menu__value">11</span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li><li><button class="rl-remind__row" type="button" data-members="due"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Payment due</span></span><span class="rl-menu__value">14</span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li><li><button class="rl-remind__row" type="button" data-members="frozen"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Frozen memberships</span></span><span class="rl-menu__value">8</span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Your shift</h2></div><div class="rl-card"><dl class="rl-details"><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Branch</dt><dd>Indiranagar</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Shift</dt><dd>Morning, 6 AM to 2 PM</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Day off</dt><dd>Sunday</dd></div></dl><p class="rl-cardfoot">Set by the gym’s owner. Ask them to change it.</p></div></section></div><div class="rl-app__col"><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Account</h2></div><ul class="rl-card rl-remind"><li><button class="rl-remind__row" type="button" data-go="account"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Account Details</span></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li><li><button class="rl-remind__row" type="button" data-sign-out><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Sign Out</span></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section></div></div>
+</main>
+<nav class="rl-tabbar" aria-label="Main"><div class="rl-tabbar__in"><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Home</a><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Members</a><button class="rl-fab" type="button" data-sheet="dm-create" aria-haspopup="dialog" aria-expanded="false" aria-label="Create"><Icon class="rl-icon"/></button><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Attendance</a><a class="rl-tab" href="#" aria-current="page"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>More</a></div></nav>
+<div class="rl-scrim" data-close></div>
+<div class="rl-sheet" id="dm-create" role="dialog" aria-modal="true" aria-labelledby="dm-create-title">
+  <span class="rl-sheet__grab" aria-hidden="true"></span>
+  <div class="rl-sheet__head"><h2 class="rl-section__title" id="dm-create-title">Create</h2><button class="rl-iconbtn rl-iconbtn--plain" type="button" data-close aria-label="Close"><Icon class="rl-icon rl-icon--sm"/></button></div>
+  <ul class="rl-sheet__list"><li><button class="rl-sheet__item" type="button" data-checkin-open><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Check In</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Add Member</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Collect Payment</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Add Subscription</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li></ul>
+</div>
+</div>
+```

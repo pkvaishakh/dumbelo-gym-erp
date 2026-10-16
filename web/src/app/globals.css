@@ -1,0 +1,15 @@
+@import "../styles/tokens.css";
+@import "../styles/rackline.css";
+
+html, body { margin: 0; }
+body { background: var(--surface); }
+/* The design system's markup expects .rl-root on the page; the whole app is one. */
+.rl-app__main { overflow-x: clip; }
+:where(a.rl-tab, a.rl-tile, a.rl-stat, a.rl-mrow, a.rl-button, a.rl-remind__row, a.rl-attn__row, a.rl-shifts__row, a.rl-avatar, a.rl-pass, a.rl-sheet__item) { text-decoration: none; color: inherit; }
+@media print {
+  .rl-noprint, .rl-tabbar { display: none !important; }
+  .rl-app { padding: 0 !important; background: #fff; }
+  .rl-poster { box-shadow: none !important; }
+}
+/* Roles without the create button (trainer, member) have four equal tabs. */
+.rl-tabbar__in:not(:has(.rl-fab)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }

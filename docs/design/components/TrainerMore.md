@@ -1,0 +1,30 @@
+# TrainerMore
+
+The trainer's More tab.
+
+Your work: branch, specialities, day off and the number of members assigned, set by the gym's owner. Your week: sessions taken in the last 7 days, the same figure admins see on the trainer's Staff Profile. Shortcuts: Log Workout. Account: Account Details and Sign Out.
+
+- No payments, revenue or other trainers' data.
+- Related: ReceptionMore, MemberMore.
+- My Tasks, at the top, opens MyTasks: the tasks the admin has given them, with how many are open.
+
+## Markup (from the design system preview)
+
+```html
+<div class="rl-app rl-root" data-morescreen="trainer">
+<header class="rl-appbar"><div class="rl-appbar__in">
+  <div class="rl-appbar__who"><h1 class="rl-pagetitle">More</h1><p class="rl-appbar__branch">Arjun Rao • Trainer</p></div>
+  <button class="rl-avatar rl-pressable" type="button" aria-label="Profile: Arjun Rao">AR</button>
+</div></header>
+<main class="rl-app__main">
+<div class="rl-app__cols"><div class="rl-app__col"><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Tasks</h2></div><ul class="rl-card rl-remind"><li><button class="rl-remind__row" type="button" data-tasks-open><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">My Tasks</span></span><span class="rl-menu__value">1 open</span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Your work</h2></div><div class="rl-card"><dl class="rl-details"><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Branch</dt><dd>Indiranagar</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Specialities</dt><dd>Strength, HIIT</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Day off</dt><dd>Wednesday</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Members</dt><dd>18</dd></div></dl><p class="rl-cardfoot">Set by the gym’s owner. Ask them to change it.</p></div></section><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Your week</h2></div><div class="rl-card"><dl class="rl-details"><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Sessions, last 7 days</dt><dd>31</dd></div></dl></div></section><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Shortcuts</h2></div><ul class="rl-card rl-remind"><li><button class="rl-remind__row" type="button" data-ttask="tlog"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Log Workout</span></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section></div><div class="rl-app__col"><section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Account</h2></div><ul class="rl-card rl-remind"><li><button class="rl-remind__row" type="button" data-go="account"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Account Details</span></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li><li><button class="rl-remind__row" type="button" data-sign-out><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-remind__text"><span class="rl-row__title">Sign Out</span></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section></div></div>
+</main>
+<nav class="rl-tabbar" aria-label="Main"><div class="rl-tabbar__in"><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Home</a><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Schedule</a><button class="rl-fab" type="button" data-sheet="tm-create" aria-haspopup="dialog" aria-expanded="false" aria-label="Create"><Icon class="rl-icon"/></button><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Members</a><a class="rl-tab" href="#" aria-current="page"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>More</a></div></nav>
+<div class="rl-scrim" data-close></div>
+<div class="rl-sheet" id="tm-create" role="dialog" aria-modal="true" aria-labelledby="tm-create-title">
+  <span class="rl-sheet__grab" aria-hidden="true"></span>
+  <div class="rl-sheet__head"><h2 class="rl-section__title" id="tm-create-title">Create</h2><button class="rl-iconbtn rl-iconbtn--plain" type="button" data-close aria-label="Close"><Icon class="rl-icon rl-icon--sm"/></button></div>
+  <ul class="rl-sheet__list"><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Log Workout</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Add Note</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Record Measurements</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Assign Plan</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Book Session</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li></ul>
+</div>
+</div>
+```

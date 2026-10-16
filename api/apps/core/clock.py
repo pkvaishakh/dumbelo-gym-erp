@@ -1,0 +1,52 @@
+"""Time in the gym's own time zone. Stored times are UTC; days, sessions and reports follow the gym's clock."""
+import calendar
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from django.utils import timezone
+
+
+def tz(gym):
+    return ZoneInfo(getattr(gym, "timezone", None) or "Asia/Kolkata")
+
+
+def local(gym, at=None):
+    return timezone.localtime(at or timezone.now(), tz(gym))
+
+
+def time_label(gym, at):
+    """'6:05 AM' in the gym's time zone. Built by hand: strftime's no-padding flags differ between Linux and Windows."""
+    t = local(gym, at)
+    return f"{t.hour % 12 or 12}:{t.minute:02d} {'AM' if t.hour < 12 else 'PM'}"
+
+
+def today(gym):
+    return local(gym).date()
+
+
+def day_bounds(gym, day: date):
+    """UTC-aware start and end of a local day, for filtering `at` / `taken_at`."""
+    start = datetime.combine(day, datetime.min.time(), tzinfo=tz(gym))
+    return start, start + timedelta(days=1)
+
+
+def add_months(d: date, months: int) -> date:
+    m = d.month - 1 + months
+    y, m = d.year + m // 12, m % 12 + 1
+    return date(y, m, min(d.day, calendar.monthrange(y, m)[1]))
+
+
+def plan_end(starts: date, months: int) -> date:
+    """A 1-month plan from 14 Oct runs to 13 Nov."""
+    return add_months(starts, months or 3) - timedelta(days=1)
+
+
+def parse_date(value, default):
+    if not value:
+        return default
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        from rest_framework.exceptions import ValidationError
+
+        raise ValidationError({"date": ["Use YYYY-MM-DD"]})

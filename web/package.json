@@ -1,0 +1,42 @@
+{
+  "name": "rackline-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "api": "orval --config orval.config.ts",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@serwist/next": "^9.5.13",
+    "@tanstack/react-query": "^5.104.2",
+    "date-fns": "^4.4.0",
+    "html5-qrcode": "^2.3.8",
+    "lucide-react": "^0.511.0",
+    "next": "^15.5.28",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.90.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56",
+    "@types/node": "^22.20.5",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.28",
+    "orval": "^7.21.0",
+    "serwist": "^9.5.13",
+    "typescript": "5.8",
+    "vitest": "^3.2.7"
+  }
+}

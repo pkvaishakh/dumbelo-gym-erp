@@ -1,0 +1,49 @@
+/* Rackline design tokens (from the Rackline design system). Change them there first, then here. */
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/Archivo-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+}
+
+:root {
+  --ground: #ffffff;
+  --surface: #f3f5ef;
+  --line: #dfe3d9;
+  --field-line: #80867c;
+  --ink: #1b1e1f;
+  --ink-muted: #565c57;
+  --on-ink: #ffffff;
+  --volt: #1eb960;
+  --volt-soft: #d8f5e2;
+  --attention: #7a4a00;
+  --attention-soft: #fbf1d9;
+  --danger: #b3261e;
+  --danger-soft: #fbe9e6;
+  --scrim: rgba(27, 30, 31, 0.48);
+  --shadow-button: 0 1px 2px rgba(27, 30, 31, 0.16), 0 10px 20px -10px rgba(27, 30, 31, 0.45);
+  --shadow-focus: 0 0 0 4px #1eb960;
+  --shadow-card: 0 1px 2px rgba(27, 30, 31, 0.06), 0 8px 24px -16px rgba(27, 30, 31, 0.22);
+  --shadow-raised: 0 -1px 0 rgba(27, 30, 31, 0.06), 0 -12px 32px -12px rgba(27, 30, 31, 0.28);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-xs: 6px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+  --touch-min: 44px;
+  --control-height: 56px;
+  --column-max: 420px;
+  --nav-height: 64px;
+  --container-max: 960px;
+  --chart-height: 180px;
+  --search-height: 48px;
+  --font-sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}

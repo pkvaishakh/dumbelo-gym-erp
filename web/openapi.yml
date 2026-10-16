@@ -1,0 +1,4139 @@
+openapi: 3.0.3
+info:
+  title: Rackline API
+  version: 0.1.0
+  description: 'Gym management for many gyms. Send `X-Gym: <gym slug>` with every
+    call inside a gym.'
+paths:
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: 'Sign out: the refresh token stops working, so a copy of it can''t
+        be used later.'
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklistRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/branches/:
+    get:
+      operationId: branches_list
+      description: Branches and their opening sessions. Admins change them; everyone
+        sees the branches they belong to.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - branches
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBranchList'
+          description: ''
+    post:
+      operationId: branches_create
+      description: Branches and their opening sessions. Admins change them; everyone
+        sees the branches they belong to.
+      tags:
+      - branches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+          description: ''
+  /api/branches/{id}/:
+    get:
+      operationId: branches_retrieve
+      description: Branches and their opening sessions. Admins change them; everyone
+        sees the branches they belong to.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch.
+        required: true
+      tags:
+      - branches
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+          description: ''
+    put:
+      operationId: branches_update
+      description: Branches and their opening sessions. Admins change them; everyone
+        sees the branches they belong to.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch.
+        required: true
+      tags:
+      - branches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+          description: ''
+    patch:
+      operationId: branches_partial_update
+      description: Branches and their opening sessions. Admins change them; everyone
+        sees the branches they belong to.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch.
+        required: true
+      tags:
+      - branches
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBranchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBranchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBranchRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+          description: ''
+    delete:
+      operationId: branches_destroy
+      description: Branches and their opening sessions. Admins change them; everyone
+        sees the branches they belong to.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch.
+        required: true
+      tags:
+      - branches
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/checkins/:
+    get:
+      operationId: checkins_list
+      description: |-
+        Who came in. Only the time in is recorded — there is no check-out.
+
+        The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
+        a mistaken check-in (audited).
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+        description: YYYY-MM-DD, today by default
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - admin
+          - member
+          - receptionist
+          - staff
+          - trainer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+        description: One member's visits, any day
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: session
+        schema:
+          type: string
+        description: Session name, e.g. Morning
+      - in: query
+        name: source
+        schema:
+          type: string
+      - in: query
+        name: staff
+        schema:
+          type: integer
+      tags:
+      - checkins
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCheckInList'
+          description: ''
+    post:
+      operationId: checkins_create
+      description: |-
+        Who came in. Only the time in is recorded — there is no check-out.
+
+        The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
+        a mistaken check-in (audited).
+      tags:
+      - checkins
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CheckInCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckInCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckIn'
+          description: ''
+  /api/checkins/{id}/:
+    delete:
+      operationId: checkins_destroy
+      description: |-
+        Who came in. Only the time in is recorded — there is no check-out.
+
+        The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
+        a mistaken check-in (audited).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this check in.
+        required: true
+      tags:
+      - checkins
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/checkins/qr/:
+    post:
+      operationId: checkins_qr_create
+      description: A signed-in member or staff member scans the branch's wall QR with
+        their phone.
+      tags:
+      - checkins
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QRRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QRRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckIn'
+          description: ''
+  /api/checkins/summary/:
+    get:
+      operationId: checkins_summary_retrieve
+      description: 'Counts for the day by session: members, trainers, receptionists
+        — the Attendance and Home cards.'
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+      tags:
+      - checkins
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckIn'
+          description: ''
+  /api/devices/punch/:
+    post:
+      operationId: devices_punch_create
+      description: |-
+        A turnstile or biometric reader posts each punch here with its token in X-Device-Token.
+
+        Answers {"open": true} to let them through. A second punch the same day is fine (open, not recorded again);
+        an ended or frozen plan answers open: false with the reason so the device can show it.
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PunchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PunchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PunchRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/expenses/:
+    get:
+      operationId: expenses_list
+      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
+        or category.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - equipment
+          - maintenance
+          - marketing
+          - other
+          - rent
+          - salaries
+          - supplies
+          - utilities
+        description: |-
+          * `rent` - Rent
+          * `salaries` - Salaries
+          * `utilities` - Utilities
+          * `equipment` - Equipment
+          * `maintenance` - Maintenance
+          * `supplies` - Supplies
+          * `marketing` - Marketing
+          * `other` - Other
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - bank
+          - card
+          - cash
+          - upi
+        description: |-
+          * `cash` - Cash
+          * `upi` - UPI
+          * `card` - Card
+          * `bank` - Bank transfer
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExpenseList'
+          description: ''
+    post:
+      operationId: expenses_create
+      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
+        or category.
+      tags:
+      - expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+          description: ''
+  /api/expenses/{id}/:
+    get:
+      operationId: expenses_retrieve
+      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
+        or category.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense.
+        required: true
+      tags:
+      - expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+          description: ''
+    put:
+      operationId: expenses_update
+      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
+        or category.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense.
+        required: true
+      tags:
+      - expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExpenseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+          description: ''
+    patch:
+      operationId: expenses_partial_update
+      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
+        or category.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense.
+        required: true
+      tags:
+      - expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedExpenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedExpenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedExpenseRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+          description: ''
+    delete:
+      operationId: expenses_destroy
+      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
+        or category.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense.
+        required: true
+      tags:
+      - expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/expenses/totals/:
+    get:
+      operationId: expenses_totals_retrieve
+      description: Totals by category for the same filters.
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM
+      tags:
+      - expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+          description: ''
+  /api/me/:
+    get:
+      operationId: me_retrieve
+      description: Who is signed in, and which gyms and branches they can open. The
+        app picks a gym and sends it as X-Gym.
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/members/:
+    get:
+      operationId: members_list
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: query
+        name: archived
+        schema:
+          type: boolean
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name, member ID or phone
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - attention
+          - due
+          - expired
+          - expiring
+          - frozen
+          - none
+        description: 'attention: anything but active'
+      - in: query
+        name: trainer
+        schema:
+          type: integer
+      tags:
+      - members
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMemberList'
+          description: ''
+    post:
+      operationId: members_create
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      tags:
+      - members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+  /api/members/{id}/:
+    get:
+      operationId: members_retrieve
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+    put:
+      operationId: members_update
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+    patch:
+      operationId: members_partial_update
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMemberRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+          description: ''
+    delete:
+      operationId: members_destroy
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/members/{id}/history/:
+    get:
+      operationId: members_history_retrieve
+      description: 'Plans and payments for the member profile. Not for trainers: it
+        has amounts.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/members/{id}/notes/:
+    get:
+      operationId: members_notes_list
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+          description: ''
+    post:
+      operationId: members_notes_create
+      description: |-
+        Members. The desk and admins manage them in their branches; a trainer sees only their own members
+        (no amounts); a member sees only themselves.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NoteRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+          description: ''
+  /api/members/{id}/set-login/:
+    post:
+      operationId: members_set_login_create
+      description: Set or reset the member's app password. They sign in with their
+        phone number.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this member.
+        required: true
+      tags:
+      - members
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/offers/:
+    get:
+      operationId: offers_list
+      description: Fixed offers. Only admins create them; the desk can only pick one
+        that applies today.
+      parameters:
+      - in: query
+        name: current
+        schema:
+          type: boolean
+        description: Only offers that apply today
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOfferList'
+          description: ''
+    post:
+      operationId: offers_create
+      description: Fixed offers. Only admins create them; the desk can only pick one
+        that applies today.
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+  /api/offers/{id}/:
+    get:
+      operationId: offers_retrieve
+      description: Fixed offers. Only admins create them; the desk can only pick one
+        that applies today.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this offer.
+        required: true
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+    put:
+      operationId: offers_update
+      description: Fixed offers. Only admins create them; the desk can only pick one
+        that applies today.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this offer.
+        required: true
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OfferRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+    patch:
+      operationId: offers_partial_update
+      description: Fixed offers. Only admins create them; the desk can only pick one
+        that applies today.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this offer.
+        required: true
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOfferRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+          description: ''
+    delete:
+      operationId: offers_destroy
+      description: Fixed offers. Only admins create them; the desk can only pick one
+        that applies today.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this offer.
+        required: true
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/payments/:
+    get:
+      operationId: payments_list
+      description: Payments recorded at the desk. Receptionists record and see their
+        branches; only admins correct or void.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+        description: 'YYYY-MM-DD: payments taken that local day'
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - bank
+          - card
+          - cash
+          - upi
+        description: |-
+          * `cash` - Cash
+          * `upi` - UPI
+          * `card` - Card
+          * `bank` - Bank transfer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: voided
+        schema:
+          type: boolean
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentList'
+          description: ''
+    post:
+      operationId: payments_create
+      description: Payments recorded at the desk. Receptionists record and see their
+        branches; only admins correct or void.
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/payments/{id}/:
+    get:
+      operationId: payments_retrieve
+      description: Payments recorded at the desk. Receptionists record and see their
+        branches; only admins correct or void.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment.
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    put:
+      operationId: payments_update
+      description: Payments recorded at the desk. Receptionists record and see their
+        branches; only admins correct or void.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment.
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCorrectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentCorrectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentCorrectRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCorrect'
+          description: ''
+    patch:
+      operationId: payments_partial_update
+      description: Payments recorded at the desk. Receptionists record and see their
+        branches; only admins correct or void.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment.
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentCorrectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentCorrectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentCorrectRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCorrect'
+          description: ''
+  /api/payments/{id}/void/:
+    post:
+      operationId: payments_void_create
+      description: Payments recorded at the desk. Receptionists record and see their
+        branches; only admins correct or void.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payment.
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/payments/collection/:
+    get:
+      operationId: payments_collection_retrieve
+      description: Money taken on a day (today by default) in the caller's branches,
+        by method — the desk's end-of-day count.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/plans/:
+    get:
+      operationId: plans_list
+      description: Plans the gym sells. Admins set them up; everyone can see what's
+        on sale.
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - membership
+          - pt
+        description: |-
+          * `membership` - Membership
+          * `pt` - Personal training
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: on_sale
+        schema:
+          type: boolean
+      tags:
+      - plans
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPlanList'
+          description: ''
+    post:
+      operationId: plans_create
+      description: Plans the gym sells. Admins set them up; everyone can see what's
+        on sale.
+      tags:
+      - plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+  /api/plans/{id}/:
+    get:
+      operationId: plans_retrieve
+      description: Plans the gym sells. Admins set them up; everyone can see what's
+        on sale.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plan.
+        required: true
+      tags:
+      - plans
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+    put:
+      operationId: plans_update
+      description: Plans the gym sells. Admins set them up; everyone can see what's
+        on sale.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plan.
+        required: true
+      tags:
+      - plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+    patch:
+      operationId: plans_partial_update
+      description: Plans the gym sells. Admins set them up; everyone can see what's
+        on sale.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plan.
+        required: true
+      tags:
+      - plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+          description: ''
+    delete:
+      operationId: plans_destroy
+      description: Plans the gym sells. Admins set them up; everyone can see what's
+        on sale.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this plan.
+        required: true
+      tags:
+      - plans
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/reports/summary/:
+    get:
+      operationId: reports_summary_retrieve
+      description: 'The admin Home screen in one call: today''s money, members by
+        status, dues, and check-ins by session.'
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/staff/:
+    get:
+      operationId: staff_list
+      description: Admins, receptionists and trainers of the gym. Only admins manage
+        staff; staff can read the list.
+      parameters:
+      - in: query
+        name: branches
+        schema:
+          type: array
+          items:
+            type: integer
+        explode: true
+        style: form
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - admin
+          - member
+          - receptionist
+          - trainer
+        description: |-
+          * `admin` - Admin
+          * `receptionist` - Receptionist
+          * `trainer` - Trainer
+          * `member` - Member
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStaffList'
+          description: ''
+    post:
+      operationId: staff_create
+      description: Admins, receptionists and trainers of the gym. Only admins manage
+        staff; staff can read the list.
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+  /api/staff/{id}/:
+    get:
+      operationId: staff_retrieve
+      description: Admins, receptionists and trainers of the gym. Only admins manage
+        staff; staff can read the list.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+    put:
+      operationId: staff_update
+      description: Admins, receptionists and trainers of the gym. Only admins manage
+        staff; staff can read the list.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+    patch:
+      operationId: staff_partial_update
+      description: Admins, receptionists and trainers of the gym. Only admins manage
+        staff; staff can read the list.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStaffRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+          description: ''
+    delete:
+      operationId: staff_destroy
+      description: Admins, receptionists and trainers of the gym. Only admins manage
+        staff; staff can read the list.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/subscriptions/:
+    get:
+      operationId: subscriptions_list
+      description: Selling a plan (new member or renewal), freezing, and cancelling.
+        A renewal starts after the current plan ends.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: plan
+        schema:
+          type: integer
+      tags:
+      - subscriptions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSubscriptionList'
+          description: ''
+    post:
+      operationId: subscriptions_create
+      description: Selling a plan (new member or renewal), freezing, and cancelling.
+        A renewal starts after the current plan ends.
+      tags:
+      - subscriptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/subscriptions/{id}/:
+    get:
+      operationId: subscriptions_retrieve
+      description: Selling a plan (new member or renewal), freezing, and cancelling.
+        A renewal starts after the current plan ends.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this subscription.
+        required: true
+      tags:
+      - subscriptions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/subscriptions/{id}/cancel/:
+    post:
+      operationId: subscriptions_cancel_create
+      description: Selling a plan (new member or renewal), freezing, and cancelling.
+        A renewal starts after the current plan ends.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this subscription.
+        required: true
+      tags:
+      - subscriptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/subscriptions/{id}/freeze/:
+    post:
+      operationId: subscriptions_freeze_create
+      description: Pause a plan (travel, injury). The end date moves out by the days
+        frozen.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this subscription.
+        required: true
+      tags:
+      - subscriptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FreezeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FreezeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FreezeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/subscriptions/{id}/unfreeze/:
+    post:
+      operationId: subscriptions_unfreeze_create
+      description: End a freeze early; the days not used come off the end date again.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this subscription.
+        required: true
+      tags:
+      - subscriptions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/support-access/:
+    get:
+      operationId: support_access_list
+      description: An admin lets Rackline support look inside the gym for a few hours.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - support-access
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSupportAccessList'
+          description: ''
+    post:
+      operationId: support_access_create
+      description: An admin lets Rackline support look inside the gym for a few hours.
+      tags:
+      - support-access
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportAccessRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupportAccessRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupportAccessRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportAccess'
+          description: ''
+  /api/tasks/:
+    get:
+      operationId: tasks_list
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: query
+        name: assignee
+        schema:
+          type: integer
+      - in: query
+        name: due_date
+        schema:
+          type: string
+          format: date
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: overdue
+        schema:
+          type: boolean
+        description: Same as state=overdue
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - receptionist
+          - trainer
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - done
+          - open
+          - overdue
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - doing
+          - done
+          - todo
+        description: |-
+          * `todo` - To do
+          * `doing` - In progress
+          * `done` - Done
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskList'
+          description: ''
+    post:
+      operationId: tasks_create
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{id}/:
+    get:
+      operationId: tasks_retrieve
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    put:
+      operationId: tasks_update
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    patch:
+      operationId: tasks_partial_update
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTaskRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+    delete:
+      operationId: tasks_destroy
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/tasks/{id}/done/:
+    post:
+      operationId: tasks_done_create
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoneRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DoneRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DoneRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{id}/reopen/:
+    post:
+      operationId: tasks_reopen_create
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{id}/start/:
+    post:
+      operationId: tasks_start_create
+      description: |-
+        Admins give trainers and receptionists tasks and track them. Staff see their own, start them, post updates
+        and mark them done.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+          description: ''
+  /api/tasks/{id}/updates/:
+    post:
+      operationId: tasks_updates_create
+      description: Post an update on progress.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this task.
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskUpdate'
+          description: ''
+  /api/tasks/counts/:
+    get:
+      operationId: tasks_counts_retrieve
+      description: 'How many tasks each filter chip holds: open, overdue, done and
+        all for the role filter, and all by role.'
+      parameters:
+      - in: query
+        name: role
+        schema:
+          type: string
+          enum:
+          - receptionist
+          - trainer
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    Branch:
+      type: object
+      description: A branch with its opening sessions. Sending `sessions` replaces
+        the whole list (as the Edit Branch form does).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        address:
+          type: string
+        phone:
+          type: string
+          maxLength: 20
+        days_open:
+          $ref: '#/components/schemas/DaysOpenEnum'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        qr_code:
+          type: string
+          readOnly: true
+          description: 'Printed on the wall QR: /checkin/<qr_code>'
+        is_active:
+          type: boolean
+      required:
+      - id
+      - name
+      - qr_code
+      - sessions
+    BranchRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+    BranchRequest:
+      type: object
+      description: A branch with its opening sessions. Sending `sessions` replaces
+        the whole list (as the Edit Branch form does).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        address:
+          type: string
+        phone:
+          type: string
+          maxLength: 20
+        days_open:
+          $ref: '#/components/schemas/DaysOpenEnum'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionRequest'
+        is_active:
+          type: boolean
+      required:
+      - name
+      - sessions
+    CategoryEnum:
+      enum:
+      - rent
+      - salaries
+      - utilities
+      - equipment
+      - maintenance
+      - supplies
+      - marketing
+      - other
+      type: string
+      description: |-
+        * `rent` - Rent
+        * `salaries` - Salaries
+        * `utilities` - Utilities
+        * `equipment` - Equipment
+        * `maintenance` - Maintenance
+        * `supplies` - Supplies
+        * `marketing` - Marketing
+        * `other` - Other
+    CheckIn:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/CheckInKindEnum'
+          readOnly: true
+        person_id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        code:
+          type: string
+        branch:
+          type: integer
+        branch_name:
+          type: string
+        at:
+          type: string
+          format: date-time
+        local_date:
+          type: string
+          format: date
+          description: The day in the gym's time zone; one check-in per person per
+            day
+        time:
+          type: string
+          readOnly: true
+        session:
+          type: string
+          nullable: true
+          readOnly: true
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+      required:
+      - branch
+      - branch_name
+      - id
+      - kind
+      - local_date
+      - name
+      - person_id
+      - session
+      - source
+      - time
+    CheckInCreateRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        member:
+          type: integer
+        staff:
+          type: integer
+      required:
+      - branch
+    CheckInKindEnum:
+      enum:
+      - member
+      - admin
+      - receptionist
+      - trainer
+      type: string
+      description: |-
+        * `member` - member
+        * `admin` - admin
+        * `receptionist` - receptionist
+        * `trainer` - trainer
+    CurrentPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+      required:
+      - ends
+      - id
+      - name
+      - starts
+    DaysOpenEnum:
+      enum:
+      - every_day
+      - mon_sat
+      type: string
+      description: |-
+        * `every_day` - Every day
+        * `mon_sat` - Monday to Saturday
+    DoneRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          description: A last update, posted before it's marked done
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+        branch_name:
+          type: string
+          readOnly: true
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        paid_to:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 200
+        spent_on:
+          type: string
+          format: date
+      required:
+      - amount_paise
+      - branch
+      - branch_name
+      - category
+      - id
+      - method
+    ExpenseRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        paid_to:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 200
+        spent_on:
+          type: string
+          format: date
+      required:
+      - amount_paise
+      - branch
+      - category
+      - method
+    FreezeRequest:
+      type: object
+      properties:
+        starts:
+          type: string
+          format: date
+        until:
+          type: string
+          format: date
+      required:
+      - until
+    LoginRequest:
+      type: object
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+          description: Email (staff) or 10-digit mobile number (members)
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - identifier
+      - password
+    Me:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        initials:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+      required:
+      - email
+      - id
+      - initials
+      - name
+      - phone
+      - roles
+    Member:
+      type: object
+      description: |-
+        What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
+        and set the member's app login (their phone + a password).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+        name:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 13
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        home_branch:
+          type: integer
+        trainer:
+          type: integer
+          nullable: true
+        trainer_name:
+          type: string
+          readOnly: true
+        goal:
+          type: string
+          maxLength: 60
+        joined_on:
+          type: string
+          format: date
+        device_user_id:
+          type: string
+          description: This member's number on the turnstile
+          maxLength: 20
+        is_archived:
+          type: boolean
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MemberStatusEnum'
+          readOnly: true
+        balance_paise:
+          type: integer
+          readOnly: true
+        plan:
+          allOf:
+          - $ref: '#/components/schemas/CurrentPlan'
+          nullable: true
+          readOnly: true
+        has_login:
+          type: boolean
+          readOnly: true
+      required:
+      - balance_paise
+      - has_login
+      - home_branch
+      - id
+      - name
+      - phone
+      - plan
+      - status
+      - trainer_name
+    MemberRequest:
+      type: object
+      description: |-
+        What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
+        and set the member's app login (their phone + a password).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 13
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        home_branch:
+          type: integer
+        trainer:
+          type: integer
+          nullable: true
+        goal:
+          type: string
+          maxLength: 60
+        joined_on:
+          type: string
+          format: date
+        device_user_id:
+          type: string
+          description: This member's number on the turnstile
+          maxLength: 20
+        is_archived:
+          type: boolean
+        first_plan:
+          type: integer
+          writeOnly: true
+        offer:
+          type: integer
+          writeOnly: true
+          nullable: true
+        paid_paise:
+          type: integer
+          minimum: 0
+          writeOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+          minLength: 6
+      required:
+      - home_branch
+      - name
+      - phone
+    MemberStatusEnum:
+      enum:
+      - active
+      - expiring
+      - due
+      - frozen
+      - expired
+      - none
+      type: string
+      description: |-
+        * `active` - active
+        * `expiring` - expiring
+        * `due` - due
+        * `frozen` - frozen
+        * `expired` - expired
+        * `none` - none
+    MethodEnum:
+      enum:
+      - cash
+      - upi
+      - card
+      - bank
+      type: string
+      description: |-
+        * `cash` - Cash
+        * `upi` - UPI
+        * `card` - Card
+        * `bank` - Bank transfer
+    Note:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        text:
+          type: string
+        author:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - created_at
+      - id
+      - text
+    NoteRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+      required:
+      - text
+    Offer:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        percent_off:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        amount_off_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        plans:
+          type: array
+          items:
+            type: integer
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+      required:
+      - ends
+      - id
+      - name
+      - starts
+    OfferRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        percent_off:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        amount_off_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        plans:
+          type: array
+          items:
+            type: integer
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+      required:
+      - ends
+      - name
+      - starts
+    PaginatedBranchList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Branch'
+    PaginatedCheckInList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckIn'
+    PaginatedExpenseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+    PaginatedMemberList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+    PaginatedOfferList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offer'
+    PaginatedPaymentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+    PaginatedPlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+    PaginatedStaffList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Staff'
+    PaginatedSubscriptionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+    PaginatedSupportAccessList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupportAccess'
+    PaginatedTaskList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    PasswordRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 6
+      required:
+      - password
+    PatchedBranchRequest:
+      type: object
+      description: A branch with its opening sessions. Sending `sessions` replaces
+        the whole list (as the Edit Branch form does).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        address:
+          type: string
+        phone:
+          type: string
+          maxLength: 20
+        days_open:
+          $ref: '#/components/schemas/DaysOpenEnum'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionRequest'
+        is_active:
+          type: boolean
+    PatchedExpenseRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        paid_to:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 200
+        spent_on:
+          type: string
+          format: date
+    PatchedMemberRequest:
+      type: object
+      description: |-
+        What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
+        and set the member's app login (their phone + a password).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 13
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        home_branch:
+          type: integer
+        trainer:
+          type: integer
+          nullable: true
+        goal:
+          type: string
+          maxLength: 60
+        joined_on:
+          type: string
+          format: date
+        device_user_id:
+          type: string
+          description: This member's number on the turnstile
+          maxLength: 20
+        is_archived:
+          type: boolean
+        first_plan:
+          type: integer
+          writeOnly: true
+        offer:
+          type: integer
+          writeOnly: true
+          nullable: true
+        paid_paise:
+          type: integer
+          minimum: 0
+          writeOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+          minLength: 6
+    PatchedOfferRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        percent_off:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        amount_off_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        plans:
+          type: array
+          items:
+            type: integer
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+    PatchedPaymentCorrectRequest:
+      type: object
+      description: Admins may correct the amount, method or note. The change is audited.
+      properties:
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        note:
+          type: string
+          maxLength: 200
+        reason:
+          type: string
+          writeOnly: true
+          minLength: 1
+    PatchedPlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        kind:
+          $ref: '#/components/schemas/PlanKindEnum'
+        months:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'Memberships: 1, 3, 6, 12'
+        sessions:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'Personal training: number of sessions'
+        price_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        includes:
+          type: string
+          maxLength: 120
+        on_sale:
+          type: boolean
+    PatchedStaffRequest:
+      type: object
+      description: A trainer, receptionist or admin. Creating one creates their login
+        (email + a first password they change).
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          nullable: true
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        branches:
+          type: array
+          items:
+            type: integer
+        is_active:
+          type: boolean
+        shift:
+          type: string
+          maxLength: 60
+        specialities:
+          type: string
+          maxLength: 120
+        day_off:
+          type: string
+          maxLength: 12
+        device_user_id:
+          type: string
+          description: This person's number on the turnstile
+          maxLength: 20
+    PatchedTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        details:
+          type: string
+        assignee:
+          type: integer
+        due_date:
+          type: string
+          format: date
+        due_time:
+          type: string
+          format: time
+          nullable: true
+          description: Without a time, due by the end of the day
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        member:
+          type: integer
+        member_name:
+          type: string
+          readOnly: true
+        subscription:
+          type: integer
+          nullable: true
+        branch:
+          type: integer
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        note:
+          type: string
+          maxLength: 200
+        taken_by_name:
+          type: string
+          readOnly: true
+        taken_at:
+          type: string
+          format: date-time
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+      required:
+      - amount_paise
+      - id
+      - member
+      - member_name
+      - method
+      - taken_at
+      - taken_by_name
+      - void_reason
+      - voided
+    PaymentCorrect:
+      type: object
+      description: Admins may correct the amount, method or note. The change is audited.
+      properties:
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - amount_paise
+      - method
+    PaymentCorrectRequest:
+      type: object
+      description: Admins may correct the amount, method or note. The change is audited.
+      properties:
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        note:
+          type: string
+          maxLength: 200
+        reason:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - amount_paise
+      - method
+      - reason
+    PaymentRequest:
+      type: object
+      properties:
+        member:
+          type: integer
+        subscription:
+          type: integer
+          nullable: true
+        branch:
+          type: integer
+        amount_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - amount_paise
+      - member
+      - method
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        kind:
+          $ref: '#/components/schemas/PlanKindEnum'
+        months:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'Memberships: 1, 3, 6, 12'
+        sessions:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'Personal training: number of sessions'
+        price_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        includes:
+          type: string
+          maxLength: 120
+        on_sale:
+          type: boolean
+      required:
+      - id
+      - name
+      - price_paise
+    PlanKindEnum:
+      enum:
+      - membership
+      - pt
+      type: string
+      description: |-
+        * `membership` - Membership
+        * `pt` - Personal training
+    PlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        kind:
+          $ref: '#/components/schemas/PlanKindEnum'
+        months:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'Memberships: 1, 3, 6, 12'
+        sessions:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'Personal training: number of sessions'
+        price_paise:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        includes:
+          type: string
+          maxLength: 120
+        on_sale:
+          type: boolean
+      required:
+      - name
+      - price_paise
+    PunchRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+          description: The person's number on the device
+        at:
+          type: string
+          format: date-time
+          description: When they punched; now if missing
+      required:
+      - user_id
+    QRRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: The code printed on the branch's wall QR
+      required:
+      - code
+    Role:
+      type: object
+      properties:
+        gym:
+          type: string
+          description: Sent by the app as the X-Gym header
+          readOnly: true
+        gym_name:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_owner:
+          type: boolean
+          description: The admin who handles Rackline billing; other admins can't
+            remove them
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchRef'
+          readOnly: true
+      required:
+      - branches
+      - gym
+      - gym_name
+      - role
+    RoleEnum:
+      enum:
+      - admin
+      - receptionist
+      - trainer
+      - member
+      type: string
+      description: |-
+        * `admin` - Admin
+        * `receptionist` - Receptionist
+        * `trainer` - Trainer
+        * `member` - Member
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 40
+        starts:
+          type: string
+          format: time
+        ends:
+          type: string
+          format: time
+      required:
+      - ends
+      - id
+      - name
+      - starts
+    SessionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+        starts:
+          type: string
+          format: time
+        ends:
+          type: string
+          format: time
+      required:
+      - ends
+      - name
+      - starts
+    SourceEnum:
+      enum:
+      - desk
+      - qr
+      - device
+      type: string
+      description: |-
+        * `desk` - Front desk
+        * `qr` - Wall QR
+        * `device` - Turnstile or biometric
+    Staff:
+      type: object
+      description: A trainer, receptionist or admin. Creating one creates their login
+        (email + a first password they change).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        branches:
+          type: array
+          items:
+            type: integer
+        is_owner:
+          type: boolean
+          readOnly: true
+          description: The admin who handles Rackline billing; other admins can't
+            remove them
+        is_active:
+          type: boolean
+        shift:
+          type: string
+          maxLength: 60
+        specialities:
+          type: string
+          maxLength: 120
+        day_off:
+          type: string
+          maxLength: 12
+        device_user_id:
+          type: string
+          description: This person's number on the turnstile
+          maxLength: 20
+      required:
+      - branches
+      - email
+      - id
+      - is_owner
+      - name
+      - role
+    StaffRequest:
+      type: object
+      description: A trainer, receptionist or admin. Creating one creates their login
+        (email + a first password they change).
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          nullable: true
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        branches:
+          type: array
+          items:
+            type: integer
+        is_active:
+          type: boolean
+        shift:
+          type: string
+          maxLength: 60
+        specialities:
+          type: string
+          maxLength: 120
+        day_off:
+          type: string
+          maxLength: 12
+        device_user_id:
+          type: string
+          description: This person's number on the turnstile
+          maxLength: 20
+      required:
+      - branches
+      - email
+      - name
+      - role
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        member:
+          type: integer
+        plan:
+          type: integer
+        plan_name:
+          type: string
+          readOnly: true
+        offer:
+          type: integer
+          nullable: true
+        offer_name:
+          type: string
+          readOnly: true
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+          readOnly: true
+        list_price_paise:
+          type: integer
+          readOnly: true
+          description: The plan's price at sale
+        price_paise:
+          type: integer
+          readOnly: true
+          description: What the member owes for it, after the offer
+        paid_paise:
+          type: integer
+          readOnly: true
+        frozen_from:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        frozen_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        cancelled:
+          type: boolean
+          readOnly: true
+      required:
+      - cancelled
+      - ends
+      - frozen_from
+      - frozen_until
+      - id
+      - list_price_paise
+      - member
+      - offer_name
+      - paid_paise
+      - plan
+      - plan_name
+      - price_paise
+    SubscriptionRequest:
+      type: object
+      properties:
+        member:
+          type: integer
+        plan:
+          type: integer
+        offer:
+          type: integer
+          nullable: true
+        starts:
+          type: string
+          format: date
+      required:
+      - member
+      - plan
+    SupportAccess:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        starts:
+          type: string
+          format: date-time
+          readOnly: true
+        ends:
+          type: string
+          format: date-time
+          readOnly: true
+        granted_by:
+          type: integer
+          readOnly: true
+      required:
+      - ends
+      - granted_by
+      - id
+      - starts
+    SupportAccessRequest:
+      type: object
+      properties:
+        hours:
+          type: integer
+          maximum: 72
+          minimum: 1
+          writeOnly: true
+          description: How long Rackline support may look
+      required:
+      - hours
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 160
+        details:
+          type: string
+        assignee:
+          type: integer
+        assignee_name:
+          type: string
+          readOnly: true
+        assignee_role:
+          type: string
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+        due_time:
+          type: string
+          format: time
+          nullable: true
+          description: Without a time, due by the end of the day
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TaskStatusEnum'
+          readOnly: true
+        is_overdue:
+          type: boolean
+          readOnly: true
+        created_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskUpdate'
+          readOnly: true
+      required:
+      - assignee
+      - assignee_name
+      - assignee_role
+      - created_at
+      - created_by_name
+      - due_date
+      - id
+      - is_overdue
+      - status
+      - title
+      - updates
+    TaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        details:
+          type: string
+        assignee:
+          type: integer
+        due_date:
+          type: string
+          format: date
+        due_time:
+          type: string
+          format: time
+          nullable: true
+          description: Without a time, due by the end of the day
+      required:
+      - assignee
+      - due_date
+      - title
+    TaskStatusEnum:
+      enum:
+      - todo
+      - doing
+      - done
+      type: string
+      description: |-
+        * `todo` - To do
+        * `doing` - In progress
+        * `done` - Done
+    TaskUpdate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/TaskUpdateKindEnum'
+          readOnly: true
+        text:
+          type: string
+        author:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - created_at
+      - id
+      - kind
+      - text
+    TaskUpdateKindEnum:
+      enum:
+      - note
+      - status
+      type: string
+      description: |-
+        * `note` - Note
+        * `status` - Status
+    TaskUpdateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+      required:
+      - text
+    TokenBlacklistRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    Tokens:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    VoidRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - reason
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

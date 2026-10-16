@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+staticfiles/
+media/
+db.sqlite3
+
+# Secrets: copy .env.example to .env
+.env
+*.env.local
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

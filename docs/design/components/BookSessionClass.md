@@ -1,0 +1,31 @@
+# BookSessionClass
+
+Booking a class: each class that day as a ChoiceCard with its time, coach and spots left.
+
+## Markup (from the design system preview)
+
+```html
+<div class="rl-app rl-app--task rl-root" data-bkscreen data-static>
+<header class="rl-appbar"><div class="rl-appbar__in">
+  <button class="rl-iconbtn rl-iconbtn--plain" type="button" data-task-back aria-label="Close"><Icon class="rl-icon"/></button>
+  <h1 class="rl-topbar__title">Book Session</h1>
+</div></header>
+<main class="rl-app__main"><form class="rl-form" novalidate onsubmit="return false">
+  <fieldset class="rl-fieldset"><legend>What</legend><div class="rl-chips"><label class="rl-chipopt"><input type="radio" name="bk-kind" value="pt"><span>Personal training</span></label><label class="rl-chipopt"><input type="radio" name="bk-kind" value="class" checked><span>Class</span></label></div>
+    <p class="rl-row__meta" data-for-kind="pt" hidden style="margin-top:var(--space-2)">With Arjun Rao, 45 minutes. 4 sessions left in your pack.</p>
+    <p class="rl-row__meta" data-for-kind="class" style="margin-top:var(--space-2)">Classes are part of your Premium plan.</p></fieldset>
+  <fieldset class="rl-fieldset"><legend>Day</legend><div class="rl-daystrip" role="radiogroup" aria-label="Day"><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-04" aria-label="Today, Sunday 4 October"><span><small>Today</small><b>4</b></span></label><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-05" checked aria-label="Monday 5 October"><span><small>Mon</small><b>5</b></span></label><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-06" aria-label="Tuesday 6 October"><span><small>Tue</small><b>6</b></span></label><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-07" aria-label="Wednesday 7 October"><span><small>Wed</small><b>7</b></span></label><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-08" aria-label="Thursday 8 October"><span><small>Thu</small><b>8</b></span></label><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-09" aria-label="Friday 9 October"><span><small>Fri</small><b>9</b></span></label><label class="rl-day"><input type="radio" name="bk-day" value="2026-10-10" aria-label="Saturday 10 October"><span><small>Sat</small><b>10</b></span></label></div></fieldset>
+  <fieldset class="rl-fieldset" data-pick-box><legend data-pick-legend>Class</legend><div data-pick-list><div class="rl-choices"><label class="rl-choice"><input type="radio" name="bk-class" value="Yoga Class|11:30 AM"><span class="rl-choice__box"><span class="rl-choice__mark"><Icon class="rl-icon rl-icon--xs"/></span><span class="rl-choice__text"><span class="rl-row__title">Yoga Class, 11:30 AM</span><span class="rl-row__meta">Neha Iyer • 8 spots left</span></span></span></label><label class="rl-choice"><input type="radio" name="bk-class" value="HIIT Burn|6:00 PM"><span class="rl-choice__box"><span class="rl-choice__mark"><Icon class="rl-icon rl-icon--xs"/></span><span class="rl-choice__text"><span class="rl-row__title">HIIT Burn, 6:00 PM</span><span class="rl-row__meta">Arjun Rao • 11 spots left</span></span></span></label></div></div>
+    <p class="rl-field__error" role="alert" data-pick-error hidden><Icon/><span>Choose a class</span></p></fieldset>
+</form></main>
+<div class="rl-actionbar"><div class="rl-actionbar__in"><div class="rl-actionbar__sum"><span data-sum-day>Mon 5 Oct</span><strong data-sum-time>Pick a time</strong></div><button class="rl-button" type="button" data-book>Book Session</button></div></div>
+<div class="rl-scrim"></div>
+<div class="rl-sheet" id="bk-done" data-modal role="dialog" aria-modal="true" aria-labelledby="bk-done-title">
+  <span class="rl-sheet__grab" aria-hidden="true"></span>
+  <div class="rl-confirm"><span class="rl-confirm__mark" aria-hidden="true"><Icon class="rl-icon"/></span><h2 class="rl-confirm__title" id="bk-done-title">Session booked</h2><p class="rl-confirm__text">See you there. We’ll remind you an hour before.</p></div>
+  <div class="rl-idcard"><dl class="rl-facts" style="margin:0;padding:0;border:0"><dt>When</dt><dd data-r="when">Mon 5 Oct, 6:00 PM</dd><dt>With</dt><dd data-r="with">Arjun Rao</dd><dt>Where</dt><dd>Rackline Indiranagar</dd><dt>Your pack</dt><dd data-r="pack">3 sessions left</dd></dl></div>
+  <div class="rl-sheet__actions"><button class="rl-button rl-button--block" type="button" data-done>Done</button></div>
+</div>
+<script type="application/json">{"pt": {"2026-10-04": [["11:00 AM", "yours"], ["1:30 PM", "open"], ["7:00 PM", "open"]], "2026-10-05": [["7:00 AM", "open"], ["8:00 AM", "open"], ["9:00 AM", "yours"], ["7:00 PM", "open"]], "2026-10-06": [["7:00 AM", "open"], ["6:00 PM", "open"], ["7:00 PM", "open"]], "2026-10-07": [], "2026-10-08": [["7:00 AM", "open"], ["8:00 AM", "open"], ["9:00 AM", "yours"], ["7:00 PM", "open"]], "2026-10-09": [["7:00 AM", "open"], ["7:00 PM", "open"]], "2026-10-10": [["9:00 AM", "open"], ["10:00 AM", "open"], ["11:00 AM", "open"]]}, "classes": {"2026-10-04": [{"name": "HIIT Burn", "time": "6:00 PM", "coach": "Arjun Rao", "left": 7}, {"name": "Power Yoga", "time": "7:00 PM", "coach": "Neha Iyer", "left": 8}], "2026-10-05": [{"name": "Yoga Class", "time": "11:30 AM", "coach": "Neha Iyer", "left": 8}, {"name": "HIIT Burn", "time": "6:00 PM", "coach": "Arjun Rao", "left": 11}], "2026-10-06": [{"name": "Strength Circuit", "time": "7:00 AM", "coach": "Kavya Shetty", "left": 6}, {"name": "Power Yoga", "time": "7:00 PM", "coach": "Neha Iyer", "left": 0}], "2026-10-07": [{"name": "Yoga Class", "time": "11:30 AM", "coach": "Neha Iyer", "left": 14}, {"name": "HIIT Burn", "time": "6:00 PM", "coach": "Kavya Shetty", "left": 9}], "2026-10-08": [{"name": "Strength Circuit", "time": "7:00 AM", "coach": "Kavya Shetty", "left": 12}], "2026-10-09": [{"name": "HIIT Burn", "time": "6:00 PM", "coach": "Arjun Rao", "left": 5}, {"name": "Power Yoga", "time": "7:00 PM", "coach": "Neha Iyer", "left": 10}], "2026-10-10": [{"name": "Weekend Bootcamp", "time": "8:00 AM", "coach": "Arjun Rao", "left": 2}]}, "days": {"2026-10-04": "Sun 4 Oct", "2026-10-05": "Mon 5 Oct", "2026-10-06": "Tue 6 Oct", "2026-10-07": "Wed 7 Oct", "2026-10-08": "Thu 8 Oct", "2026-10-09": "Fri 9 Oct", "2026-10-10": "Sat 10 Oct"}, "packLeft": 4}</script>
+</div>
+```

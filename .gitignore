@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+api/staticfiles/
+api/db.sqlite3
+api/media/
+
+# Secrets
+.env
+*.env.local
+
+# Node (web app)
+node_modules/
+web/.next/
+web/out/
+web/.env*.local
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+web/test-results/
+web/playwright-report/
+web/public/sw.js
+web/public/sw.js.map
+web/public/swe-worker-*.js
+*.tsbuildinfo

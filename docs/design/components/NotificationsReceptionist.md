@@ -1,0 +1,26 @@
+# NotificationsReceptionist
+
+The front desk's notifications: a booked member who hasn't arrived, a member who checked in with money due, a membership ending today. Each leads to Attendance, Collect Payment or the filtered Members list.
+
+## Markup (from the design system preview)
+
+```html
+<div class="rl-app rl-root" data-nscreen="desk">
+<header class="rl-appbar rl-appbar--scroll"><div class="rl-appbar__in">
+  <button class="rl-iconbtn rl-iconbtn--plain" type="button" data-back aria-label="Back"><Icon class="rl-icon"/></button>
+  <div class="rl-appbar__who"><h1 class="rl-pagetitle">Notifications</h1><p class="rl-appbar__branch" data-unread-text>3 unread</p></div>
+</div></header>
+<main class="rl-app__main">
+<section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Today</h2><button class="rl-link" type="button" data-read-all><span>Mark All as Read</span></button></div><ul class="rl-card rl-activity"><li><button class="rl-activity__row rl-notice is-unread" type="button" data-notice="0" data-go="attendance"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-activity__text"><span class="rl-row__body"><strong>Rahul Kumar</strong> has personal training with Arjun at 9:00 AM. He hasn’t checked in yet.</span><span class="rl-row__meta">10 min ago</span></span><span class="rl-notice__dot" aria-label="Unread"></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li><li><button class="rl-activity__row rl-notice is-unread" type="button" data-notice="1" data-go="collect"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-activity__text"><span class="rl-row__body"><strong>Farhan Ali</strong> checked in with ₹1,500 due. Collect it before he leaves.</span><span class="rl-row__meta">19 min ago</span></span><span class="rl-notice__dot" aria-label="Unread"></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li><li><button class="rl-activity__row rl-notice is-unread" type="button" data-notice="2" data-go="expiring"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-activity__text"><span class="rl-row__body"><strong>Karthik Iyer</strong>’s membership ends today. Offer a renewal.</span><span class="rl-row__meta">31 min ago</span></span><span class="rl-notice__dot" aria-label="Unread"></span><Icon class="rl-icon rl-icon--sm rl-attn__chev"/></button></li></ul></section>
+<section class="rl-section"><div class="rl-section__head"><h2 class="rl-section__title">Earlier</h2></div><ul class="rl-card rl-activity"><li><button class="rl-activity__row rl-notice" type="button" data-notice="3"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-activity__text"><span class="rl-row__body">Your shift tomorrow: <strong>Morning, 6 AM to 2 PM</strong>.</span><span class="rl-row__meta">Yesterday</span></span><span class="rl-notice__dot" aria-label="Unread" hidden></span><span class="rl-notice__pad" aria-hidden="true"></span></button></li></ul></section>
+<p class="rl-row__meta" style="text-align:center">Notifications from the last 7 days.</p>
+</main>
+<nav class="rl-tabbar" aria-label="Main"><div class="rl-tabbar__in"><a class="rl-tab" href="#" aria-current="page"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Home</a><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Members</a><button class="rl-fab" type="button" data-sheet="nt-desk-create" aria-haspopup="dialog" aria-expanded="false" aria-label="Create"><Icon class="rl-icon"/></button><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>Attendance</a><a class="rl-tab" href="#"><span class="rl-tab__icon"><Icon class="rl-icon"/></span>More</a></div></nav>
+<div class="rl-scrim" data-close></div>
+<div class="rl-sheet" id="nt-desk-create" role="dialog" aria-modal="true" aria-labelledby="nt-desk-create-title">
+  <span class="rl-sheet__grab" aria-hidden="true"></span>
+  <div class="rl-sheet__head"><h2 class="rl-section__title" id="nt-desk-create-title">Create</h2><button class="rl-iconbtn rl-iconbtn--plain" type="button" data-close aria-label="Close"><Icon class="rl-icon rl-icon--sm"/></button></div>
+  <ul class="rl-sheet__list"><li><button class="rl-sheet__item" type="button" data-checkin-open><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Check In</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Add Member</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Collect Payment</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li><li><button class="rl-sheet__item" type="button"><span class="rl-chipicon"><Icon class="rl-icon rl-icon--sm"/></span><span class="rl-sheet__text">Add Subscription</span><Icon class="rl-icon rl-icon--sm rl-chev"/></button></li></ul>
+</div>
+</div>
+```

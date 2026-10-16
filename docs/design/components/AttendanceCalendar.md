@@ -1,0 +1,18 @@
+# AttendanceCalendar
+
+Four weeks of check-ins as a calendar of dots.
+
+Use on the Progress tab. You provide the days. A `volt` dot is a check-in, a `surface` dot is a day without one, a ring is today. Two lines above give the streak and the count for the last 30 days, and a legend under the grid names the three kinds of dot.
+
+- Each dot carries the date and its state in an `aria-label`; the legend is for sighted readers.
+- The weeks run Monday to Sunday and end with the current week.
+
+## Markup (from the design system preview)
+
+```html
+<div class="rl-root demo"><div class="rl-card rl-card--pad">
+  <p class="rl-row__title">Checked in 8 days in a row</p><p class="rl-row__meta">24 check-ins in the last 30 days</p>
+  <ol class="rl-cal" aria-label="Check-ins, 7 Sep to 4 Oct"><li class="rl-cal__head" aria-hidden="true">M</li><li class="rl-cal__head" aria-hidden="true">T</li><li class="rl-cal__head" aria-hidden="true">W</li><li class="rl-cal__head" aria-hidden="true">T</li><li class="rl-cal__head" aria-hidden="true">F</li><li class="rl-cal__head" aria-hidden="true">S</li><li class="rl-cal__head" aria-hidden="true">S</li><li><span class="rl-cal__day" aria-label="Mon 7 Sep, checked in">7</span></li><li><span class="rl-cal__day" aria-label="Tue 8 Sep, checked in">8</span></li><li><span class="rl-cal__day" aria-label="Wed 9 Sep, checked in">9</span></li><li><span class="rl-cal__day" aria-label="Thu 10 Sep, checked in">10</span></li><li><span class="rl-cal__day" aria-label="Fri 11 Sep, checked in">11</span></li><li><span class="rl-cal__day" aria-label="Sat 12 Sep, checked in">12</span></li><li><span class="rl-cal__day rl-cal__day--missed" aria-label="Sun 13 Sep, no check-in">13</span></li><li><span class="rl-cal__day" aria-label="Mon 14 Sep, checked in">14</span></li><li><span class="rl-cal__day" aria-label="Tue 15 Sep, checked in">15</span></li><li><span class="rl-cal__day" aria-label="Wed 16 Sep, checked in">16</span></li><li><span class="rl-cal__day rl-cal__day--missed" aria-label="Thu 17 Sep, no check-in">17</span></li><li><span class="rl-cal__day" aria-label="Fri 18 Sep, checked in">18</span></li><li><span class="rl-cal__day" aria-label="Sat 19 Sep, checked in">19</span></li><li><span class="rl-cal__day rl-cal__day--missed" aria-label="Sun 20 Sep, no check-in">20</span></li><li><span class="rl-cal__day" aria-label="Mon 21 Sep, checked in">21</span></li><li><span class="rl-cal__day" aria-label="Tue 22 Sep, checked in">22</span></li><li><span class="rl-cal__day" aria-label="Wed 23 Sep, checked in">23</span></li><li><span class="rl-cal__day" aria-label="Thu 24 Sep, checked in">24</span></li><li><span class="rl-cal__day rl-cal__day--missed" aria-label="Fri 25 Sep, no check-in">25</span></li><li><span class="rl-cal__day" aria-label="Sat 26 Sep, checked in">26</span></li><li><span class="rl-cal__day" aria-label="Sun 27 Sep, checked in">27</span></li><li><span class="rl-cal__day" aria-label="Mon 28 Sep, checked in">28</span></li><li><span class="rl-cal__day" aria-label="Tue 29 Sep, checked in">29</span></li><li><span class="rl-cal__day" aria-label="Wed 30 Sep, checked in">30</span></li><li><span class="rl-cal__day" aria-label="Thu 1 Oct, checked in">1</span></li><li><span class="rl-cal__day" aria-label="Fri 2 Oct, checked in">2</span></li><li><span class="rl-cal__day" aria-label="Sat 3 Oct, checked in">3</span></li><li><span class="rl-cal__day rl-cal__day--today" aria-label="Sun 4 Oct, today, not checked in yet">4</span></li></ol>
+  <p class="rl-legend" aria-hidden="true"><span><i></i>Checked in</span><span><i class="is-missed"></i>No check-in</span><span><i class="is-today"></i>Today</span></p>
+</div></div>
+```
