@@ -36,6 +36,38 @@ No Docker? Remove the `DATABASE_URL` line from `.env` and the API uses a local S
 
 Tests: `pytest` (in `api/`).
 
+### Background jobs
+
+Scheduled work (today's reminder list, and more later) runs on Celery with Redis as the broker. **You don't need
+it to develop**: with `CELERY_BROKER_URL` empty, a job runs in the process that asks for it, so the API and the
+tests behave the same as a server with a worker.
+
+To run it the way a server does, set `CELERY_BROKER_URL=redis://localhost:6379/0` in `api/.env` and start two
+more processes next to the API:
+
+```powershell
+cd api; .venv\Scripts\activate
+celery -A config worker --loglevel=info      # runs the jobs
+celery -A config beat   --loglevel=info      # the clock that hands them out, in another terminal
+```
+
+Or let Docker run both against the same Redis: `docker compose up -d worker beat`.
+
+Beat ticks every quarter hour. Each gym gets its reminder list when **its own** clock strikes 6 AM, so a gym in
+Dubai and one in Bengaluru are each woken at their own six (quarter hours, because India is UTC+5:30 — an hourly
+tick would reach it at 6:30). Later ticks in the same hour find the rows already written and add nothing. The job writes a `ReminderDue` row per member who needs a
+nudge — a plan ending in 7, 3 or 0 days, or money owed — and sends nothing yet; WhatsApp is the next step.
+Running the job twice in a day adds nothing, and archived members and frozen plans are left alone.
+
+To see it work without waiting for 6 AM:
+
+```powershell
+cd api; python manage.py shell
+>>> from apps.reminders.tasks import sweep_reminders
+>>> from django.utils import timezone
+>>> sweep_reminders(at=timezone.now().isoformat())   # 0 unless some gym's clock says 6
+```
+
 ### Demo logins (password `rackline-demo`)
 
 | Who | Sign in with | Role |
@@ -101,6 +133,6 @@ Open http://localhost:3000 and sign in with a demo login. Details in `web/README
 
 ## Next steps
 
-1. WhatsApp renewal reminders (Celery + Redis, Rackline's number first).
+1. WhatsApp renewal reminders: send the `ReminderDue` rows the daily job already writes, from Rackline's number first.
 2. Turnstile vendor adapter (ZKTeco/eSSL push format), then the pilot at the current client from week 9.
 3. Password reset by the desk for staff, and members changing their own password.

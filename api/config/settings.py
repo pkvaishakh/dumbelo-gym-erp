@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     "apps.expenses",
     "apps.audit",
     "apps.reports",
+    "apps.reminders",
 ]
 
 MIDDLEWARE = [
@@ -127,6 +129,22 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api",  # set, not detected: detection uses os.path and breaks on Windows (tags become "api")
 }
+# ---- Background jobs (see config/celery.py) ----
+# No broker means no worker: tasks run where they are called, which is what the tests and a laptop without
+# Redis want. A server sets CELERY_BROKER_URL to its Redis.
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
+CELERY_TASK_ALWAYS_EAGER = not CELERY_BROKER_URL
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TIMEZONE = "UTC"  # beat ticks in UTC; each gym's own clock decides when its day starts (apps/core/clock.py)
+CELERY_BEAT_SCHEDULE = {
+    "reminders": {
+        "task": "apps.reminders.tasks.sweep_reminders",
+        # Every quarter hour, not every hour: India is UTC+5:30 and Nepal +5:45, so a tick on the hour would
+        # reach them at 6:30 and 6:45 their own time. The sweep is safe to repeat, so the extra ticks cost nothing.
+        "schedule": crontab(minute="*/15"),
+    },
+}
+
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_HEADERS = ["authorization", "content-type", "x-gym", "x-device-token"]
 

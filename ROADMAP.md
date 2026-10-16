@@ -31,7 +31,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Admin home summary and reports
 
 ## Before the pilot
-- [ ] Celery + Redis for scheduled jobs; daily reminder list (session 4)
+- [x] Celery + Redis for scheduled jobs; daily reminder list (session 4)
 - [ ] WhatsApp renewal and dues reminders (session 5)
 - [ ] CI for API, web and e2e (session 6)
 - [ ] Deploy setup: API + Postgres on AWS Mumbai, web on Vercel (session 7)
