@@ -85,7 +85,8 @@ cd api; python manage.py shell
 | Neeraj, Alex, Imran | neeraj@ / alex@ / imran@rackline.demo | Trainers |
 | Aarav Reddy | 9800000001 | Member (first 10 members have logins) |
 
-`python manage.py seed_demo --reset` rebuilds the demo gym.
+`python manage.py seed_demo --reset` rebuilds the demo gym. It also sends yesterday's and today's reminders
+through the fake sender, so the Reminders card on a member's profile has something in it.
 
 ## How the API works
 

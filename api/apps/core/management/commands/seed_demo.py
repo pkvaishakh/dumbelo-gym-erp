@@ -20,6 +20,9 @@ from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Offer, Plan
 from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
+from apps.messages.models import Message
+from apps.messages.services import send_due
+from apps.reminders.services import queue_for
 from apps.tasks.models import Task, TaskUpdate
 
 User = get_user_model()
@@ -176,9 +179,15 @@ class Command(BaseCommand):
             Expense.objects.create(gym=gym, branch=b, category="utilities", amount_paise=rnd.randint(8, 18) * 1000 * 100, method="upi", paid_to="BESCOM", spent_on=today.replace(day=min(5, today.day)), created_by=meera)
         Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today, created_by=meera)
 
+        # Yesterday's and today's reminders, sent by the fake sender, so the Reminders card has something in it.
+        for day in (today - timedelta(days=1), today):
+            queue_for(gym, day)
+            send_due(gym, day)
+
         self.stdout.write(self.style.SUCCESS(
             f"Demo gym ready: {len(branches)} branches, {len(staff)} staff, {len(people)} members, "
-            f"{CheckIn.objects.filter(gym=gym).count()} check-ins. Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
+            f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
+            f"Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
         ))
 
     def _try(self, branch, at, status_day=None, **kw):

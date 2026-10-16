@@ -88,3 +88,30 @@ test("admin: long lists load a page at a time, and the other list screens load",
     await expect(page.getByText("Something went wrong")).toHaveCount(0);
   }
 });
+
+test("admin: turns the gym's reminders off and on, and sees what a member was sent", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/more");
+  await page.getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Reminders to members" })).toBeVisible();
+
+  const setting = page.locator("label.rl-setting");
+  await expect(setting.getByRole("switch")).toBeChecked();
+  await setting.click();
+  await expect(setting.getByRole("switch")).not.toBeChecked();
+  await expect(setting.getByText(/^Off: no one is messaged/)).toBeVisible();
+  await setting.click();  // and back on, so the demo gym is left as it was
+  await expect(setting.getByRole("switch")).toBeChecked();
+
+  // a member who owes money has been messaged about it, and can be taken off the list
+  await page.goto("/members?status=due");
+  await page.locator("a.rl-mrow").first().click();
+  const card = page.locator("section").filter({ has: page.getByRole("heading", { name: "Reminders" }) });
+  await expect(card.getByText("Payment due").first()).toBeVisible();
+  await expect(card.getByText(/is still to pay on your/).first()).toBeVisible();
+  const theirs = card.locator("label.rl-setting");
+  await theirs.click();
+  await expect(theirs.getByRole("switch")).not.toBeChecked();
+  await theirs.click();
+  await expect(theirs.getByRole("switch")).toBeChecked();
+});
