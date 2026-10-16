@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from apps.core.models import GymScoped, TimeStamped
+from apps.core.models import GymScoped
 
 
 class CheckIn(GymScoped):
@@ -40,15 +40,27 @@ def _token():
     return secrets.token_urlsafe(24)
 
 
-class Device(TimeStamped):
-    """A turnstile or biometric reader that pushes each punch to /api/devices/punch/ with its token."""
+class Device(GymScoped):
+    """A turnstile or biometric reader that pushes each punch to /api/devices/punch/ with its token.
+
+    A serial is the maker's number on the box, so it only has to be unique inside the gym; two gyms may well
+    own the same model of reader. The token is unique everywhere, because a punch arrives with nothing else.
+    """
 
     branch = models.ForeignKey("gyms.Branch", on_delete=models.CASCADE, related_name="devices")
     name = models.CharField(max_length=60)
-    serial = models.CharField(max_length=60, unique=True)
+    serial = models.CharField(max_length=60)
     token = models.CharField(max_length=64, unique=True, default=_token)
     is_active = models.BooleanField(default=True)
     last_seen = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["gym", "serial"], name="device_serial_unique_in_gym")]
+
     def __str__(self):
         return f"{self.name} ({self.serial})"
+
+    def save(self, *args, **kwargs):
+        if self.branch_id and not self.gym_id:  # the branch decides the gym: the two can never disagree
+            self.gym_id = self.branch.gym_id
+        super().save(*args, **kwargs)

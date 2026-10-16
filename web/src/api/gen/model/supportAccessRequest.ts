@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * A window an admin opened for Rackline support. `open` says whether it is running right now.
+ */
 export interface SupportAccessRequest {
   /**
    * How long Rackline support may look

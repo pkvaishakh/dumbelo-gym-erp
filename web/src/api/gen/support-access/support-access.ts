@@ -39,7 +39,11 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * An admin lets Rackline support look inside the gym for a few hours.
+ * An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+
+A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
+written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
+what really happened.
  */
 export type supportAccessListResponse200 = {
   data: PaginatedSupportAccessList
@@ -155,7 +159,11 @@ export function useSupportAccessList<TData = Awaited<ReturnType<typeof supportAc
 
 
 /**
- * An admin lets Rackline support look inside the gym for a few hours.
+ * An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+
+A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
+written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
+what really happened.
  */
 export type supportAccessCreateResponse201 = {
   data: SupportAccess
@@ -231,6 +239,85 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getSupportAccessCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Take the access back now. Rackline loses the gym on its next call.
+ */
+export type supportAccessEndCreateResponse200 = {
+  data: SupportAccess
+  status: 200
+}
+    
+export type supportAccessEndCreateResponseSuccess = (supportAccessEndCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type supportAccessEndCreateResponse = (supportAccessEndCreateResponseSuccess)
+
+export const getSupportAccessEndCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/support-access/${id}/end/`
+}
+
+export const supportAccessEndCreate = async (id: number, options?: RequestInit): Promise<supportAccessEndCreateResponse> => {
+  
+  return apiFetch<supportAccessEndCreateResponse>(getSupportAccessEndCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getSupportAccessEndCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supportAccessEndCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof supportAccessEndCreate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['supportAccessEndCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof supportAccessEndCreate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  supportAccessEndCreate(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SupportAccessEndCreateMutationResult = NonNullable<Awaited<ReturnType<typeof supportAccessEndCreate>>>
+    
+    export type SupportAccessEndCreateMutationError = unknown
+
+    export const useSupportAccessEndCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof supportAccessEndCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof supportAccessEndCreate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getSupportAccessEndCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

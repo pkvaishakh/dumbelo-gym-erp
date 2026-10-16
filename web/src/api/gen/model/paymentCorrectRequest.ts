@@ -13,7 +13,7 @@ import type { MethodEnum } from './methodEnum';
 export interface PaymentCorrectRequest {
   /**
    * @minimum 0
-   * @maximum 2147483647
+   * @maximum 9223372036854776000
    */
   amount_paise: number;
   method: MethodEnum;

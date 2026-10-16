@@ -14,13 +14,13 @@ export interface OfferRequest {
   name: string;
   /**
    * @minimum 0
-   * @maximum 32767
+   * @maximum 9223372036854776000
    * @nullable
    */
   percent_off?: number | null;
   /**
    * @minimum 0
-   * @maximum 2147483647
+   * @maximum 9223372036854776000
    * @nullable
    */
   amount_off_paise?: number | null;

@@ -1,7 +1,7 @@
 from django.db.models import Count
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field, extend_schema_view
 from rest_framework import mixins, serializers, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -15,9 +15,10 @@ from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, ALL, DESK, GymViewMixin
 from apps.gyms.models import Branch, GymRole
 from apps.members.models import Member
+from apps.members.serializers import GymPK, gym_of
 
 from .models import CheckIn, Device
-from .services import check_in, count_by_session, session_name
+from .services import check_in, count_by_session, deactivate_device, rotate_device_token, session_name
 
 
 class CheckInSerializer(serializers.ModelSerializer):
@@ -219,3 +220,85 @@ class DevicePunchView(APIView):
                 return Response({"open": True, "recorded": False, "message": str(e.detail)})
             return Response({"open": False, "code": e.rule_code, "message": str(e.detail)})
         return Response({"open": True, "recorded": True, "checkin": c.id})
+
+
+class DeviceSerializer(serializers.ModelSerializer):
+    """A device as the Devices screen shows it. Never the token: that is shown once and then only on the device."""
+
+    branch = GymPK(Branch)
+    branch_name = serializers.CharField(source="branch.name", read_only=True)
+
+    class Meta:
+        model = Device
+        fields = ["id", "branch", "branch_name", "name", "serial", "is_active", "last_seen"]
+        read_only_fields = ["is_active", "last_seen"]
+
+    def validate_serial(self, serial):
+        serial = serial.strip()
+        clash = Device.objects.filter(gym=gym_of(self.context), serial__iexact=serial)
+        if self.instance:
+            clash = clash.exclude(pk=self.instance.pk)
+        if clash.exists():  # the same number twice in one gym means it was typed wrong
+            raise serializers.ValidationError("You already have a device with this serial number")
+        return serial
+
+
+class DeviceWithTokenSerializer(DeviceSerializer):
+    """The answer to adding a device or rotating its token: the one time the token is sent back."""
+
+    class Meta(DeviceSerializer.Meta):
+        fields = DeviceSerializer.Meta.fields + ["token"]
+        read_only_fields = DeviceSerializer.Meta.read_only_fields + ["token"]
+
+
+class DeviceEditSerializer(DeviceSerializer):
+    """Renaming a device or moving it to another branch. The serial belongs to the hardware, so it stays."""
+
+    class Meta(DeviceSerializer.Meta):
+        read_only_fields = DeviceSerializer.Meta.read_only_fields + ["serial"]
+
+
+@extend_schema_view(
+    list=extend_schema(parameters=[OpenApiParameter("branch", int, description="Only this branch's devices")]),
+    create=extend_schema(request=DeviceSerializer, responses={201: DeviceWithTokenSerializer}),
+)
+class DeviceViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    """The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+    Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+    copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+    stay part of the gym's history."""
+
+    roles = {"*": ADMIN}
+    filterset_fields = ["branch"]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return DeviceWithTokenSerializer
+        if self.action in ("update", "partial_update"):
+            return DeviceEditSerializer
+        return DeviceSerializer
+
+    def get_queryset(self):
+        qs = Device.objects.filter(gym=self.gym).select_related("branch")
+        return self.in_my_branches(qs, "branch").order_by("branch__name", "name")
+
+    def perform_create(self, serializer):
+        device = serializer.save()
+        record(self.request, "device.added", device, None, {"name": device.name, "serial": device.serial, "branch": device.branch_id})
+
+    @extend_schema(request=None, responses=DeviceSerializer)
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, pk=None):
+        """Switch a device off. Its token stops working at the door straight away."""
+        device = deactivate_device(self.get_object())
+        record(request, "device.deactivated", device, {"is_active": True}, {"is_active": False})
+        return Response(DeviceSerializer(device, context=self.get_serializer_context()).data)
+
+    @extend_schema(request=None, responses=DeviceWithTokenSerializer)
+    @action(detail=True, methods=["post"], url_path="rotate-token")
+    def rotate(self, request, pk=None):
+        """Give the device a new token, for a reader that was replaced or a token that got out."""
+        device = rotate_device_token(self.get_object())
+        record(request, "device.token_rotated", device)  # the token itself is never audited
+        return Response(DeviceWithTokenSerializer(device, context=self.get_serializer_context()).data)

@@ -6,9 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * A window an admin opened for Rackline support. `open` says whether it is running right now.
+ */
 export interface SupportAccess {
   readonly id: number;
   readonly starts: string;
   readonly ends: string;
   readonly granted_by: number;
+  readonly granted_by_name: string;
+  readonly open: boolean;
 }

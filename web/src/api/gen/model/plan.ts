@@ -15,18 +15,18 @@ export interface Plan {
   /**
    * Memberships: 1, 3, 6, 12
    * @minimum 0
-   * @maximum 32767
+   * @maximum 9223372036854776000
    */
   months?: number;
   /**
    * Personal training: number of sessions
    * @minimum 0
-   * @maximum 32767
+   * @maximum 9223372036854776000
    */
   sessions?: number;
   /**
    * @minimum 0
-   * @maximum 2147483647
+   * @maximum 9223372036854776000
    */
   price_paise: number;
   /** @maxLength 120 */

@@ -108,7 +108,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Sign out: the refresh token stops working, so a copy of it can't be used later.
+ * Sign out: the refresh token stops working, so a copy of it can't be used later. The refresh token is the
+proof, so an expired access token mustn't block it.
  */
 export type authLogoutCreateResponse200 = {
   data: void

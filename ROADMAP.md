@@ -6,7 +6,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Sign in by email (staff) or phone (member), JWT with refresh and logout
 - [x] Gyms, branches and named opening sessions; `X-Gym` tenancy with 404 for other gyms
 - [x] Staff: add, edit, deactivate; one role per gym, several branches
-- [ ] Support access: admin screen to grant and end a read-only window (session 3)
+- [x] Support access: admin screen to grant and end a read-only window (session 3)
 
 ## Members, plans and money
 - [x] Plans and offers (admin creates; receptionist applies fixed offers)
@@ -21,8 +21,8 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Front-desk check-in, one per person per local day, expired/frozen turned away
 - [x] Wall QR per branch and member/staff self check-in
 - [x] Turnstile/biometric punches at `/api/devices/punch/`
-- [ ] Device API: add, deactivate, rotate token (session 1)
-- [ ] Devices screen (session 2)
+- [x] Device API: add, deactivate, rotate token (session 1)
+- [x] Devices screen (session 2)
 - [x] Attendance by session; members, trainers and receptionists counted apart
 
 ## Staff work

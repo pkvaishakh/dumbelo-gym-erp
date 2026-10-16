@@ -5,7 +5,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from apps.attendance.models import CheckIn
+from apps.attendance.models import CheckIn, Device
 from apps.attendance.services import check_in
 from apps.expenses.models import Expense
 from apps.members.models import Member
@@ -23,6 +23,7 @@ def grow(w, n):
         check_in(w.a, member=m, source=CheckIn.DESK)
         Task.objects.create(gym=w.gym, title=f"Task {i}", assignee=w.desk, created_by=w.admin, due_date=w.today)
         Expense.objects.create(gym=w.gym, branch=w.a, category="other", amount_paise=1000, spent_on=w.today, created_by=w.admin)
+        Device.objects.create(branch=w.a, name=f"Door {i}", serial=f"ZK-{w.gym.slug}-{i}")
 
 
 def queries(client, url):
@@ -44,6 +45,7 @@ LISTS = [
     ("admin", "/api/tasks/"),
     ("admin", "/api/tasks/counts/"),
     ("admin", "/api/expenses/"),
+    ("admin", "/api/devices/"),
     ("admin", "/api/staff/"),
 ]
 

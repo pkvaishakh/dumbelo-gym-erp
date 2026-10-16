@@ -35,8 +35,9 @@ paths:
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
-      description: 'Sign out: the refresh token stops working, so a copy of it can''t
-        be used later.'
+      description: |-
+        Sign out: the refresh token stops working, so a copy of it can't be used later. The refresh token is the
+        proof, so an expired access token mustn't block it.
       tags:
       - auth
       requestBody:
@@ -298,7 +299,7 @@ paths:
         name: session
         schema:
           type: string
-        description: Session name, e.g. Morning
+        description: Session name, e.g. Morning; Other for outside every session
       - in: query
         name: source
         schema:
@@ -422,6 +423,223 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckIn'
+          description: ''
+  /api/devices/:
+    get:
+      operationId: devices_list
+      description: |-
+        The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+        Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+        copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+        stay part of the gym's history.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: Only this branch's devices
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeviceList'
+          description: ''
+    post:
+      operationId: devices_create
+      description: |-
+        The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+        Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+        copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+        stay part of the gym's history.
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceWithToken'
+          description: ''
+  /api/devices/{id}/:
+    get:
+      operationId: devices_retrieve
+      description: |-
+        The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+        Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+        copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+        stay part of the gym's history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: ''
+    put:
+      operationId: devices_update
+      description: |-
+        The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+        Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+        copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+        stay part of the gym's history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceEditRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeviceEditRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeviceEditRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceEdit'
+          description: ''
+    patch:
+      operationId: devices_partial_update
+      description: |-
+        The turnstiles and biometric readers that post to /api/devices/punch/. Admins only.
+
+        Adding a device or rotating its token answers with the token; it is never listed again, so it has to be
+        copied onto the device there and then. A device that has gone is switched off, never deleted: its punches
+        stay part of the gym's history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceEditRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceEditRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeviceEditRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceEdit'
+          description: ''
+  /api/devices/{id}/deactivate/:
+    post:
+      operationId: devices_deactivate_create
+      description: Switch a device off. Its token stops working at the door straight
+        away.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+          description: ''
+  /api/devices/{id}/rotate-token/:
+    post:
+      operationId: devices_rotate_token_create
+      description: Give the device a new token, for a reader that was replaced or
+        a token that got out.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this device.
+        required: true
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceWithToken'
           description: ''
   /api/devices/punch/:
     post:
@@ -2001,7 +2219,12 @@ paths:
   /api/support-access/:
     get:
       operationId: support_access_list
-      description: An admin lets Rackline support look inside the gym for a few hours.
+      description: |-
+        An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+
+        A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
+        written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
+        what really happened.
       parameters:
       - name: limit
         required: false
@@ -2028,7 +2251,12 @@ paths:
           description: ''
     post:
       operationId: support_access_create
-      description: An admin lets Rackline support look inside the gym for a few hours.
+      description: |-
+        An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+
+        A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
+        written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
+        what really happened.
       tags:
       - support-access
       requestBody:
@@ -2047,6 +2275,28 @@ paths:
       - jwtAuth: []
       responses:
         '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportAccess'
+          description: ''
+  /api/support-access/{id}/end/:
+    post:
+      operationId: support_access_end_create
+      description: Take the access back now. Rackline loses the gym on its next call.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this support access.
+        required: true
+      tags:
+      - support-access
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
           content:
             application/json:
               schema:
@@ -2594,6 +2844,148 @@ components:
       description: |-
         * `every_day` - Every day
         * `mon_sat` - Monday to Saturday
+    Device:
+      type: object
+      description: 'A device as the Devices screen shows it. Never the token: that
+        is shown once and then only on the device.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+        branch_name:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 60
+        serial:
+          type: string
+          maxLength: 60
+        is_active:
+          type: boolean
+          readOnly: true
+        last_seen:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - branch
+      - branch_name
+      - id
+      - is_active
+      - last_seen
+      - name
+      - serial
+    DeviceEdit:
+      type: object
+      description: Renaming a device or moving it to another branch. The serial belongs
+        to the hardware, so it stays.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+        branch_name:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 60
+        serial:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        last_seen:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - branch
+      - branch_name
+      - id
+      - is_active
+      - last_seen
+      - name
+      - serial
+    DeviceEditRequest:
+      type: object
+      description: Renaming a device or moving it to another branch. The serial belongs
+        to the hardware, so it stays.
+      properties:
+        branch:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+      required:
+      - branch
+      - name
+    DeviceRequest:
+      type: object
+      description: 'A device as the Devices screen shows it. Never the token: that
+        is shown once and then only on the device.'
+      properties:
+        branch:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
+        serial:
+          type: string
+          minLength: 1
+          maxLength: 60
+      required:
+      - branch
+      - name
+      - serial
+    DeviceWithToken:
+      type: object
+      description: 'The answer to adding a device or rotating its token: the one time
+        the token is sent back.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+        branch_name:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 60
+        serial:
+          type: string
+          maxLength: 60
+        is_active:
+          type: boolean
+          readOnly: true
+        last_seen:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - branch
+      - branch_name
+      - id
+      - is_active
+      - last_seen
+      - name
+      - serial
+      - token
     DoneRequest:
       type: object
       properties:
@@ -2615,8 +3007,9 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         paid_to:
@@ -2644,8 +3037,9 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         paid_to:
@@ -2907,13 +3301,15 @@ components:
           maxLength: 80
         percent_off:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           nullable: true
         amount_off_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           nullable: true
         plans:
           type: array
@@ -2941,13 +3337,15 @@ components:
           maxLength: 80
         percent_off:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           nullable: true
         amount_off_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           nullable: true
         plans:
           type: array
@@ -3011,6 +3409,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CheckIn'
+    PaginatedDeviceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
     PaginatedExpenseList:
       type: object
       required:
@@ -3248,6 +3669,17 @@ components:
             $ref: '#/components/schemas/SessionRequest'
         is_active:
           type: boolean
+    PatchedDeviceEditRequest:
+      type: object
+      description: Renaming a device or moving it to another branch. The serial belongs
+        to the hardware, so it stays.
+      properties:
+        branch:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 60
     PatchedExpenseRequest:
       type: object
       properties:
@@ -3257,8 +3689,9 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         paid_to:
@@ -3335,13 +3768,15 @@ components:
           maxLength: 80
         percent_off:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           nullable: true
         amount_off_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           nullable: true
         plans:
           type: array
@@ -3361,8 +3796,9 @@ components:
       properties:
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -3383,18 +3819,21 @@ components:
           $ref: '#/components/schemas/PlanKindEnum'
         months:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           description: 'Memberships: 1, 3, 6, 12'
         sessions:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           description: 'Personal training: number of sessions'
         price_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         includes:
           type: string
           maxLength: 120
@@ -3477,8 +3916,9 @@ components:
           type: integer
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -3513,8 +3953,9 @@ components:
       properties:
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -3529,8 +3970,9 @@ components:
       properties:
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -3556,8 +3998,9 @@ components:
           type: integer
         amount_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -3580,18 +4023,21 @@ components:
           $ref: '#/components/schemas/PlanKindEnum'
         months:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           description: 'Memberships: 1, 3, 6, 12'
         sessions:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           description: 'Personal training: number of sessions'
         price_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         includes:
           type: string
           maxLength: 120
@@ -3620,18 +4066,21 @@ components:
           $ref: '#/components/schemas/PlanKindEnum'
         months:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           description: 'Memberships: 1, 3, 6, 12'
         sessions:
           type: integer
-          maximum: 32767
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
           description: 'Personal training: number of sessions'
         price_paise:
           type: integer
-          maximum: 2147483647
+          maximum: 9223372036854775807
           minimum: 0
+          format: int64
         includes:
           type: string
           maxLength: 120
@@ -3922,6 +4371,8 @@ components:
       - plan
     SupportAccess:
       type: object
+      description: A window an admin opened for Rackline support. `open` says whether
+        it is running right now.
       properties:
         id:
           type: integer
@@ -3937,13 +4388,23 @@ components:
         granted_by:
           type: integer
           readOnly: true
+        granted_by_name:
+          type: string
+          readOnly: true
+        open:
+          type: boolean
+          readOnly: true
       required:
       - ends
       - granted_by
+      - granted_by_name
       - id
+      - open
       - starts
     SupportAccessRequest:
       type: object
+      description: A window an admin opened for Rackline support. `open` says whether
+        it is running right now.
       properties:
         hours:
           type: integer

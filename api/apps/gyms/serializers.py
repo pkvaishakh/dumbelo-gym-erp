@@ -6,6 +6,8 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.core.errors import RuleBroken
+
 from .models import Branch, BranchSession, GymRole, SupportAccess
 
 User = get_user_model()
@@ -141,14 +143,23 @@ class StaffSerializer(serializers.ModelSerializer):
 
 
 class SupportAccessSerializer(serializers.ModelSerializer):
+    """A window an admin opened for Rackline support. `open` says whether it is running right now."""
+
     hours = serializers.IntegerField(write_only=True, min_value=1, max_value=72, help_text="How long Rackline support may look")
+    granted_by_name = serializers.CharField(source="granted_by.name", read_only=True)
+    open = serializers.SerializerMethodField()
 
     class Meta:
         model = SupportAccess
-        fields = ["id", "starts", "ends", "hours", "granted_by"]
+        fields = ["id", "starts", "ends", "hours", "granted_by", "granted_by_name", "open"]
         read_only_fields = ["id", "starts", "ends", "granted_by"]
+
+    def get_open(self, window) -> bool:
+        return window.starts <= timezone.now() < window.ends
 
     def create(self, data):
         req = self.context["request"]
         now = timezone.now()
+        if SupportAccess.open_for(req.gym):
+            raise RuleBroken("already_open", "Rackline already has access. End it first to change how long it lasts.")
         return SupportAccess.objects.create(gym=req.gym, granted_by=req.user, starts=now, ends=now + timedelta(hours=data["hours"]))
