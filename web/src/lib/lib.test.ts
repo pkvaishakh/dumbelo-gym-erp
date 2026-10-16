@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { plural, rupees, toPaise } from "./format";
+import { plural, rupees, seen, toPaise } from "./format";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
 
@@ -18,6 +18,17 @@ describe("money", () => {
   it("counts in words", () => {
     expect(plural(1, "member")).toBe("1 member");
     expect(plural(1200, "member")).toBe("1,200 members");
+  });
+});
+
+describe("when a device was last seen", () => {
+  it("says Never for a device that has never punched", () => {
+    expect(seen(null)).toBe("Never");
+    expect(seen(undefined)).toBe("Never");
+    expect(seen("")).toBe("Never");
+  });
+  it("counts back from now for one that has", () => {
+    expect(seen(new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())).toBe("2 hours ago");
   });
 });
 

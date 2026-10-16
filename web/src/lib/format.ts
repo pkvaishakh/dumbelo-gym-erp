@@ -17,6 +17,8 @@ export const day = (iso: string) => format(parseISO(iso), "d MMM yyyy");
 export const dayShort = (iso: string) => format(parseISO(iso), "d MMM");
 export const isoDate = (date: Date) => format(date, "yyyy-MM-dd");
 export const ago = (iso: string) => formatDistanceToNowStrict(parseISO(iso), { addSuffix: true });
+/** When a device last spoke to us: "2 hours ago", or "Never" for one that never has. */
+export const seen = (iso: string | null | undefined) => (iso ? ago(iso) : "Never");
 export const daysLeft = (iso: string) => differenceInCalendarDays(parseISO(iso), new Date());
 
 /** "6:30 AM" from "06:30:00" */
@@ -58,4 +60,5 @@ export function phone(p: string | null | undefined) {
 
 export const STATUS_LABEL: Record<string, string> = {
   active: "Active", expiring: "Expiring", due: "Payment due", frozen: "Frozen", expired: "Expired", none: "No plan",
+  off: "Off", // a branch, staff member or device that has been switched off
 };

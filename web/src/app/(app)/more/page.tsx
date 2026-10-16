@@ -1,6 +1,6 @@
 "use client";
 import {
-  Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, LifeBuoy, LogOut, QrCode, Receipt, Repeat, Tag, UserRound, Users, Wallet,
+  Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, LifeBuoy, LogOut, QrCode, Receipt, Repeat, ScanLine, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -32,6 +32,7 @@ export default function MorePage() {
               <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={summary.data ? `${rupees(summary.data.expenses_month_paise)} this month` : undefined} />
               <MenuRow icon={Wallet} title="Today’s collection" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
+              <MenuRow icon={ScanLine} title="Devices" href="/devices" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
               <MenuRow icon={LifeBuoy} title="Rackline support access" onClick={() => setSupport(true)} />
             </ul>
