@@ -7,6 +7,8 @@ export default defineConfig({
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,
+  // On CI: failing lines annotated in the run's summary, plus an HTML report the workflow keeps when a run fails.
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     ...devices["Pixel 7"],

@@ -1,5 +1,7 @@
 # Rackline
 
+[![CI](https://github.com/pkvaishakh/rackline-gym-erp/actions/workflows/ci.yml/badge.svg)](https://github.com/pkvaishakh/rackline-gym-erp/actions/workflows/ci.yml)
+
 Gym management for many gyms: members, plans and payments, check-ins (desk, wall QR, turnstile), staff and tasks.
 
 ```
@@ -137,6 +139,20 @@ npm run dev
 ```
 
 Open http://localhost:3000 and sign in with a demo login. Details in `web/README.md`.
+
+## Checks on every push
+
+`.github/workflows/ci.yml` runs on every pull request and on every push to `main`, and does what you would do
+on your own machine before saying something is done:
+
+| Job | What it runs |
+|---|---|
+| API tests | Python 3.12 against Postgres 16, `pip install -r requirements-dev.txt`, `pytest` |
+| Web checks | Node 20, `npm ci`, then `npm run typecheck`, `lint`, `test` and `build` |
+| Flows | after both: the API with a freshly seeded demo gym, the built web app, `npm run e2e` in Chromium |
+
+When the flows fail, the run keeps the Playwright report as an artifact called `playwright-report`: it has each
+step, the page as the browser saw it and a trace of what broke.
 
 ## Next steps
 
