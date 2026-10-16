@@ -149,13 +149,33 @@ on your own machine before saying something is done:
 |---|---|
 | API tests | Python 3.12 against Postgres 16, `pip install -r requirements-dev.txt`, `pytest` |
 | Web checks | Node 20, `npm ci`, then `npm run typecheck`, `lint`, `test` and `build` |
-| Flows | after both: the API with a freshly seeded demo gym, the built web app, `npm run e2e` in Chromium |
+| API image | `docker build` of `api/`, then the container itself answering `/api/health/` |
+| Flows | after the API and web checks: the API with a freshly seeded demo gym, the built web app, `npm run e2e` in Chromium |
 
 When the flows fail, the run keeps the Playwright report as an artifact called `playwright-report`: it has each
 step, the page as the browser saw it and a trace of what broke.
 
+## Deploy
+
+`docs/deploy.md` is the runbook: the API on AWS Mumbai (`ap-south-1`) — App Runner, RDS Postgres, ElastiCache
+Redis, and the Celery worker and beat on ECS Fargate — and the web app on Vercel. It lists every setting a
+server needs and can be followed start to finish with your own AWS and Vercel accounts.
+
+What the repository does for you:
+
+| | |
+|---|---|
+| `api/Dockerfile` | gunicorn behind whitenoise, static files collected in, non-root, one image for the API, the worker and beat |
+| `PRODUCTION=true` | Refuses to start without `SECRET_KEY`, `ALLOWED_HOSTS`, `DATABASE_URL` and `CACHE_URL`; turns on the HTTPS-only settings. `python manage.py check --deploy` is clean |
+| `/api/health/` | "Is the API up and can it reach its database?" No sign-in, no `X-Gym`, and it answers the load balancer even though the check arrives with the container's own address |
+| `.github/workflows/deploy.yml` | Started by hand, only on a commit CI has passed: builds and pushes the image, migrates, rolls out, restarts the jobs, then asks `/api/health/` whether it worked |
+
+Nothing in this repository holds a real secret. The AWS role is assumed with OIDC and every value a server
+needs lives in its own environment (Secrets Manager for the four secret ones).
+
 ## Next steps
 
-1. WhatsApp renewal reminders: send the `ReminderDue` rows the daily job already writes, from Rackline's number first.
-2. Turnstile vendor adapter (ZKTeco/eSSL push format), then the pilot at the current client from week 9.
-3. Password reset by the desk for staff, and members changing their own password.
+1. Deploy the pilot: follow `docs/deploy.md`, then onboard the first real gym.
+2. Backups, the monthly restore drill, and `create_gym` for a real gym (session 8 in `ROADMAP.md`).
+3. Turnstile vendor adapter (ZKTeco/eSSL push format), then the pilot at the current client from week 9.
+4. Password reset by the desk for staff, and members changing their own password.

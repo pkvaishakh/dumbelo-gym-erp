@@ -1,0 +1,12 @@
+# Keep the image to the code it runs: no virtualenv, no local database, and above all no .env.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+*.env.local
+db.sqlite3
+staticfiles/
+media/
+tests/

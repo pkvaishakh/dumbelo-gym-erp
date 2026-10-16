@@ -6,6 +6,8 @@ import environ
 from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 
+from config.env import missing_in_production
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
@@ -17,6 +19,8 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 # PRODUCTION=true on every deployed server: no default secret, no debug, HTTPS only (see the end of this file).
 PRODUCTION = env("PRODUCTION")
+if PRODUCTION and (missing := missing_in_production(env)):
+    raise ImproperlyConfigured(f"PRODUCTION=true needs {', '.join(missing)} in the environment (see docs/deploy.md)")
 SECRET_KEY = env("SECRET_KEY") if PRODUCTION else env("SECRET_KEY", default="dev-only-not-a-secret-change-me-in-production-0000")
 DEBUG = env("DEBUG")
 if PRODUCTION and DEBUG:
@@ -49,7 +53,12 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Before anything that reads the Host header: the load balancer checks the container at its own address.
+    "apps.core.middleware.HealthCheckHost",
     "django.middleware.security.SecurityMiddleware",
+    # Serves /static/ (the admin and the docs page) straight from gunicorn, so a deploy needs no bucket or CDN.
+    # runserver serves static files itself, so on a laptop this middleware never has anything to do.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -97,6 +106,12 @@ USE_TZ = True  # stored in UTC, shown in the gym's time zone
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # `collectstatic` writes a compressed copy of every file next to it, which is what whitenoise serves.
+    # Names are not hashed: the only static files Rackline has are the admin's and the docs page's.
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
@@ -161,8 +176,10 @@ CORS_ALLOW_HEADERS = ["authorization", "content-type", "x-gym", "x-device-token"
 if PRODUCTION:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # behind the load balancer
     SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]  # the load balancer checks over plain HTTP; a redirect isn't healthy
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True  # api.<domain> is HTTPS from its first day, so it can be on the preload list
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "same-origin"

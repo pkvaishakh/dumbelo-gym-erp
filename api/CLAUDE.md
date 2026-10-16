@@ -3,9 +3,11 @@
 ## Layout
 
 ```
-config/              settings (django-environ, .env), urls (router + a few APIViews)
+config/              settings (django-environ, .env), env.py (what a server must be told with
+                     PRODUCTION=true), urls (router + a few APIViews)
 apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMixin), errors.py (RuleBroken,
                      error shape), clock.py (gym time zone, days, months), money.py, models.py (GymScoped base),
+                     views.py (/api/health/), middleware.py (lets the load balancer's check through),
                      management/commands/seed_demo.py
 apps/accounts/       User (email for staff, +91 phone for members), login/refresh/me
 apps/gyms/           Gym, Branch, BranchSession (named opening hours), GymRole (one role per user per gym,

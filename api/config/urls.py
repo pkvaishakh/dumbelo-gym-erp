@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import LoginView, LogoutView, MeView, RefreshView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
+from apps.core.views import HealthView
 from apps.expenses.views import ExpenseViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, SubscriptionViewSet
@@ -29,6 +30,7 @@ router.register("messages", MessageViewSet, basename="message")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/health/", HealthView.as_view(), name="health"),
     path("api/auth/login/", LoginView.as_view(), name="login"),
     path("api/auth/refresh/", RefreshView.as_view(), name="refresh"),
     path("api/auth/logout/", LogoutView.as_view(), name="logout"),

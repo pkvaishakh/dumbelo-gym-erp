@@ -953,6 +953,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/GymSettings'
           description: ''
+  /api/health/:
+    get:
+      operationId: health_retrieve
+      description: '200 with `{"status": "ok"}` while the API can reach its database,
+        503 when it can''t.'
+      summary: Is the API up?
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/me/:
     get:
       operationId: me_retrieve

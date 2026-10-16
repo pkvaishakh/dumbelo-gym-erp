@@ -7,5 +7,6 @@ django-filter==24.3
 django-cors-headers==4.6.0
 psycopg[binary]==3.2.3
 gunicorn==23.0.0
+whitenoise==6.8.2
 celery==5.6.3
 redis==8.1.0

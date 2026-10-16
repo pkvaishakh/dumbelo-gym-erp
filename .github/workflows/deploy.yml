@@ -1,0 +1,172 @@
+# Deploys the API to AWS. Started by hand only (Actions → Deploy API → Run workflow), never by a push, and
+# only on a commit CI has already passed. What it needs to be given is in docs/deploy.md ("Deploying again").
+# The web app is not here: Vercel builds it from main by itself.
+name: Deploy API
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_migrations:
+        description: "Skip the migration task (only when you know this commit migrates nothing)"
+        type: boolean
+        default: false
+
+# Two deploys at once would race for the same service.
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write  # for the OIDC token the AWS role is assumed with; there is no AWS key in the repository
+  actions: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+
+jobs:
+  ci-passed:
+    name: CI passed on this commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "ci.yml",
+              head_sha: context.sha,
+              status: "success",
+            });
+            const sha = context.sha.slice(0, 7);
+            if (runs.data.total_count === 0) {
+              core.setFailed(`CI has not passed on ${sha}. Push it, let CI go green, then deploy.`);
+            } else {
+              core.info(`CI passed on ${sha}.`);
+            }
+
+  deploy:
+    name: Build, migrate, roll out
+    needs: ci-passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production  # add a required reviewer here to make a deploy need a second pair of eyes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check this repository has been told where to deploy
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          APPRUNNER_SERVICE_ARN: ${{ vars.APPRUNNER_SERVICE_ARN }}
+        run: |
+          missing=""
+          for name in AWS_ROLE_ARN ECR_REPOSITORY APPRUNNER_SERVICE_ARN; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "Set these first (docs/deploy.md, \"Deploying again\"):$missing"
+            exit 1
+          fi
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Build and push the image
+        id: image
+        working-directory: api
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+        run: |
+          tag=$(git rev-parse --short HEAD)
+          docker build -t "$IMAGE:$tag" -t "$IMAGE:latest" .
+          docker push "$IMAGE:$tag"
+          docker push "$IMAGE:latest"
+          echo "ref=$IMAGE:$tag" >> "$GITHUB_OUTPUT"
+
+      # One task, on the new image, before anything serves it: ten containers starting at once must not each
+      # try to migrate. The deploy stops here if it fails.
+      - name: Migrate the database
+        if: ${{ !inputs.skip_migrations }}
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER }}
+          TASK: ${{ vars.MIGRATE_TASK_DEFINITION }}
+          SUBNETS: ${{ vars.MIGRATE_SUBNETS }}
+          GROUPS: ${{ vars.MIGRATE_SECURITY_GROUPS }}
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: |
+          if [ -z "$CLUSTER" ] || [ -z "$TASK" ] || [ -z "$SUBNETS" ]; then
+            echo "::error::No migration task configured. Set ECS_CLUSTER, MIGRATE_TASK_DEFINITION and MIGRATE_SUBNETS, or run the migrations by hand (docs/deploy.md)."
+            exit 1
+          fi
+          overrides=$(jq -nc --arg image "$IMAGE" '{containerOverrides: [{name: "migrate", image: $image}]}')
+          network=$(jq -nc --arg s "$SUBNETS" --arg g "$GROUPS" \
+            '{awsvpcConfiguration: {subnets: ($s | split(",")), securityGroups: (if $g == "" then [] else ($g | split(",")) end)}}')
+          arn=$(aws ecs run-task --cluster "$CLUSTER" --task-definition "$TASK" --launch-type FARGATE \
+            --overrides "$overrides" --network-configuration "$network" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "Migrating in $arn"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$arn"
+          code=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$arn" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          reason=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$arn" \
+            --query 'tasks[0].stoppedReason' --output text)
+          echo "Migration task finished with exit code $code ($reason)"
+          [ "$code" = "0" ] || { echo "::error::The migrations failed. Nothing has been rolled out; the log is in CloudWatch under /ecs/rackline."; exit 1; }
+
+      - name: Roll out the API
+        env:
+          SERVICE_ARN: ${{ vars.APPRUNNER_SERVICE_ARN }}
+        run: |
+          op=$(aws apprunner start-deployment --service-arn "$SERVICE_ARN" --query OperationId --output text)
+          echo "Deployment $op started"
+          for _ in $(seq 1 60); do
+            status=$(aws apprunner list-operations --service-arn "$SERVICE_ARN" --max-results 20 \
+              --query "OperationSummaryList[?Id=='$op'].Status | [0]" --output text)
+            echo "App Runner: $status"
+            case "$status" in
+              SUCCEEDED) exit 0 ;;
+              PENDING|IN_PROGRESS) sleep 15 ;;
+              ROLLBACK*) echo "::error::The new version failed its health check, so App Runner put the old one back. The service's log says why."; exit 1 ;;
+              *) echo "::error::The deployment ended up $status. The App Runner console shows which step failed."; exit 1 ;;
+            esac
+          done
+          echo "::error::App Runner is still deploying after 15 minutes."
+          exit 1
+
+      # The jobs run the same image, so they need restarting to pick it up. Unset services are skipped.
+      - name: Restart the worker and beat
+        env:
+          CLUSTER: ${{ vars.ECS_CLUSTER }}
+          WORKER: ${{ vars.WORKER_SERVICE }}
+          BEAT: ${{ vars.BEAT_SERVICE }}
+        run: |
+          for service in "$WORKER" "$BEAT"; do
+            [ -n "$service" ] && [ -n "$CLUSTER" ] || continue
+            aws ecs update-service --cluster "$CLUSTER" --service "$service" --force-new-deployment \
+              --query 'service.serviceName' --output text
+          done
+
+      - name: Ask the API whether it is well
+        env:
+          HEALTH_URL: ${{ vars.API_HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::warning::Set the API_HEALTH_URL variable and the deploy will check itself."
+            exit 0
+          fi
+          for _ in $(seq 1 10); do
+            body=$(curl -fsS --max-time 10 "$HEALTH_URL" || true)
+            echo "$body"
+            case "$body" in *'"status":"ok"'*) echo "The API is up."; exit 0 ;; esac
+            sleep 10
+          done
+          echo "::error::$HEALTH_URL never answered ok. The deploy is out; roll back (docs/deploy.md)."
+          exit 1
