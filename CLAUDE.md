@@ -24,6 +24,26 @@ First time: see README.md (venv, `pip install -r requirements-dev.txt`, `migrate
 Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
 `@rackline.demo`, member `9800000001`. `python manage.py seed_demo --reset` rebuilds the demo gym.
 
+## The four roles (one role per person per gym; full rules in `docs/decisions.md`)
+
+| Role | Can | Can't |
+|---|---|---|
+| Admin | Everything in every branch: plans, offers, staff, branches, reports, expenses, correct/void payments, tasks | Remove the account owner |
+| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, today's collection, their tasks | Revenue totals, reports, staff data, expenses, make offers, correct/void |
+| Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in | See any amount |
+| Member | Their own membership and visits, self check-in by wall QR | See anyone else |
+
+Rackline support: read-only, only while an admin-granted window is open, and logged.
+
+## Don't touch
+
+- `web/src/api/gen/` and `web/openapi.yml`: generated. Regenerate (command below), never hand-edit.
+- `web/src/styles/` (tokens.css, rackline.css): the design system. No new colours, fonts, shadows or radii.
+- Existing migrations: add a new one, never edit or delete an applied one.
+- `.env` files: never commit them; change `.env.example` instead.
+- `ROADMAP.md` scope: don't build what it marks "not in MVP" (payment gateway, check-out, native apps) unless asked.
+- No hard deletes of members, payments, staff or plans; no floats for money; no check-out field anywhere.
+
 ## Cloud sessions (Linux)
 
 `scripts/cloud-setup.sh` runs at session start (hook in `.claude/settings.json`): it makes `api/.venv`, writes
