@@ -1,5 +1,6 @@
-# Local services for development: Postgres (the database) and Redis (background jobs, from the WhatsApp step on).
-# Start with: docker compose up -d
+# Local services for development: Postgres, Redis, and the Celery worker and beat that run the daily jobs.
+# Start the database and Redis with: docker compose up -d db redis
+# Add the jobs with:                 docker compose up -d worker beat
 services:
   db:
     image: postgres:16
@@ -12,5 +13,23 @@ services:
   redis:
     image: redis:7
     ports: ["6379:6379"]
+
+  # The worker runs the jobs; beat is the clock that hands them out. Both are the API image with another command,
+  # so they share its code and settings. Beat ticks every quarter hour; each gym gets its reminders at 6 AM its own time.
+  worker:
+    build: ./api
+    command: celery -A config worker --loglevel=info
+    environment: &jobs
+      DATABASE_URL: postgres://rackline:rackline@db:5432/rackline
+      CELERY_BROKER_URL: redis://redis:6379/0
+      SECRET_KEY: dev-only-not-a-secret-change-me-in-production-0000
+    depends_on: [db, redis]
+
+  beat:
+    build: ./api
+    command: celery -A config beat --loglevel=info
+    environment: *jobs
+    depends_on: [db, redis]
+
 volumes:
   pgdata:

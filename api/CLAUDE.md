@@ -14,6 +14,7 @@ apps/members/        Plan, Offer, Member, MemberNote, Subscription, Payment; ser
 apps/attendance/     CheckIn (member XOR staff), Device; services.py (check_in: the one rule book)
 apps/tasks/          Task, TaskUpdate (note | status)
 apps/expenses/       Expense
+apps/reminders/      ReminderDue + the daily job that fills it (services.py, tasks.py); Celery in config/celery.py
 apps/reports/        SummaryView (admin home)
 apps/audit/          AuditLog + record(request, action, obj, before, after)
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)
