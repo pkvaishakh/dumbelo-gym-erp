@@ -4,13 +4,14 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.audit.models import record
 from apps.core.errors import RuleBroken
 from apps.core.tenancy import ADMIN, ALL, STAFF, GymViewMixin
 
 from .models import Branch, GymRole, SupportAccess
-from .serializers import BranchSerializer, StaffSerializer, SupportAccessSerializer
+from .serializers import BranchSerializer, GymSettingsSerializer, StaffSerializer, SupportAccessSerializer
 
 
 class BranchViewSet(GymViewMixin, viewsets.ModelViewSet):
@@ -85,3 +86,29 @@ class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMod
         window.save(update_fields=["ends", "updated_at"])
         record(request, "support.ended", window, before, {"ends": window.ends.isoformat()})
         return Response(self.get_serializer(window).data)
+
+
+class GymSettingsView(GymViewMixin, APIView):
+    """The gym's own rules, in one place. Admins only, and everything here holds at every branch.
+
+    One switch so far: whether members are sent their renewal and dues reminders. Turning it off stops the
+    messages, not the daily list, so the desk still sees who needs chasing and nothing is lost by turning it
+    back on. The change is audited: it decides what thousands of members do or don't hear from the gym.
+    """
+
+    roles = {"*": ADMIN}
+
+    @extend_schema(responses=GymSettingsSerializer)
+    def get(self, request):
+        return Response(GymSettingsSerializer(self.gym).data)
+
+    @extend_schema(request=GymSettingsSerializer, responses=GymSettingsSerializer)
+    def patch(self, request):
+        before = {"reminders_on": self.gym.reminders_on}
+        s = GymSettingsSerializer(self.gym, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        gym = s.save()
+        after = {"reminders_on": gym.reminders_on}
+        if before != after:
+            record(request, "gym.settings_changed", gym, before, after)
+        return Response(GymSettingsSerializer(gym).data)

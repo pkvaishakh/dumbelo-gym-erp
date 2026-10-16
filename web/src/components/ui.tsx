@@ -258,6 +258,24 @@ export function MenuRow({ icon, title, value, href, onClick }: { icon: LucideIco
   return <li>{href ? <Link className="rl-remind__row" href={href}>{inner}</Link> : <button className="rl-remind__row" type="button" onClick={onClick}>{inner}</button>}</li>;
 }
 
+/** A setting that takes effect the moment it is flipped, so it never has a Save button (the design's Switch). */
+export function Setting({ title, note, name, checked, onChange, disabled }: {
+  title: string; note?: React.ReactNode; name: string; checked: boolean; onChange: (on: boolean) => void; disabled?: boolean;
+}) {
+  return (
+    <label className="rl-setting">
+      <span className="rl-setting__text">
+        <span className="rl-row__title">{title}</span>
+        {note && <span className="rl-row__meta">{note}</span>}
+      </span>
+      <span className="rl-switch">
+        <input type="checkbox" role="switch" name={name} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+        <span />
+      </span>
+    </label>
+  );
+}
+
 export function Details({ rows }: { rows: { icon: LucideIcon; label: string; value: React.ReactNode }[] }) {
   return (
     <dl className="rl-card rl-details">

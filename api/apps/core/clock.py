@@ -20,6 +20,11 @@ def time_label(gym, at):
     return f"{t.hour % 12 or 12}:{t.minute:02d} {'AM' if t.hour < 12 else 'PM'}"
 
 
+def date_label(day: date) -> str:
+    """'5 Oct' — a day in the words a member reads. Built by hand: %-d is Linux-only, %#d is Windows-only."""
+    return f"{day.day} {day:%b}"
+
+
 def today(gym):
     return local(gym).date()
 

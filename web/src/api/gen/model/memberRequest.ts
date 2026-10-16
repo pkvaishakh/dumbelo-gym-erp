@@ -36,6 +36,8 @@ export interface MemberRequest {
    * @maxLength 20
    */
   device_user_id?: string;
+  /** This member asked not to be sent reminders */
+  reminders_opted_out?: boolean;
   is_archived?: boolean;
   first_plan?: number;
   /** @nullable */

@@ -14,7 +14,9 @@ apps/members/        Plan, Offer, Member, MemberNote, Subscription, Payment; ser
 apps/attendance/     CheckIn (member XOR staff), Device; services.py (check_in: the one rule book)
 apps/tasks/          Task, TaskUpdate (note | status)
 apps/expenses/       Expense
-apps/reminders/      ReminderDue + the daily job that fills it (services.py, tasks.py); Celery in config/celery.py
+apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
+apps/messages/       WhatsApp reminders: senders.py (FakeSender by default), Message, and the 6 AM job that
+                     writes the day's list and sends it (tasks.py). App label "gym_messages": see apps.py
 apps/reports/        SummaryView (admin home)
 apps/audit/          AuditLog + record(request, action, obj, before, after)
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)

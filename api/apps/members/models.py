@@ -103,6 +103,7 @@ class Member(GymScoped):
     goal = models.CharField(max_length=60, blank=True)
     joined_on = models.DateField(default=date.today)
     device_user_id = models.CharField(max_length=20, blank=True, help_text="This member's number on the turnstile")
+    reminders_opted_out = models.BooleanField(default=False, help_text="This member asked not to be sent reminders")
     is_archived = models.BooleanField(default=False)
 
     objects = MemberQuerySet.as_manager()
