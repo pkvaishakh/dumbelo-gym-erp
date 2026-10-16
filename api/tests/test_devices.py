@@ -79,11 +79,22 @@ def test_rename_and_move_a_device_but_not_its_serial(w):
     assert (d.name, d.branch_id, d.serial) == ("Back door", w.b.id, "ZK-1")
 
 
-def test_the_same_serial_twice_is_a_field_error(w):
+def test_the_same_serial_twice_in_one_gym_is_a_field_error(w):
     c = w.client(w.admin)
     assert add(c, w.a).status_code == 201
     r = add(c, w.b, name="Other door")
     assert r.status_code == 400 and "serial" in r.json()["error"]["fields"]
+
+
+def test_two_gyms_can_own_the_same_serial(w, other):
+    """A serial is the maker's number on the box, so two gyms may well buy the same reader."""
+    assert add(w.client(w.admin), w.a).status_code == 201
+    assert add(other.client(other.admin), other.a).status_code == 201
+
+
+def test_a_device_carries_the_gym_of_its_branch(w):
+    d = Device.objects.get(pk=add(w.client(w.admin), w.a).json()["id"])
+    assert d.gym_id == w.gym.id == d.branch.gym_id
 
 
 def test_a_device_is_never_deleted(w):

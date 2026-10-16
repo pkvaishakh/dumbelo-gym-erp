@@ -15,7 +15,7 @@ from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, ALL, DESK, GymViewMixin
 from apps.gyms.models import Branch, GymRole
 from apps.members.models import Member
-from apps.members.serializers import GymPK
+from apps.members.serializers import GymPK, gym_of
 
 from .models import CheckIn, Device
 from .services import check_in, count_by_session, deactivate_device, rotate_device_token, session_name
@@ -235,11 +235,11 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     def validate_serial(self, serial):
         serial = serial.strip()
-        clash = Device.objects.filter(serial__iexact=serial)
+        clash = Device.objects.filter(gym=gym_of(self.context), serial__iexact=serial)
         if self.instance:
             clash = clash.exclude(pk=self.instance.pk)
-        if clash.exists():  # serials are a maker's number: the same one twice means the wrong number was typed
-            raise serializers.ValidationError("This serial number is already registered")
+        if clash.exists():  # the same number twice in one gym means it was typed wrong
+            raise serializers.ValidationError("You already have a device with this serial number")
         return serial
 
 
@@ -280,7 +280,7 @@ class DeviceViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin
         return DeviceSerializer
 
     def get_queryset(self):
-        qs = Device.objects.filter(branch__gym=self.gym).select_related("branch")
+        qs = Device.objects.filter(gym=self.gym).select_related("branch")
         return self.in_my_branches(qs, "branch").order_by("branch__name", "name")
 
     def perform_create(self, serializer):
