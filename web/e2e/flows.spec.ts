@@ -23,7 +23,9 @@ test("admin: home figures, a member's profile, and assigning a task", async ({ p
   await page.goto("/tasks");
   await page.getByRole("button", { name: "New Task" }).click();
   await page.getByRole("textbox", { name: "Task" }).fill("Check the treadmill belts");
-  await page.getByLabel("Assign to").selectOption({ label: "Arjun Rao (Receptionist)" });
+  // The label adds their branches when the gym has more than one: "Arjun Rao (Receptionist, Indiranagar)".
+  const assignTo = page.getByLabel("Assign to");
+  await assignTo.selectOption((await assignTo.locator("option", { hasText: "Arjun Rao (Receptionist" }).getAttribute("value"))!);
   await page.getByRole("button", { name: "Assign Task" }).click();
   await expect(page.getByText("Task assigned")).toBeVisible();
 });
