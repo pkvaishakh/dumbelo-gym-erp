@@ -95,6 +95,8 @@ export * from './plansListKind';
 export * from './plansListParams';
 export * from './punchRequest';
 export * from './qRRequest';
+export * from './reportsPeriodRetrieve200';
+export * from './reportsPeriodRetrieveParams';
 export * from './reportsSummaryRetrieve200';
 export * from './reportsSummaryRetrieveParams';
 export * from './role';

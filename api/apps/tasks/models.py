@@ -20,6 +20,7 @@ class Task(GymScoped):
 
     class Meta:
         ordering = ["status", "due_date", "due_time"]
+        indexes = [models.Index(fields=["gym", "due_date"], name="task_gym_due")]
 
     def __str__(self):
         return self.title

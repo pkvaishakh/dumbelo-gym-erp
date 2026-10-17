@@ -68,3 +68,31 @@ export const STATUS_LABEL: Record<string, string> = {
   active: "Active", expiring: "Expiring", due: "Payment due", frozen: "Frozen", expired: "Expired", none: "No plan",
   off: "Off", // a branch, staff member or device that has been switched off
 };
+
+/** Axis and cap labels: "₹850", "₹48.6k", "₹1.2L", "₹3.4Cr" (Indian units, one decimal at most). */
+export function rupeesShort(paise: number) {
+  const r = paise / 100;
+  const one = (n: number) => String(Math.round(n * 10) / 10);
+  if (r >= 1e7) return `₹${one(r / 1e7)}Cr`;
+  if (r >= 1e5) return `₹${one(r / 1e5)}L`;
+  if (r >= 1e3) return `₹${one(r / 1e3)}k`;
+  return `₹${Math.round(r)}`;
+}
+
+/** "28 Sep to 4 Oct"; years appear when the range isn't all in this year. */
+export function rangeLabel(from: string, to: string, now = new Date()) {
+  const a = parseISO(from), b = parseISO(to);
+  const thisYear = a.getFullYear() === now.getFullYear() && b.getFullYear() === now.getFullYear();
+  const f = thisYear ? "d MMM" : "d MMM yyyy";
+  return from === to ? format(a, f) : `${format(a, f)} to ${format(b, f)}`;
+}
+
+/** A figure against the same number of days just before: "+9% vs previous 7 days". */
+export function trend(now: number, before: number, days: number): { dir: "up" | "down" | "flat"; text: string } {
+  const vs = `vs previous ${plural(days, "day")}`;
+  if (now === before) return { dir: "flat", text: `Same as previous ${plural(days, "day")}` };
+  if (before === 0) return { dir: "up", text: `Up from 0 ${vs}` };
+  const pct = Math.round(((now - before) / before) * 100);
+  const dir = now > before ? "up" : "down";
+  return { dir, text: `${pct > 0 ? "+" : pct === 0 ? (dir === "up" ? "+" : "-") : ""}${pct}% ${vs}` };
+}

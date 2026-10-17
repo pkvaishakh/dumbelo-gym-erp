@@ -402,8 +402,10 @@ paths:
   /api/checkins/summary/:
     get:
       operationId: checkins_summary_retrieve
-      description: 'Counts for the day by session: members, trainers, receptionists
-        — the Attendance and Home cards.'
+      description: |-
+        Counts for the day by session: members, trainers, receptionists — the Attendance and Home cards.
+
+        Without a branch, `branches` also gives each of your branches' member check-ins by source.
       parameters:
       - in: query
         name: branch
@@ -1973,11 +1975,43 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/reports/period/:
+    get:
+      operationId: reports_period_retrieve
+      description: |-
+        The admin Reports screen for any range of days (`from`, `to`; the last 7 days by default): money in and out,
+        new members, check-ins and tasks, each with the period of the same length just before it to compare.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/reports/summary/:
     get:
       operationId: reports_summary_retrieve
-      description: 'The admin Home screen in one call: today''s money, members by
-        status, dues, and check-ins by session.'
+      description: |-
+        The admin Home screen in one call: today's money, members by status, dues, and check-ins by session.
+        For all branches it also gives each branch's day (`branches`), so the owner can compare them at a glance.
       parameters:
       - in: query
         name: branch

@@ -481,6 +481,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     /**
  * Counts for the day by session: members, trainers, receptionists — the Attendance and Home cards.
+
+Without a branch, `branches` also gives each of your branches' member check-ins by source.
  */
 export type checkinsSummaryRetrieveResponse200 = {
   data: CheckIn

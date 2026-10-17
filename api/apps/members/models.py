@@ -114,6 +114,7 @@ class Member(GymScoped):
             models.UniqueConstraint(fields=["gym", "phone"], name="member_phone_unique_in_gym"),
         ]
         ordering = ["name"]
+        indexes = [models.Index(fields=["gym", "joined_on"], name="member_gym_joined")]
 
     def __str__(self):
         return f"{self.name} ({self.code})"

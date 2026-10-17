@@ -1,7 +1,7 @@
 "use client";
 import {
-  AlertTriangle, CalendarCheck, CalendarX, ChevronRight, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, ScanLine, Ticket,
-  UserPlus, Users, Wallet,
+  AlertTriangle, CalendarCheck, CalendarX, ChevronRight, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, Receipt, ScanLine,
+  Ticket, UserPlus, Users, Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useRef } from "react";
@@ -16,7 +16,7 @@ import { Icon, Photo, Section, SkeletonRows, Stat, Status, TaskStatus } from "@/
 import { day, daysLeft, isoDate, plural, rupees, span } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
-import type { CheckinSummary, MemberSelf, Page, SessionCounts, Summary, TaskCounts, TrainerMember } from "@/lib/types";
+import type { BranchDay, CheckinSummary, MemberSelf, Page, SessionCounts, Summary, TaskCounts, TrainerMember } from "@/lib/types";
 
 import { CheckInSearch } from "./checkin";
 
@@ -102,6 +102,91 @@ function MyTasks({ limit = 3 }: { limit?: number }) {
   );
 }
 
+/** Today at a glance, in two groups that fit one phone screen: money (dark card) and members. */
+function Glance({ sum }: { sum: Summary }) {
+  const active = sum.members.active + sum.members.expiring + sum.members.due;
+  return (
+    <div className="rl-glance">
+      <div className="rl-glance__money">
+        <Link className="rl-glance__hero rl-pressable" href="/reports">
+          <span className="rl-glance__head">
+            <span className="rl-glance__chip" aria-hidden="true"><Icon as={IndianRupee} size="sm" /></span>
+            <span className="rl-glance__kicker">Today’s revenue</span>
+            <ChevronRight className="rl-icon rl-icon--sm rl-glance__chev" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="rl-glance__big">{rupees(sum.revenue.today_paise)}</span>
+          <span className="rl-glance__note">{rupees(sum.revenue.month_paise)} this month</span>
+        </Link>
+        <div className="rl-glance__pair">
+          <Link className="rl-glance__cell rl-pressable" href="/expenses">
+            <span className="rl-glance__label"><Icon as={Receipt} size="sm" />Expenses today</span>
+            <span className="rl-glance__value">{rupees(sum.expenses_today_paise)}</span>
+            <span className="rl-glance__note">{rupees(sum.expenses_month_paise)} this month</span>
+          </Link>
+          <Link className="rl-glance__cell rl-pressable" href="/members?status=due">
+            <span className="rl-glance__label"><Icon as={HandCoins} size="sm" />Outstanding dues</span>
+            <span className="rl-glance__value">{rupees(sum.dues.total_paise)}</span>
+            <span className="rl-glance__note">From {plural(sum.dues.members, "member")}</span>
+          </Link>
+        </div>
+      </div>
+      <div className="rl-glance__people">
+        <Link className="rl-glance__cell rl-pressable" href="/members?status=active">
+          <span className="rl-glance__label"><Icon as={Users} size="sm" />Active</span>
+          <span className="rl-glance__value">{active.toLocaleString("en-IN")}</span>
+          <span className="rl-glance__note">{sum.members.frozen} frozen</span>
+        </Link>
+        <Link className="rl-glance__cell rl-pressable" href="/attendance">
+          <span className="rl-glance__label"><Icon as={CalendarCheck} size="sm" />Check-ins</span>
+          <span className="rl-glance__value">{sum.checkins.total.toLocaleString("en-IN")}</span>
+          <span className="rl-glance__note">Today so far</span>
+        </Link>
+        <Link className="rl-glance__cell rl-pressable" href="/members?status=expired">
+          <span className="rl-glance__label"><Icon as={CalendarX} size="sm" />Expired</span>
+          <span className="rl-glance__value">{sum.members.expired.toLocaleString("en-IN")}</span>
+          <span className="rl-glance__note">Not renewed yet</span>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function GlanceLoading() {
+  const cell = (i: number) => <div className="rl-glance__cell" key={i}><span className="rl-skel" style={{ height: 12, width: "60%" }} /><span className="rl-skel" style={{ height: 22, width: "80%", marginTop: 8 }} /></div>;
+  return (
+    <div className="rl-glance" aria-hidden="true">
+      <div className="rl-glance__money"><div className="rl-glance__hero"><span className="rl-skel" style={{ height: 32, width: "55%" }} /></div><div className="rl-glance__pair">{[0, 1].map(cell)}</div></div>
+      <div className="rl-glance__people">{[0, 1, 2].map(cell)}</div>
+    </div>
+  );
+}
+
+/** All branches: each branch's day side by side. Tapping one switches Home to that branch. */
+function BranchesToday({ rows }: { rows: BranchDay[] }) {
+  const { setBranch } = useSession();
+  const top = Math.max(1, ...rows.map((b) => b.revenue_today_paise));
+  return (
+    <ul className="rl-card rl-brday">
+      {rows.map((b) => (
+        <li key={b.id}><button className="rl-brday__row" type="button" onClick={() => setBranch(b.id)}
+          aria-label={`${b.name}: ${rupees(b.revenue_today_paise)} revenue, ${rupees(b.expenses_today_paise)} expenses, ${b.checkins} check-ins, ${b.active_members} active members. Show this branch`}>
+          <span className="rl-brday__top">
+            <span className="rl-row__title">{b.name}</span>
+            <ChevronRight className="rl-icon rl-icon--sm rl-attn__chev" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="rl-bar" aria-hidden="true"><span className="rl-bar__fill" style={{ ["--v" as string]: b.revenue_today_paise / top }} /></span>
+          <span className="rl-brday__nums" aria-hidden="true">
+            <span><b>{rupees(b.revenue_today_paise)}</b><small>Revenue</small></span>
+            <span><b>{rupees(b.expenses_today_paise)}</b><small>Expenses</small></span>
+            <span><b>{b.checkins}</b><small>Check-ins</small></span>
+            <span><b>{b.active_members}</b><small>Active</small></span>
+          </span>
+        </button></li>
+      ))}
+    </ul>
+  );
+}
+
 export function AdminHome() {
   const { branch } = useSession();
   const s = useGet<Summary>("/api/reports/summary/", { branch });
@@ -115,17 +200,7 @@ export function AdminHome() {
       <main className="rl-app__main">
         <Greeting />
         <Section label="Today’s overview">
-          <div className="rl-scroller rl-scroller--five">
-            {!sum ? Array.from({ length: 4 }, (_, i) => <div className="rl-stat" key={i}><span className="rl-skel" style={{ height: 28, width: "70%" }} /><span className="rl-skel" style={{ height: 14, width: "50%", marginTop: 8 }} /></div>) : (
-              <>
-                <Stat icon={IndianRupee} value={rupees(sum.revenue.today_paise)} label="Today’s revenue" note={`${rupees(sum.revenue.month_paise)} this month`} href="/reports" />
-                <Stat icon={Users} value={(sum.members.active + sum.members.expiring + sum.members.due).toLocaleString("en-IN")} label="Active members" note={`${sum.members.frozen} frozen`} href="/members?status=active" />
-                <Stat icon={CalendarCheck} value={sum.checkins.total} label="Check-ins today" href="/attendance" />
-                <Stat icon={CalendarX} value={sum.members.expired} label="Expired" note="Not renewed yet" href="/members?status=expired" />
-                <Stat icon={HandCoins} value={rupees(sum.dues.total_paise)} label="Outstanding dues" note={`From ${plural(sum.dues.members, "member")}`} href="/members?status=due" />
-              </>
-            )}
-          </div>
+          {sum ? <Glance sum={sum} /> : <GlanceLoading />}
         </Section>
         <div className="rl-app__cols">
           <div className="rl-app__col">
@@ -151,6 +226,11 @@ export function AdminHome() {
             </Section>
           </div>
         </div>
+        {!branch && (sum?.branches?.length ?? 0) > 1 && (
+          <Section title="Branches today" aside={<p className="rl-section__aside">Tap one to see it alone</p>}>
+            <BranchesToday rows={sum!.branches!} />
+          </Section>
+        )}
       </main>
     </div>
   );

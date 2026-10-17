@@ -21,6 +21,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ReportsPeriodRetrieve200,
+  ReportsPeriodRetrieveParams,
   ReportsSummaryRetrieve200,
   ReportsSummaryRetrieveParams
 } from '.././model';
@@ -33,7 +35,125 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * The admin Reports screen for any range of days (`from`, `to`; the last 7 days by default): money in and out,
+new members, check-ins and tasks, each with the period of the same length just before it to compare.
+ */
+export type reportsPeriodRetrieveResponse200 = {
+  data: ReportsPeriodRetrieve200
+  status: 200
+}
+    
+export type reportsPeriodRetrieveResponseSuccess = (reportsPeriodRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsPeriodRetrieveResponse = (reportsPeriodRetrieveResponseSuccess)
+
+export const getReportsPeriodRetrieveUrl = (params?: ReportsPeriodRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/period/?${stringifiedParams}` : `/api/reports/period/`
+}
+
+export const reportsPeriodRetrieve = async (params?: ReportsPeriodRetrieveParams, options?: RequestInit): Promise<reportsPeriodRetrieveResponse> => {
+  
+  return apiFetch<reportsPeriodRetrieveResponse>(getReportsPeriodRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsPeriodRetrieveQueryKey = (params?: ReportsPeriodRetrieveParams,) => {
+    return [
+    `/api/reports/period/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsPeriodRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsPeriodRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsPeriodRetrieve>>> = ({ signal }) => reportsPeriodRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsPeriodRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsPeriodRetrieve>>>
+export type ReportsPeriodRetrieveQueryError = unknown
+
+
+export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsPeriodRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsPeriodRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsPeriodRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
+ params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsPeriodRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsPeriodRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
+ params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
+ params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsPeriodRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * The admin Home screen in one call: today's money, members by status, dues, and check-ins by session.
+For all branches it also gives each branch's day (`branches`), so the owner can compare them at a glance.
  */
 export type reportsSummaryRetrieveResponse200 = {
   data: ReportsSummaryRetrieve200

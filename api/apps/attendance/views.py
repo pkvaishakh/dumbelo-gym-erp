@@ -144,12 +144,26 @@ class CheckInViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
     @extend_schema(parameters=[OpenApiParameter("date", str), OpenApiParameter("branch", int)])
     @action(detail=False, methods=["get"])
     def summary(self, request):
-        """Counts for the day by session: members, trainers, receptionists — the Attendance and Home cards."""
+        """Counts for the day by session: members, trainers, receptionists — the Attendance and Home cards.
+
+        Without a branch, `branches` also gives each of your branches' member check-ins by source."""
         qs = self.get_queryset()
         totals, sessions = count_by_session(qs, self.gym)
+        members = qs.filter(member__isnull=False)
         sources = {s: 0 for s, _ in CheckIn.SOURCES}
-        sources.update(qs.filter(member__isnull=False).values_list("source").annotate(n=Count("id")))
-        return Response({"totals": totals, "sessions": sessions, "member_sources": sources})
+        sources.update(members.values_list("source").annotate(n=Count("id")))
+        out = {"totals": totals, "sessions": sessions, "member_sources": sources}
+        if int_param(request, "branch") is None and self.me.role != GymRole.MEMBER:
+            per = {}
+            for b, src, n in members.order_by().values_list("branch_id", "source").annotate(n=Count("id")):
+                per.setdefault(b, {s: 0 for s, _ in CheckIn.SOURCES})[src] = n
+            mine = self.in_my_branches(Branch.objects.filter(gym=self.gym, is_active=True), "id").order_by("name")
+            zero = {s: 0 for s, _ in CheckIn.SOURCES}
+            out["branches"] = [
+                {"id": b.id, "name": b.name, "member": sum(per.get(b.id, zero).values()), "member_sources": per.get(b.id, zero)}
+                for b in mine
+            ]
+        return Response(out)
 
 
 class QRSerializer(serializers.Serializer):
