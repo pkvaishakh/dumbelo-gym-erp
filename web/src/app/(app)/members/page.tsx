@@ -35,15 +35,17 @@ function MembersPage() {
   const router = useRouter();
   const { role, branch: homeBranch, branchName: homeBranchName } = useSession();
   const isTrainer = role.role === "trainer";
+  const isAdmin = role.role === "admin";
   const [f, setF] = useState({ status: params.get("status") ?? "all", plan: params.get("plan") ?? "all", branch: params.get("branch") ?? "default" });
   const [sheet, setSheet] = useState(false);
   const [q, setQ] = useState("");
   const dq = useSearch(q);
 
-  // "default" follows the branch picked on Home; "all" or an id overrides it on this list only.
-  const branches = isTrainer ? [] : role.branches;
-  const branch = f.branch === "default" ? homeBranch : f.branch === "all" ? null : Number(f.branch);
-  const branchName = f.branch === "default" ? homeBranchName : branch ? branches.find((b) => b.id === branch)?.name ?? "" : "All branches";
+  // Admins only: "default" follows the branch picked on Home; "all" or an id overrides it on this list only.
+  // Everyone else sees all of their own branches, which the API already keeps them to.
+  const branches = isAdmin ? role.branches : [];
+  const branch = !isAdmin ? null : f.branch === "default" ? homeBranch : f.branch === "all" ? null : Number(f.branch);
+  const branchName = !isAdmin || f.branch === "default" ? homeBranchName : branch ? branches.find((b) => b.id === branch)?.name ?? "" : "All branches";
   const plans = usePlansList({ on_sale: true, limit: 100 });
   const planList = plans.data?.data.results ?? [];
   const planName = planList.find((p) => String(p.id) === f.plan)?.name;
@@ -51,12 +53,12 @@ function MembersPage() {
   const apiStatus = f.status === "all" ? undefined : (f.status as MembersListStatus);
   const list = useMembersListInfinite({
     ...(dq ? { q: dq } : {}), ...(apiStatus ? { status: apiStatus } : {}),
-    ...(f.plan !== "all" ? { plan: Number(f.plan) } : {}), ...(branch && !isTrainer ? { branch } : {}),
+    ...(f.plan !== "all" ? { plan: Number(f.plan) } : {}), ...(branch ? { branch } : {}),
   }, { query: paged });
   const { rows, count } = pages(list);
 
   const set = (next: Partial<typeof f>) => { const v = { ...f, ...next }; setF(v); router.replace(listUrl(v), { scroll: false }); };
-  const filtered = f.plan !== "all" || f.branch !== "default";
+  const filtered = f.plan !== "all" || (isAdmin && f.branch !== "default");
   const clear = () => set({ status: "all", plan: "all", branch: "default" });
   const statuses = isTrainer ? [{ value: "all", label: "All" }, { value: "attention", label: "Need attention" }, ...FILTERS.slice(1)] : FILTERS;
   const branchOptions = [

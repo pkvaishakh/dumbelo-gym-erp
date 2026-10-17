@@ -10,6 +10,8 @@ import { useState } from "react";
 
 import { greeting } from "@/lib/format";
 import { useSession, type RoleName } from "@/lib/session";
+import { CheckInSheet } from "@/features/checkin";
+
 import { Icon, Mark, Sheet } from "./ui";
 
 function Avatar() {
@@ -24,7 +26,7 @@ export function Greeting() {
     <div className="rl-greeting">
       <h1 className="rl-greeting__hello">{greeting(me.name, true)}</h1>
       {role.role === "admin" ? <BranchChip /> : (
-        <p className="rl-appbar__branch" style={{ margin: 0 }}>{branchName}{role.role !== "member" ? " branch" : ""}</p>
+        <p className="rl-appbar__branch" style={{ margin: 0 }}>{branchName}{role.role !== "member" ? (role.branches.length > 1 ? " branches" : " branch") : ""}</p>
       )}
     </div>
   );
@@ -155,10 +157,11 @@ export function TabBar() {
   const { role } = useSession();
   const path = usePathname();
   const [create, setCreate] = useState(false);
+  const [checking, setChecking] = useState(false);
   const tabs = TABS[role.role];
   if (/\/(new|edit)(\/|$)/.test(path)) return null; // task screens have their own action bar
   const hasCreate = role.role === "admin" || role.role === "receptionist";
-  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
+  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/expenses") && role.role === "receptionist") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
   const render = (t: Tab) => (
     <Link key={t.href} className="rl-tab" href={t.href} aria-current={current(t.href) ? "page" : undefined}>
       <span className="rl-tab__icon"><Icon as={t.icon} /></span>{t.label}
@@ -175,17 +178,18 @@ export function TabBar() {
         )}
         {tabs.slice(2).map(render)}
       </div></nav>
-      {hasCreate && <CreateSheet open={create} onClose={() => setCreate(false)} />}
+      {hasCreate && <CreateSheet open={create} onClose={() => setCreate(false)} onCheckIn={() => { setCreate(false); setChecking(true); }} />}
+      {hasCreate && <CheckInSheet open={checking} onClose={() => setChecking(false)} />}
     </div>
   );
 }
 
-function CreateSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function CreateSheet({ open, onClose, onCheckIn }: { open: boolean; onClose: () => void; onCheckIn: () => void }) {
   const { role } = useSession();
   const router = useRouter();
   const go = (href: string) => { onClose(); router.push(href); };
-  const item = (label: string, icon: typeof Home, href: string) => (
-    <li key={label}><button className="rl-sheet__item" type="button" onClick={() => go(href)}>
+  const item = (label: string, icon: typeof Home, href: string | (() => void)) => (
+    <li key={label}><button className="rl-sheet__item" type="button" onClick={() => typeof href === "string" ? go(href) : href()}>
       <span className="rl-chipicon"><Icon as={icon} size="sm" /></span><span className="rl-sheet__text">{label}</span>
     </button></li>
   );
@@ -196,7 +200,7 @@ function CreateSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
         {item("Add Member", UserPlus, "/members/new")}
         {item("New Subscription", Ticket, "/subscriptions/new")}
         {item("Collect Payment", Wallet, "/payments/new")}
-        {item("Mark Attendance", ClipboardCheck, "/attendance?checkin=1")}
+        {item("Mark Attendance", ClipboardCheck, onCheckIn)}
       </ul>
       {role.role === "admin" && (
         <>
@@ -207,6 +211,12 @@ function CreateSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
             {item("Assign Task", ClipboardList, "/tasks?new=1")}
             {item("Add Expense", Receipt, "/expenses/new")}
           </ul>
+        </>
+      )}
+      {role.role === "receptionist" && (
+        <>
+          <p className="rl-sheet__label">Expenses</p>
+          <ul className="rl-sheet__list">{item("Add Expense", Receipt, "/expenses/new")}</ul>
         </>
       )}
     </Sheet>

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "./api";
 import { invalidate } from "./query";
 
-/** GET for endpoints the generated client types loosely (reports, collection, history). Same cache keys as orval's. */
+/** GET for endpoints the generated client types loosely (reports, collection, notes). Same cache keys as orval's. */
 export function useGet<T>(url: string, params?: Record<string, string | number | boolean | null | undefined>, enabled = true) {
   const clean = params ? Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")) : undefined;
   const qs = clean && Object.keys(clean).length ? "?" + new URLSearchParams(clean as Record<string, string>).toString() : "";

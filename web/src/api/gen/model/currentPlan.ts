@@ -11,4 +11,8 @@ export interface CurrentPlan {
   name: string;
   starts: string;
   ends: string;
+  /** @nullable */
+  frozen_from: string | null;
+  /** @nullable */
+  frozen_until: string | null;
 }

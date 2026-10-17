@@ -8,7 +8,7 @@ import { Suspense, useState } from "react";
 import type { PaymentsListMethod } from "@/api/gen/model";
 import { usePaymentsListInfinite } from "@/api/gen/payments/payments";
 import { PageBar } from "@/components/shell";
-import { Chips, Empty, Field, LoadMore, Photo, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
+import { Chips, DayStrip, Empty, Field, LoadMore, Photo, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
 import { isoDate, plural, rangeLabel, rupees, until } from "@/lib/format";
 import { paged, pages, useGet, useSearch } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -59,10 +59,11 @@ function CollectionPage() {
   const [text, setText] = useState("");
   const dq = useSearch(text);
 
-  // "default" follows the branch picked on Home; "all" or an id overrides it on this screen only.
-  const branches = role.branches;
-  const branch = f.branch === "default" ? homeBranch : f.branch === "all" ? null : Number(f.branch);
-  const branchName = f.branch === "default" ? homeBranchName : branch ? branches.find((b) => b.id === branch)?.name ?? "" : "All branches";
+  // Admins only: "default" follows the branch picked on Home; "all" or an id overrides it on this screen only.
+  // The desk sees all of its own branches, which the API already keeps it to.
+  const branches = isAdmin ? role.branches : [];
+  const branch = !isAdmin ? null : f.branch === "default" ? homeBranch : f.branch === "all" ? null : Number(f.branch);
+  const branchName = !isAdmin || f.branch === "default" ? homeBranchName : branch ? branches.find((b) => b.id === branch)?.name ?? "" : "All branches";
   const branchOptions = [
     { value: "default", label: homeBranch ? homeBranchName : "All branches" },
     ...(homeBranch ? [{ value: "all", label: "All branches" }] : []),
@@ -79,21 +80,25 @@ function CollectionPage() {
   const { rows, count } = pages(list);
 
   const go = (next: Partial<Filters>) => router.replace(listUrl({ ...f, ...next }), { scroll: false });
-  const filtered = f.branch !== "default" || f.method !== "all";
+  const filtered = (isAdmin && f.branch !== "default") || f.method !== "all";
   const resetFilters = () => go({ branch: "default", method: "all" });
   const oneDay = from === to;
   const when = from === today && oneDay ? "today" : oneDay ? `on ${rangeLabel(from, to)}` : rangeLabel(from, to);
 
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Collection" sub={branchName} back="/more" />
+      <PageBar title="Payments" sub={branchName} back="/more" />
       <main className="rl-app__main">
         <div className="rl-searchbar rl-searchbar--filters">
           <SearchField value={text} onChange={setText} placeholder="Member, ID, phone or note" label="Search payments by member name, member ID, phone or note"
             filter={{ on: filtered, onClick: () => setSheet(true) }} />
-          {isAdmin && <Chips name="col-period" label="Period" value={period} onChange={(v) => go(v === "custom" ? { period: v, from, to } : { period: v })} options={PERIODS} />}
+          {isAdmin ? <Chips name="col-period" label="Period" value={period} onChange={(v) => go(v === "custom" ? { period: v, from, to } : { period: v })} options={PERIODS} /> : (
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <DayStrip name="col-day" pick value={from} onChange={(d) => go(d === today ? { period: "today" } : { period: "custom", from: d, to: d })} />
+            </div>
+          )}
         </div>
-        {isAdmin ? period === "custom" && (
+        {isAdmin && period === "custom" && (
           <div className="rl-pair" style={{ marginTop: "var(--space-4)" }}>
             <Field label="From" error={backwards ? "Pick a start date on or before the end date" : undefined}>{(id, desc) => (
               <input className="rl-field__input" id={id} type="date" max={today} value={from} aria-describedby={desc} aria-invalid={backwards}
@@ -101,13 +106,6 @@ function CollectionPage() {
             )}</Field>
             <Field label="To">{(id) => (
               <input className="rl-field__input" id={id} type="date" max={today} value={to} onChange={(e) => e.target.value && go({ to: e.target.value })} />
-            )}</Field>
-          </div>
-        ) : (
-          <div style={{ marginTop: "var(--space-4)" }}>
-            <Field label="Day">{(id) => (
-              <input className="rl-field__input" id={id} type="date" max={today} value={from}
-                onChange={(e) => e.target.value && go(e.target.value === today ? { period: "today" } : { period: "custom", from: e.target.value, to: e.target.value })} />
             )}</Field>
           </div>
         )}

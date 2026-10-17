@@ -8,7 +8,7 @@ import { Suspense, useState } from "react";
 import { useExpensesListInfinite } from "@/api/gen/expenses/expenses";
 import type { ExpensesListCategory, ExpensesListMethod } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
-import { AddButton, Chips, Empty, Field, Icon, LoadMore, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
+import { AddButton, Chips, DayStrip, Empty, Field, Icon, LoadMore, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
 import { day, isoDate, plural, rangeLabel, rupees } from "@/lib/format";
 import { paged, pages, useGet, useSearch } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -50,10 +50,13 @@ function ExpensesPage() {
   const params = useSearchParams();
   const router = useRouter();
   const { role, branch: homeBranch, branchName: homeBranchName } = useSession();
+  const isAdmin = role.role === "admin";
   const today = isoDate(new Date());
   const asked = params.get("period");
   const period = (PERIODS.some((p) => p.value === asked) ? asked : "month") as Period;
-  const [from, to] = rangeOf(period, today, params.get("from"), params.get("to"));
+  // Receptionists see one day at a time, like the day's payments: today unless they pick another day.
+  const deskDay = params.get("from") || today;
+  const [from, to] = isAdmin ? rangeOf(period, today, params.get("from"), params.get("to")) : [deskDay, deskDay];
   const f: Filters = {
     period, from, to, category: params.get("category") ?? "all", branch: params.get("branch") ?? "default", method: params.get("method") ?? "all",
   };
@@ -94,9 +97,13 @@ function ExpensesPage() {
       <main className="rl-app__main">
         <div className="rl-searchbar rl-searchbar--filters">
           <SearchField value={text} onChange={setText} placeholder="Paid to or note" label="Search who it was paid to, or the note" filter={{ on: filtered, onClick: () => setSheet(true) }} />
-          <Chips name="ex-period" label="Period" value={period} onChange={(v) => go(v === "custom" ? { period: v, from, to } : { period: v })} options={PERIODS} />
+          {isAdmin ? <Chips name="ex-period" label="Period" value={period} onChange={(v) => go(v === "custom" ? { period: v, from, to } : { period: v })} options={PERIODS} /> : (
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <DayStrip name="ex-day" pick value={from} onChange={(d) => go(d === today ? { period: "month" } : { period: "custom", from: d, to: d })} />
+            </div>
+          )}
         </div>
-        {period === "custom" && (
+        {isAdmin && period === "custom" && (
           <div className="rl-pair" style={{ marginTop: "var(--space-4)" }}>
             <Field label="From" error={backwards ? "Pick a start date on or before the end date" : undefined}>{(id, desc) => (
               <input className="rl-field__input" id={id} type="date" value={from} aria-describedby={desc} aria-invalid={backwards}
@@ -152,7 +159,7 @@ function ExpensesPage() {
                   <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={resetFilters}>Clear Filters</button>
                 </Empty>
               ) : (
-                <Empty icon={Receipt} title="No expenses in these dates" text="Add rent, salaries and bills to see what each branch costs.">
+                <Empty icon={Receipt} title="No expenses in these dates" text={isAdmin ? "Add rent, salaries and bills to see what each branch costs." : "Add what the desk paid out, so the cash adds up at close."}>
                   <Link className="rl-button rl-button--block" href="/expenses/new">Add Expense</Link>
                 </Empty>
               )}

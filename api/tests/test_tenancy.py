@@ -60,7 +60,7 @@ def test_trainer_sees_own_members_without_amounts(w):
     rows = w.client(w.trainer).get("/api/members/").json()["results"]
     assert rows[0]["name"] == "Asha"
     assert "balance_paise" not in rows[0] and rows[0]["payment_due"] is False
-    assert w.client(w.trainer).get(f"/api/members/{w.member.id}/history/").status_code == 403
+    assert w.client(w.trainer).get(f"/api/subscriptions/?member={w.member.id}").status_code == 403
     assert w.client(w.trainer).get("/api/payments/").status_code == 403
 
 
@@ -84,10 +84,8 @@ def test_member_can_sign_in_with_phone(w, client):
     assert r.status_code == 200
 
 
-def test_only_admin_manages_staff_and_expenses(w):
+def test_only_admin_manages_staff(w):
     assert w.client(w.desk).post("/api/staff/", {}, format="json").status_code == 403
-    assert w.client(w.desk).get("/api/expenses/").status_code == 403
-    assert w.client(w.admin).get("/api/expenses/").status_code == 200
 
 
 def test_support_needs_a_window_and_is_read_only(w):

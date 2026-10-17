@@ -19,6 +19,8 @@ class CurrentPlanSerializer(serializers.Serializer):
     name = serializers.CharField()
     starts = serializers.DateField()
     ends = serializers.DateField()
+    frozen_from = serializers.DateField(allow_null=True)
+    frozen_until = serializers.DateField(allow_null=True)
 
 
 def gym_of(ctx):
@@ -153,7 +155,7 @@ class MemberSerializer(serializers.ModelSerializer):
     @extend_schema_field(CurrentPlanSerializer(allow_null=True))
     def get_plan(self, m):
         sub = m.current_subscription(self.context.get("today"))
-        return sub and {"id": sub.id, "name": sub.plan.name, "starts": sub.starts, "ends": sub.ends}
+        return sub and {"id": sub.id, "name": sub.plan.name, "starts": sub.starts, "ends": sub.ends, "frozen_from": sub.frozen_from, "frozen_until": sub.frozen_until}
 
     def get_has_login(self, m) -> bool:
         return m.user_id is not None

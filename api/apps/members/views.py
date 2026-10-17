@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Q, Sum
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
@@ -182,32 +181,17 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
         record(request, "member.login_set", member)
         return Response({"ok": True})
 
-    @extend_schema(responses=OpenApiTypes.OBJECT)
-    @action(detail=True, methods=["get"])
-    def history(self, request, pk=None):
-        """Plans and payments for the member profile. Not for trainers: it has amounts."""
-        if self.me.role == GymRole.TRAINER:
-            raise RuleBroken("not_allowed", "Trainers don't see payment amounts")
-        member = self.get_object()
-        subs = member.subscriptions.select_related("plan", "offer").with_paid()
-        pays = member.payments.select_related("taken_by__user")
-        ctx = self.get_serializer_context()
-        return Response({
-            "subscriptions": SubscriptionSerializer(subs, many=True, context=ctx).data,
-            "payments": PaymentSerializer(pays, many=True, context=ctx).data,
-            "balance_paise": member.balance_paise(),
-        })
-
 
 class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends."""
+    """Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+    `?member=` is a member's plans, newest first, a page at a time (the member profile)."""
 
     serializer_class = SubscriptionSerializer
     roles = {"cancel": ADMIN, "*": DESK}
     filterset_fields = ["member", "plan"]
 
     def get_queryset(self):
-        qs = Subscription.objects.filter(member__gym=self.gym).select_related("plan", "offer", "member").with_paid()
+        qs = Subscription.objects.filter(member__gym=self.gym).select_related("plan", "offer", "member").with_paid().order_by("-starts", "-id")
         return self.in_my_branches(qs, "member__home_branch")
 
     @extend_schema(request=FreezeSerializer, responses=SubscriptionSerializer)

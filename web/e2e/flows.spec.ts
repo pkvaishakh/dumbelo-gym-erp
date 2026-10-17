@@ -48,13 +48,16 @@ test("admin: add a member with a plan and part payment", async ({ page }) => {
 
 test("receptionist: check a member in from home, once a day", async ({ page }) => {
   await signIn(page, "arjun@rackline.demo");
+  await page.getByRole("button", { name: /Check In Member/ }).click();
   const search = page.getByLabel("Search members to check in");
   await search.fill("RF-10");
+  await search.press("Enter");  // searches on Enter only, not while typing
   const row = page.locator(".rl-result").filter({ has: page.getByRole("button", { name: "Check In" }) }).first();
   await row.getByRole("button", { name: "Check In" }).click();
-  const sheet = page.locator(".rl-sheet.is-open");
+  const sheet = page.locator(".rl-sheet.is-open").filter({ has: page.locator(".rl-confirm") });
   await expect(sheet.locator(".rl-confirm__title")).toHaveText(/is checked in|Already checked in|Check-in blocked/);
   await sheet.getByRole("button", { name: "Done" }).click();
+  await expect(search).toBeFocused();  // the check-in sheet stays open, ready for the next member
 });
 
 test("trainer: sees own members without amounts", async ({ page }) => {

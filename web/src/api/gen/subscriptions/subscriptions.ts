@@ -42,6 +42,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
  * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+`?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsListResponse200 = {
   data: PaginatedSubscriptionList
@@ -158,6 +159,7 @@ export function useSubscriptionsList<TData = Awaited<ReturnType<typeof subscript
 
 /**
  * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+`?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsCreateResponse201 = {
   data: Subscription
@@ -238,6 +240,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     /**
  * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+`?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsRetrieveResponse200 = {
   data: Subscription
@@ -347,6 +350,7 @@ export function useSubscriptionsRetrieve<TData = Awaited<ReturnType<typeof subsc
 
 /**
  * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+`?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsCancelCreateResponse200 = {
   data: Subscription

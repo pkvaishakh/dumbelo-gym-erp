@@ -32,7 +32,6 @@ import type {
 import type {
   Member,
   MemberRequest,
-  MembersHistoryRetrieve200,
   MembersListParams,
   Note,
   NoteRequest,
@@ -671,115 +670,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Plans and payments for the member profile. Not for trainers: it has amounts.
- */
-export type membersHistoryRetrieveResponse200 = {
-  data: MembersHistoryRetrieve200
-  status: 200
-}
-    
-export type membersHistoryRetrieveResponseSuccess = (membersHistoryRetrieveResponse200) & {
-  headers: Headers;
-};
-;
-
-export type membersHistoryRetrieveResponse = (membersHistoryRetrieveResponseSuccess)
-
-export const getMembersHistoryRetrieveUrl = (id: number,) => {
-
-
-  
-
-  return `/api/members/${id}/history/`
-}
-
-export const membersHistoryRetrieve = async (id: number, options?: RequestInit): Promise<membersHistoryRetrieveResponse> => {
-  
-  return apiFetch<membersHistoryRetrieveResponse>(getMembersHistoryRetrieveUrl(id),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-);}
-
-
-
-
-
-export const getMembersHistoryRetrieveQueryKey = (id?: number,) => {
-    return [
-    `/api/members/${id}/history/`
-    ] as const;
-    }
-
-    
-export const getMembersHistoryRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getMembersHistoryRetrieveQueryKey(id);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof membersHistoryRetrieve>>> = ({ signal }) => membersHistoryRetrieve(id, { signal, ...requestOptions });
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type MembersHistoryRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof membersHistoryRetrieve>>>
-export type MembersHistoryRetrieveQueryError = unknown
-
-
-export function useMembersHistoryRetrieve<TData = Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError = unknown>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof membersHistoryRetrieve>>,
-          TError,
-          Awaited<ReturnType<typeof membersHistoryRetrieve>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useMembersHistoryRetrieve<TData = Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError = unknown>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof membersHistoryRetrieve>>,
-          TError,
-          Awaited<ReturnType<typeof membersHistoryRetrieve>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useMembersHistoryRetrieve<TData = Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError = unknown>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useMembersHistoryRetrieve<TData = Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError = unknown>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersHistoryRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getMembersHistoryRetrieveQueryOptions(id,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-
-/**
  * Members. The desk and admins manage them in their branches; a trainer sees only their own members
 (no amounts); a member sees only themselves.
  */

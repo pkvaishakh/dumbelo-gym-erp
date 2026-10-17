@@ -19,3 +19,42 @@ body { background: var(--surface); }
 /* Smaller than other icon buttons to sit lighter in the bar; the ::before keeps the 44px tap area. */
 .rl-iconbtn--primary { width: 36px; height: 36px; margin: 4px; }
 .rl-iconbtn--primary::before { content: ""; position: absolute; inset: -4px; }
+
+/* Reception Home's overview: the whole desk day on one phone screen, no sideways scroll. The ink card holds money in
+   and out side by side; under it, four member counts in a 2 × 2 card. Built from the Admin Home glance classes. */
+.rl-glance--desk .rl-glance__pair { border-top: 0; }
+.rl-glance--desk .rl-glance__cell { gap: 2px; padding: var(--space-4) var(--space-3) var(--space-3) var(--space-4); }
+.rl-glance--desk .rl-glance__label { gap: var(--space-2); }
+.rl-glance--desk .rl-glance__chip { width: 28px; height: 28px; border-radius: var(--radius-xs); }
+.rl-glance--desk .rl-glance__money .rl-glance__value { margin-top: var(--space-2); font-size: 24px; line-height: 30px; letter-spacing: -0.01em; font-variation-settings: "wdth" 112; }
+.rl-glance--desk .rl-glance__money .rl-pressable:active { background: var(--ink-muted); }
+.rl-glance__people--four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rl-glance__people--four .rl-glance__cell + .rl-glance__cell { border-left: 0; }
+.rl-glance__people--four .rl-glance__cell:nth-child(even) { border-left: 1px solid var(--line); }
+.rl-glance__people--four .rl-glance__cell:nth-child(n+3) { border-top: 1px solid var(--line); }
+.rl-glance__people--four .rl-glance__label .rl-icon { flex: none; }
+.rl-glance--desk .rl-glance__people .rl-glance__value { margin-top: var(--space-2); font-size: 26px; line-height: 32px; }
+.rl-glance__value--attention { color: var(--attention); }
+.rl-glance__value--danger { color: var(--danger); }
+@media (min-width: 768px) {
+  .rl-glance--desk { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .rl-glance--desk .rl-glance__money { align-content: stretch; }
+  .rl-glance--desk .rl-glance__money .rl-glance__cell { align-content: center; padding: var(--space-4); }
+  .rl-glance--desk .rl-glance__money .rl-glance__value { font-size: 30px; line-height: 36px; }
+}
+
+/* Reception Home's three actions under Check In Member: raised cards, the icon on an ink plate (volt icon). */
+.rl-tile--desk { gap: var(--space-3); min-height: 96px; padding: var(--space-3); background: var(--ground); box-shadow: var(--shadow-card); }
+.rl-tile--desk:active { background: var(--surface); box-shadow: none; }
+.rl-tile__plate { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: var(--radius-sm); background: var(--ink); color: var(--volt); }
+.rl-tile__label { font-size: 14px; line-height: 18px; font-weight: 700; letter-spacing: -0.005em; }
+@media (min-width: 768px) {
+  .rl-tile--desk { min-height: 88px; flex-direction: row; align-items: center; justify-content: flex-start; padding: var(--space-4); }
+}
+
+/* Check In Member sheet (Reception Home): the search stays pinned at the top of the sheet while results scroll,
+   and the sheet keeps one height so it doesn't jump as results come and go. */
+.rl-checkin-sheet { display: grid; align-content: start; gap: var(--space-3); min-height: 56vh; min-height: 56dvh; }
+.rl-sheet .rl-checkin-sheet .rl-searchbar { top: calc(var(--space-2) * -1); margin: 0 calc(var(--space-4) * -1); padding: var(--space-2) var(--space-4); background: var(--ground); box-shadow: none; }
+.rl-checkin-sheet .rl-section { margin: 0; }
+.rl-checkin__hint { margin: 0; padding: 0 var(--space-1); }
