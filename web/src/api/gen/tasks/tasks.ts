@@ -995,7 +995,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * How many tasks each filter chip holds: open, overdue, done and all for the role filter, and all by role.
+ * How many tasks each filter chip holds: open, overdue, done and all for the filters, and all by role.
  */
 export type tasksCountsRetrieveResponse200 = {
   data: TasksCountsRetrieve200

@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Exists, OuterRef, Q, Sum
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
@@ -22,16 +22,39 @@ from .serializers import (
     PaymentSerializer, PlanSerializer, SubscriptionSerializer, TrainerMemberSerializer, VoidSerializer, set_login,
 )
 
-class PlanViewSet(GymViewMixin, viewsets.ModelViewSet):
-    """Plans the gym sells. Admins set them up; everyone can see what's on sale."""
+class SoldAtMixin:
+    """Plans and offers are one list for the gym, each given to some branches (none means every branch).
+    `?branch=` keeps what that branch can sell and `?q=` searches by name; everyone but admins and support only sees
+    what their branches have."""
+
+    def at_my_branches(self, qs):
+        ids = self.me.branch_ids()
+        if ids is not None:
+            qs = qs.at_branches(ids)
+        if (branch := int_param(self.request, "branch")) is not None:
+            qs = qs.at_branches([branch])
+        q = self.request.query_params.get("q", "").strip()
+        if len(q) >= 2:
+            qs = qs.filter(name__icontains=q)
+        return qs
+
+
+_SOLD_AT = [OpenApiParameter("branch", int, description="Only what this branch can sell"), OpenApiParameter("q", str, description="Name")]
+
+
+@extend_schema_view(list=extend_schema(parameters=_SOLD_AT))
+class PlanViewSet(SoldAtMixin, GymViewMixin, viewsets.ModelViewSet):
+    """Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs."""
 
     serializer_class = PlanSerializer
     roles = {"list": ALL, "retrieve": ALL, "*": ADMIN}
     filterset_fields = ["kind", "on_sale"]
 
     def get_queryset(self):
-        qs = Plan.objects.filter(gym=self.gym)
-        return qs if self.me.role in (GymRole.ADMIN, "support") else qs.filter(on_sale=True)
+        qs = Plan.objects.filter(gym=self.gym).prefetch_related("branches")
+        if self.me.role not in (GymRole.ADMIN, "support"):
+            qs = qs.filter(on_sale=True)
+        return self.at_my_branches(qs)
 
     def perform_destroy(self, plan):
         if plan.subscriptions.exists():
@@ -39,19 +62,20 @@ class PlanViewSet(GymViewMixin, viewsets.ModelViewSet):
         plan.delete()
 
 
-@extend_schema_view(list=extend_schema(parameters=[OpenApiParameter("current", bool, description="Only offers that apply today")]))
-class OfferViewSet(GymViewMixin, viewsets.ModelViewSet):
-    """Fixed offers. Only admins create them; the desk can only pick one that applies today."""
+@extend_schema_view(list=extend_schema(parameters=[OpenApiParameter("current", bool, description="Only offers that apply today"), *_SOLD_AT]))
+class OfferViewSet(SoldAtMixin, GymViewMixin, viewsets.ModelViewSet):
+    """Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+    today at its branches."""
 
     serializer_class = OfferSerializer
     roles = {"list": DESK, "retrieve": DESK, "*": ADMIN}
 
     def get_queryset(self):
-        qs = Offer.objects.filter(gym=self.gym).prefetch_related("plans").order_by("-starts")
+        qs = Offer.objects.filter(gym=self.gym).prefetch_related("plans", "branches").order_by("-starts")
         if self.request.query_params.get("current") or self.me.role == GymRole.RECEPTIONIST:
             today = clock.today(self.gym)
             qs = qs.filter(is_active=True, starts__lte=today, ends__gte=today)
-        return qs
+        return self.at_my_branches(qs)
 
     def perform_destroy(self, offer):
         if offer.subscriptions.exists():
@@ -94,6 +118,9 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
             qs = qs.filter(home_branch_id=branch)
         if (trainer := int_param(self.request, "trainer")) is not None:
             qs = qs.filter(trainer_id=trainer)
+        if (plan := int_param(self.request, "plan")) is not None:
+            # Narrows to members who ever bought the plan; list() keeps those whose current plan it is.
+            qs = qs.filter(Exists(Subscription.objects.filter(member=OuterRef("pk"), plan_id=plan, cancelled=False)))
         if p.get("q"):
             q = p["q"].strip()
             qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q) | Q(phone__contains=q))
@@ -103,17 +130,25 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
         OpenApiParameter("q", str, description="Name, member ID or phone"),
         OpenApiParameter("status", str, enum=STATUSES + ("attention",), description="attention: anything but active"),
         OpenApiParameter("branch", int), OpenApiParameter("trainer", int), OpenApiParameter("archived", bool),
+        OpenApiParameter("plan", int, description="Members whose current plan is this one"),
     ])
     def list(self, request, *args, **kwargs):
         status = request.query_params.get("status")
-        if not status:
+        plan = int_param(request, "plan")
+        if not status and plan is None:
             return super().list(request, *args, **kwargs)
-        # Status comes from subscriptions, freezes and payments, so it's worked out in Python over the gym's members,
+        # Status and current plan come from subscriptions, freezes and payments, so it's worked out in Python over the gym's members,
         # loaded with with_totals() in three queries. Fine to a few thousand members; move to a stored status updated
         # nightly if a gym outgrows it.
         today = clock.today(self.gym)
-        wanted = (lambda s: s != "active") if status == "attention" else (lambda s: s == status)
-        rows = [m for m in self.get_queryset() if wanted(m.status(today))]
+
+        def wanted(m):
+            if plan is not None and getattr(m.current_subscription(today), "plan_id", None) != plan:
+                return False
+            s = m.status(today)
+            return not status or (s != "active" if status == "attention" else s == status)
+
+        rows = [m for m in self.get_queryset() if wanted(m)]
         page = self.paginate_queryset(rows)
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
 
@@ -227,7 +262,15 @@ class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMode
         return Response(self.get_serializer(sub).data)
 
 
-@extend_schema_view(list=extend_schema(parameters=[OpenApiParameter("date", str, description="YYYY-MM-DD: payments taken that local day")]))
+_PAYMENT_FILTERS = [
+    OpenApiParameter("date", str, description="YYYY-MM-DD: payments taken that local day"),
+    OpenApiParameter("from", str, description="First local day, YYYY-MM-DD. Admins only when it spans more than a day"),
+    OpenApiParameter("to", str, description="Last local day, YYYY-MM-DD"),
+    OpenApiParameter("q", str, description="Member name, member ID or phone, or the payment note"),
+]
+
+
+@extend_schema_view(list=extend_schema(parameters=_PAYMENT_FILTERS))
 class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void."""
 
@@ -240,11 +283,30 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
     def get_queryset(self):
         qs = Payment.objects.filter(gym=self.gym).select_related("member", "taken_by__user")
         qs = self.in_my_branches(qs)
-        day = self.request.query_params.get("date")
-        if day:
-            start, end = clock.day_bounds(self.gym, clock.parse_date(day, None))
+        if days := self._days():
+            start, end = clock.day_bounds(self.gym, days[0])[0], clock.day_bounds(self.gym, days[1])[1]
             qs = qs.filter(taken_at__gte=start, taken_at__lt=end)
+        if q := self.request.query_params.get("q", "").strip():
+            qs = qs.filter(Q(member__name__icontains=q) | Q(member__code__icontains=q) | Q(member__phone__contains=q) | Q(note__icontains=q))
         return qs
+
+    def _days(self):
+        """The first and last local day asked for: ?date= for one day, or ?from=&to= for a range (either end may be
+        left out). Receptionists see one day's money at a time; totals over longer spans are for admins."""
+        p = self.request.query_params
+        if day := clock.parse_date(p.get("date"), None):
+            return day, day
+        first = clock.parse_date(p.get("from"), None, field="from")
+        last = clock.parse_date(p.get("to"), None, field="to")
+        if not first and not last:
+            return None
+        today = clock.today(self.gym)
+        first, last = first or last or today, last or today
+        if first > last:
+            raise ValidationError({"from": ["Pick a start date on or before the end date"]})
+        if first != last and self.me.role not in (GymRole.ADMIN, "support"):
+            raise RuleBroken("not_allowed", "You can see one day's collection at a time")
+        return first, last
 
     def perform_update(self, serializer):
         p = serializer.instance
@@ -268,16 +330,18 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         record(request, "payment.voided", p, {"voided": False}, {"voided": True, "reason": p.void_reason})
         return Response(PaymentSerializer(p, context=self.get_serializer_context()).data)
 
-    @extend_schema(parameters=[OpenApiParameter("date", str), OpenApiParameter("branch", int)])
+    @extend_schema(parameters=[*_PAYMENT_FILTERS, OpenApiParameter("branch", int), OpenApiParameter("method", str, enum=[m for m, _ in Payment.METHODS])])
     @action(detail=False, methods=["get"])
     def collection(self, request):
-        """Money taken on a day (today by default) in the caller's branches, by method — the desk's end-of-day count."""
-        day = clock.parse_date(request.query_params.get("date"), clock.today(self.gym))
-        start, end = clock.day_bounds(self.gym, day)
-        qs = self.in_my_branches(Payment.objects.filter(gym=self.gym, voided=False, taken_at__gte=start, taken_at__lt=end))
-        if (branch := int_param(request, "branch")) is not None:
-            qs = qs.filter(branch_id=branch)
+        """Money taken (today by default) in the caller's branches, by method — the desk's end-of-day count.
+        Takes the same filters as the list, so the totals always match the payments shown under them."""
+        asked = self._days()
+        first, last = asked or (clock.today(self.gym),) * 2
+        qs = self.filter_queryset(self.get_queryset()).filter(voided=False)
+        if not asked:
+            start, end = clock.day_bounds(self.gym, first)
+            qs = qs.filter(taken_at__gte=start, taken_at__lt=end)
         by_method = {m: 0 for m, _ in Payment.METHODS}
         for row in qs.values("method").annotate(t=Sum("amount_paise")):
             by_method[row["method"]] = row["t"]
-        return Response({"date": day, "total_paise": sum(by_method.values()), "count": qs.count(), "by_method": by_method})
+        return Response({"date": first, "from": first, "to": last, "total_paise": sum(by_method.values()), "count": qs.count(), "by_method": by_method})

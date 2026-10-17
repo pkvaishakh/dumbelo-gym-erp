@@ -1,6 +1,7 @@
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import serializers, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -35,12 +36,17 @@ class ExpenseSerializer(serializers.ModelSerializer):
         return Expense.objects.create(gym=req.gym, created_by=req.gym_role, **data)
 
 
-_MONTH = OpenApiParameter("month", str, description="YYYY-MM")
+_FILTERS = [
+    OpenApiParameter("month", str, description="YYYY-MM"),
+    OpenApiParameter("from", str, description="First day spent, YYYY-MM-DD"),
+    OpenApiParameter("to", str, description="Last day spent, YYYY-MM-DD"),
+    OpenApiParameter("q", str, description="Who it was paid to, or the note"),
+]
 
 
-@extend_schema_view(list=extend_schema(parameters=[_MONTH]), totals=extend_schema(parameters=[_MONTH]))
+@extend_schema_view(list=extend_schema(parameters=_FILTERS), totals=extend_schema(parameters=_FILTERS))
 class ExpenseViewSet(GymViewMixin, viewsets.ModelViewSet):
-    """What the gym spends. Admins only. Filter by ?month=2026-10, branch or category."""
+    """What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q."""
 
     serializer_class = ExpenseSerializer
     roles = {"*": ADMIN}
@@ -48,10 +54,20 @@ class ExpenseViewSet(GymViewMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Expense.objects.filter(gym=self.gym).select_related("branch")
-        month = self.request.query_params.get("month")
-        if month:
+        p = self.request.query_params
+        if month := p.get("month"):
             d = clock.parse_date(month + "-01", None)
             qs = qs.filter(spent_on__gte=d, spent_on__lt=clock.add_months(d, 1))
+        first = clock.parse_date(p.get("from"), None, field="from")
+        last = clock.parse_date(p.get("to"), None, field="to")
+        if first and last and first > last:
+            raise ValidationError({"from": ["Pick a start date on or before the end date"]})
+        if first:
+            qs = qs.filter(spent_on__gte=first)
+        if last:
+            qs = qs.filter(spent_on__lte=last)
+        if q := p.get("q", "").strip():
+            qs = qs.filter(Q(paid_to__icontains=q) | Q(note__icontains=q))
         return qs
 
     @action(detail=False, methods=["get"])

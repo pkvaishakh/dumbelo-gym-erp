@@ -6,12 +6,13 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.services import reset_staff_password
 from apps.audit.models import record
 from apps.core.errors import RuleBroken
 from apps.core.tenancy import ADMIN, ALL, STAFF, GymViewMixin
 
 from .models import Branch, GymRole, SupportAccess
-from .serializers import BranchSerializer, GymSettingsSerializer, StaffSerializer, SupportAccessSerializer
+from .serializers import BranchSerializer, GymSettingsSerializer, StaffPasswordSerializer, StaffSerializer, SupportAccessSerializer
 
 
 class BranchViewSet(GymViewMixin, viewsets.ModelViewSet):
@@ -47,6 +48,17 @@ class StaffViewSet(GymViewMixin, viewsets.ModelViewSet):
         after = {"role": role.role, "is_active": role.is_active}
         if before != after:
             record(self.request, "staff.changed", role, before, after)
+
+    @extend_schema(request=StaffPasswordSerializer, responses={204: None})
+    @action(detail=True, methods=["post"], url_path="set-password")
+    def set_password(self, request, pk=None):
+        """Give a receptionist or trainer a new password (they forgot theirs). They're signed out everywhere."""
+        role = self.get_object()
+        data = StaffPasswordSerializer(data=request.data, context={"request": request, "user": role.user})
+        data.is_valid(raise_exception=True)
+        reset_staff_password(role, data.validated_data["password"])
+        record(request, "staff.password_reset", role)
+        return Response(status=204)
 
     def perform_destroy(self, role):
         if role.is_owner:

@@ -25,7 +25,7 @@ export default function AddMember() {
   const [method, setMethod] = useState<Method>("upi");
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [made, setMade] = useState<Member | null>(null);
-  const price = usePriceOf(plan, offer);
+  const price = usePriceOf(f.home_branch || null, plan, offer);
   const trainers = useStaffList({ role: "trainer", is_active: true, limit: 100, branches: f.home_branch ? [f.home_branch] : undefined });
   const a = useAction();
   const paid = mode === "full" ? price.total : mode === "part" ? toPaise(amount) : 0;
@@ -72,7 +72,7 @@ export default function AddMember() {
               <Field label="Email" optional>{(id) => <input className="rl-field__input" id={id} type="email" inputMode="email" autoCapitalize="none" placeholder="name@example.com" value={f.email} onChange={set("email")} />}</Field>
               {role.branches.length > 1 && (
                 <Field label="Home branch">{(id) => (
-                  <select className="rl-field__input" id={id} value={f.home_branch} onChange={(e) => setF({ ...f, home_branch: Number(e.target.value), trainer: null })}>
+                  <select className="rl-field__input" id={id} value={f.home_branch} onChange={(e) => { setF({ ...f, home_branch: Number(e.target.value), trainer: null }); setPlan(null); setOffer(null); }}>
                     {role.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 )}</Field>
@@ -91,7 +91,7 @@ export default function AddMember() {
           )}
           {step === 2 && (
             <>
-              <PlanPicker plan={plan} setPlan={(v) => { setPlan(v); setErrs({}); }} offer={offer} setOffer={setOffer} />
+              <PlanPicker branch={f.home_branch || null} plan={plan} setPlan={(v) => { setPlan(v); setErrs({}); }} offer={offer} setOffer={setOffer} />
               <ErrorText>{errs.plan}</ErrorText>
               {price.off > 0 && <p className="rl-field__hint">{price.offer?.name}: {rupees(price.off)} off {rupees(price.list)}</p>}
             </>

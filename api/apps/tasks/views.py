@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.errors import RuleBroken
+from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, STAFF, GymViewMixin
 from apps.gyms.models import GymRole
 
@@ -54,8 +55,15 @@ class DoneSerializer(serializers.Serializer):
     note = serializers.CharField(required=False, allow_blank=True, help_text="A last update, posted before it's marked done")
 
 
+NARROW = [
+    OpenApiParameter("role", str, enum=["trainer", "receptionist"]), OpenApiParameter("assignee", int),
+    OpenApiParameter("branch", int, description="Tasks of staff who work at this branch"),
+    OpenApiParameter("q", str, description="Task title or details, or the assignee's name"),
+]
+
+
 @extend_schema_view(list=extend_schema(parameters=[
-    OpenApiParameter("state", str, enum=["open", "overdue", "done"]), OpenApiParameter("role", str, enum=["trainer", "receptionist"]),
+    OpenApiParameter("state", str, enum=["open", "overdue", "done"]), *NARROW,
     OpenApiParameter("overdue", bool, description="Same as state=overdue"),
 ]))
 class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
@@ -64,15 +72,23 @@ class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
 
     serializer_class = TaskSerializer
     roles = {"list": STAFF, "retrieve": STAFF, "start": STAFF, "done": STAFF, "reopen": STAFF, "updates": STAFF, "counts": STAFF, "*": ADMIN}
-    filterset_fields = ["status", "assignee", "due_date"]
+    filterset_fields = ["status", "due_date"]
 
     def _mine(self, by_role=True):
-        """Tasks the caller may see (admins: all; staff: their own), narrowed to ?role= when by_role."""
+        """Tasks the caller may see (admins: all; staff: their own), narrowed by ?assignee=, ?branch= and ?q=,
+        and by ?role= when by_role. The list and the counts share it, so the chips count what the list shows."""
+        p = self.request.query_params
         qs = Task.objects.filter(gym=self.gym)
         if self.me.role != GymRole.ADMIN and self.me.role != "support":
             qs = qs.filter(assignee=self.me)
-        if by_role and (role := self.request.query_params.get("role")) in GymRole.STAFF_ROLES:
+        if by_role and (role := p.get("role")) in GymRole.STAFF_ROLES:
             qs = qs.filter(assignee__role=role)
+        if (assignee := int_param(self.request, "assignee")) is not None:
+            qs = qs.filter(assignee_id=assignee)
+        if (branch := int_param(self.request, "branch")) is not None:
+            qs = qs.filter(assignee__branches=branch)
+        if q := p.get("q", "").strip():
+            qs = qs.filter(Q(title__icontains=q) | Q(details__icontains=q) | Q(assignee__user__name__icontains=q))
         return qs
 
     def get_queryset(self):
@@ -88,10 +104,10 @@ class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
         done_last = Case(When(status=Task.DONE, then=Value(1)), default=Value(0), output_field=IntegerField())
         return qs.order_by(done_last, "due_date", "due_time", "id")
 
-    @extend_schema(parameters=[OpenApiParameter("role", str, enum=["trainer", "receptionist"])], responses=OpenApiTypes.OBJECT)
+    @extend_schema(parameters=NARROW, responses=OpenApiTypes.OBJECT)
     @action(detail=False, methods=["get"])
     def counts(self, request):
-        """How many tasks each filter chip holds: open, overdue, done and all for the role filter, and all by role."""
+        """How many tasks each filter chip holds: open, overdue, done and all for the filters, and all by role."""
         qs = self._mine()
         by_state = qs.aggregate(all=Count("id"), done=Count("id", filter=Q(status=Task.DONE)), overdue=Count("id", filter=overdue(self.gym)))
         by_state["open"] = by_state["all"] - by_state["done"]

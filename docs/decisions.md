@@ -16,11 +16,19 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks.
 - Member: their own membership, visits, and self check-in.
 - Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).
+- Staff change their own name, email, mobile number and password (More). A member's details are changed by
+  the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and not for
+  someone who also signs in to another gym (one login covers every gym); for them, this gym can't change their
+  name, email or mobile number either. Any password change signs that person
+  out on every other device. Resets are audited; the password never is.
 
 ## Money
 - Record payments only (no payment gateway in the MVP). Part payments allowed; never more than what's owed.
 - Discounts only through offers (percent or amount off, date range, optional plans). Admins correct or void
   payments, with a reason, audited. Nothing is deleted.
+- Plans and offers are one list for the gym, made by admins. Each is given to some branches, or to none, which
+  means every branch (including ones opened later). The desk sees and sells only what its branches have; a sale
+  checks the plan and the offer against the member's home branch.
 
 ## Attendance
 - Check-in sources: front desk, a fixed wall QR per branch (members/staff scan it), and turnstile/biometric

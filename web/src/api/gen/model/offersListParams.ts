@@ -8,6 +8,10 @@
 
 export type OffersListParams = {
 /**
+ * Only what this branch can sell
+ */
+branch?: number;
+/**
  * Only offers that apply today
  */
 current?: boolean;
@@ -19,4 +23,8 @@ limit?: number;
  * The initial index from which to return the results.
  */
 offset?: number;
+/**
+ * Name
+ */
+q?: string;
 };

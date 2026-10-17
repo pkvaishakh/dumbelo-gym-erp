@@ -9,6 +9,10 @@ import type { PlansListKind } from './plansListKind';
 
 export type PlansListParams = {
 /**
+ * Only what this branch can sell
+ */
+branch?: number;
+/**
  * * `membership` - Membership
 * `pt` - Personal training
  */
@@ -22,4 +26,8 @@ limit?: number;
  */
 offset?: number;
 on_sale?: boolean;
+/**
+ * Name
+ */
+q?: string;
 };

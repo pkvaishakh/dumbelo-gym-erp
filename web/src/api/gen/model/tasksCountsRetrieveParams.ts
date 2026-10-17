@@ -8,5 +8,14 @@
 import type { TasksCountsRetrieveRole } from './tasksCountsRetrieveRole';
 
 export type TasksCountsRetrieveParams = {
+assignee?: number;
+/**
+ * Tasks of staff who work at this branch
+ */
+branch?: number;
+/**
+ * Task title or details, or the assignee's name
+ */
+q?: string;
 role?: TasksCountsRetrieveRole;
 };

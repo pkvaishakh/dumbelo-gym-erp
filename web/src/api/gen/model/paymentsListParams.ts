@@ -14,6 +14,10 @@ branch?: number;
  */
 date?: string;
 /**
+ * First local day, YYYY-MM-DD. Admins only when it spans more than a day
+ */
+from?: string;
+/**
  * Number of results to return per page.
  */
 limit?: number;
@@ -29,5 +33,13 @@ method?: PaymentsListMethod;
  * The initial index from which to return the results.
  */
 offset?: number;
+/**
+ * Member name, member ID or phone, or the payment note
+ */
+q?: string;
+/**
+ * Last local day, YYYY-MM-DD
+ */
+to?: string;
 voided?: boolean;
 };

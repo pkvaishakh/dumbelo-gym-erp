@@ -13,7 +13,15 @@ EXPIRING_DAYS = 7
 STATUSES = ("active", "expiring", "due", "frozen", "expired", "none")  # what Member.status() can answer
 
 
+class SoldAtQuerySet(models.QuerySet):
+    def at_branches(self, ids):
+        """Plans or offers a branch can use: the ones given to any of `ids`, and the ones with no branch (every branch)."""
+        return self.filter(models.Q(branches__isnull=True) | models.Q(branches__in=ids)).distinct()
+
+
 class Plan(GymScoped):
+    """One plan list for the gym. The admin gives each plan to some branches, or to every branch by choosing none."""
+
     MEMBERSHIP, PT = "membership", "pt"
     KINDS = [(MEMBERSHIP, "Membership"), (PT, "Personal training")]
     name = models.CharField(max_length=80)
@@ -23,6 +31,9 @@ class Plan(GymScoped):
     price_paise = models.PositiveIntegerField()
     includes = models.CharField(max_length=120, blank=True)
     on_sale = models.BooleanField(default=True)
+    branches = models.ManyToManyField("gyms.Branch", blank=True, related_name="plans", help_text="Empty means every branch")
+
+    objects = SoldAtQuerySet.as_manager()
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["gym", "name"], name="plan_name_unique_in_gym")]
@@ -48,6 +59,9 @@ class Offer(GymScoped):
     starts = models.DateField()
     ends = models.DateField()
     is_active = models.BooleanField(default=True)
+    branches = models.ManyToManyField("gyms.Branch", blank=True, related_name="offers", help_text="Empty means every branch")
+
+    objects = SoldAtQuerySet.as_manager()
 
     class Meta:
         constraints = [
@@ -61,8 +75,10 @@ class Offer(GymScoped):
     def __str__(self):
         return self.name
 
-    def applies_to(self, plan, on: date):
+    def applies_to(self, plan, on: date, branch=None):
         if not self.is_active or not (self.starts <= on <= self.ends):
+            return False
+        if branch is not None and not sold_at(self, branch):
             return False
         return not self.plans.exists() or self.plans.filter(pk=plan.pk).exists()
 
@@ -70,6 +86,11 @@ class Offer(GymScoped):
         if self.percent_off is not None:
             return price_paise * self.percent_off // 100
         return min(self.amount_off_paise or 0, price_paise)
+
+
+def sold_at(row, branch) -> bool:
+    """A plan or offer is available at `branch` when it was given to it, or to no branch (every branch)."""
+    return not row.branches.exists() or row.branches.filter(pk=branch.pk).exists()
 
 
 def _total(qs, per, field):

@@ -40,7 +40,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Fixed offers. Only admins create them; the desk can only pick one that applies today.
+ * Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+today at its branches.
  */
 export type offersListResponse200 = {
   data: PaginatedOfferList
@@ -156,7 +157,8 @@ export function useOffersList<TData = Awaited<ReturnType<typeof offersList>>, TE
 
 
 /**
- * Fixed offers. Only admins create them; the desk can only pick one that applies today.
+ * Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+today at its branches.
  */
 export type offersCreateResponse201 = {
   data: Offer
@@ -236,7 +238,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Fixed offers. Only admins create them; the desk can only pick one that applies today.
+ * Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+today at its branches.
  */
 export type offersRetrieveResponse200 = {
   data: Offer
@@ -345,7 +348,8 @@ export function useOffersRetrieve<TData = Awaited<ReturnType<typeof offersRetrie
 
 
 /**
- * Fixed offers. Only admins create them; the desk can only pick one that applies today.
+ * Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+today at its branches.
  */
 export type offersUpdateResponse200 = {
   data: Offer
@@ -426,7 +430,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Fixed offers. Only admins create them; the desk can only pick one that applies today.
+ * Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+today at its branches.
  */
 export type offersPartialUpdateResponse200 = {
   data: Offer
@@ -507,7 +512,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Fixed offers. Only admins create them; the desk can only pick one that applies today.
+ * Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+today at its branches.
  */
 export type offersDestroyResponse204 = {
   data: void

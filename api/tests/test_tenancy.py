@@ -40,6 +40,22 @@ def test_receptionist_sees_only_their_branch(w):
     assert len(w.client(w.admin).get("/api/members/").json()["results"]) == 2
 
 
+
+def test_members_filter_by_current_plan(w):
+    from apps.members.models import Plan
+    from apps.members.services import sell
+
+    annual = Plan.objects.create(gym=w.gym, name="Annual", months=12, price_paise=1200000)
+    switched = w.plan_ending_on(w.today - timedelta(days=40), "Bina", "9811111112")  # old monthly, now on annual
+    sell(switched, annual, by=w.desk, starts=w.today - timedelta(days=5))
+    c = w.client(w.admin)
+    names = lambda url: [m["name"] for m in c.get(url).json()["results"]]  # noqa: E731
+    assert names(f"/api/members/?plan={w.monthly.id}") == ["Asha"]
+    assert names(f"/api/members/?plan={annual.id}") == ["Bina"]
+    assert names(f"/api/members/?plan={annual.id}&status=due") == ["Bina"]
+    assert names(f"/api/members/?plan={annual.id}&status=active") == []
+    assert names(f"/api/members/?plan={annual.id}&branch={w.b.id}") == []
+
 def test_trainer_sees_own_members_without_amounts(w):
     rows = w.client(w.trainer).get("/api/members/").json()["results"]
     assert rows[0]["name"] == "Asha"

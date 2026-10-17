@@ -14,7 +14,7 @@ export interface PaymentRequest {
   branch?: number;
   /**
    * @minimum 0
-   * @maximum 9223372036854776000
+   * @maximum 2147483647
    */
   amount_paise: number;
   method: MethodEnum;

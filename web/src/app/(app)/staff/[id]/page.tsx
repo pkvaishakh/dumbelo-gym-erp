@@ -7,9 +7,10 @@ import { useState } from "react";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useStaffRetrieve } from "@/api/gen/staff/staff";
 import { DetailBar } from "@/components/shell";
-import { Details, ErrorText, Icon, Photo, Section, Sheet, SkeletonRows, Status } from "@/components/ui";
+import type { Staff } from "@/api/gen/model";
+import { Details, ErrorText, Field, Icon, Photo, Section, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { day, isoDate, phone } from "@/lib/format";
-import { useAction } from "@/lib/hooks";
+import { fieldError, useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
 export default function StaffProfile() {
@@ -19,6 +20,7 @@ export default function StaffProfile() {
   const s = q.data?.data;
   const visits = useCheckinsList({ staff: Number(id), limit: 14 });
   const [deact, setDeact] = useState(false);
+  const [reset, setReset] = useState(false);
   const a = useAction();
   if (!s) return <div className="rl-app rl-root"><DetailBar title="Staff" /><main className="rl-app__main"><SkeletonRows n={4} /></main></div>;
   const label = s.role === "trainer" ? "Trainer" : s.role === "receptionist" ? "Receptionist" : "Admin";
@@ -62,6 +64,9 @@ export default function StaffProfile() {
         </Section>
         {!s.is_owner && s.role !== "admin" && (
           <Section label="Access">
+            {role.role === "admin" && s.is_active && (
+              <button className="rl-button rl-button--block rl-button--secondary" type="button" style={{ marginBottom: "var(--space-3)" }} onClick={() => setReset(true)}>Reset Password</button>
+            )}
             <button className={`rl-button rl-button--block ${s.is_active ? "rl-button--danger-quiet" : "rl-button--secondary"}`} type="button" onClick={() => (s.is_active ? setDeact(true) : toggle())}>
               {s.is_active ? "Deactivate" : "Reactivate"}
             </button>
@@ -76,6 +81,38 @@ export default function StaffProfile() {
           <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => setDeact(false)}>Keep Active</button>
         </div>
       </Sheet>
+      {role.role === "admin" && <ResetSheet open={reset} staff={s} onClose={() => setReset(false)} />}
     </div>
+  );
+}
+
+function ResetSheet({ open, staff, onClose }: { open: boolean; staff: Staff; onClose: () => void }) {
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState<string>();
+  const [done, setDone] = useState(false);
+  const a = useAction();
+  const close = () => { setPw(""); setErr(undefined); setDone(false); a.clearError(); onClose(); };
+  async function go() {
+    if (pw.length < 8) return setErr("Use at least 8 characters");
+    try { await a.run(`/api/staff/${staff.id}/set-password/`, { password: pw }, { refresh: [] }); setDone(true); } catch { /* shown */ }
+  }
+  return (
+    <Sheet open={open} onClose={close} title={done ? undefined : "Reset Password"}>
+      {done ? (
+        <>
+          <div className="rl-confirm"><h2 className="rl-confirm__title">Password reset</h2><p className="rl-confirm__text">{staff.name} signs in with {staff.email} and the password you set. They&apos;ve been signed out everywhere else.</p></div>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={close}>Done</button></div>
+        </>
+      ) : (
+        <>
+          <p className="rl-row__meta">For when {staff.name} has forgotten theirs. They sign in with {staff.email}.</p>
+          <Field label="New password" error={err ?? fieldError(a.error, "password")} hint="At least 8 characters. Tell them the password.">
+            {(fid) => <input className="rl-field__input" id={fid} type="text" autoComplete="new-password" value={pw} onChange={(e) => { setPw(e.target.value); setErr(undefined); }} />}
+          </Field>
+          <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Saving…" : "Set Password"}</button></div>
+        </>
+      )}
+    </Sheet>
   );
 }

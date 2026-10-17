@@ -11,6 +11,10 @@ import type { TasksListStatus } from './tasksListStatus';
 
 export type TasksListParams = {
 assignee?: number;
+/**
+ * Tasks of staff who work at this branch
+ */
+branch?: number;
 due_date?: string;
 /**
  * Number of results to return per page.
@@ -24,6 +28,10 @@ offset?: number;
  * Same as state=overdue
  */
 overdue?: boolean;
+/**
+ * Task title or details, or the assignee's name
+ */
+q?: string;
 role?: TasksListRole;
 state?: TasksListState;
 /**

@@ -227,7 +227,7 @@ function NoteSheet({ open, id, onClose }: { open: boolean; id: number; onClose: 
   }
   return (
     <Sheet open={open} onClose={onClose} title="Add Note">
-      <Field label="Note" error={err} hint="Only staff see notes.">
+      <Field label="Note" error={err} area hint="Only staff see notes.">
         {(fid) => <textarea className="rl-field__input" id={fid} rows={3} value={text} onChange={(e) => { setText(e.target.value); setErr(undefined); }} placeholder="Prefers evening sessions" />}
       </Field>
       <ErrorText>{a.error?.message}</ErrorText>

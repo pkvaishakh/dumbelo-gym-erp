@@ -667,7 +667,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Money taken on a day (today by default) in the caller's branches, by method — the desk's end-of-day count.
+ * Money taken (today by default) in the caller's branches, by method — the desk's end-of-day count.
+Takes the same filters as the list, so the totals always match the payments shown under them.
  */
 export type paymentsCollectionRetrieveResponse200 = {
   data: Payment

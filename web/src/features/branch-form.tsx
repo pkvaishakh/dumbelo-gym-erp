@@ -36,7 +36,7 @@ export function BranchForm({ branch, onSaved }: { branch?: Branch; onSaved: (b: 
     <>
       <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
         <Field label="Branch name">{(id) => <input className="rl-field__input" id={id} value={f.name} placeholder="Indiranagar" onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
-        <Field label="Address" optional>{(id) => <textarea className="rl-field__input" id={id} rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />}</Field>
+        <Field label="Address" optional area>{(id) => <textarea className="rl-field__input" id={id} rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />}</Field>
         <Field label="Phone" optional>{(id) => <input className="rl-field__input" id={id} type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />}</Field>
         <fieldset className="rl-fieldset"><legend>Open</legend>
           <Choices name="days" two value={f.days_open} onChange={(v) => setF({ ...f, days_open: v })} options={[{ value: "every_day", title: "Every day" }, { value: "mon_sat", title: "Monday to Saturday" }]} />
