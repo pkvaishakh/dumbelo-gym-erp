@@ -38,9 +38,11 @@ class GymPK(serializers.PrimaryKeyRelatedField):
 
 
 class PlanSerializer(serializers.ModelSerializer):
+    branches = GymPK(Branch, many=True, required=False, help_text="Empty means every branch")
+
     class Meta:
         model = Plan
-        fields = ["id", "name", "kind", "months", "sessions", "price_paise", "includes", "on_sale"]
+        fields = ["id", "name", "kind", "months", "sessions", "price_paise", "includes", "on_sale", "branches"]
 
     def validate(self, data):
         kind = data.get("kind", getattr(self.instance, "kind", Plan.MEMBERSHIP))
@@ -58,15 +60,19 @@ class PlanSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, data):
-        return Plan.objects.create(gym=gym_of(self.context), **data)
+        branches = data.pop("branches", [])
+        plan = Plan.objects.create(gym=gym_of(self.context), **data)
+        plan.branches.set(branches)
+        return plan
 
 
 class OfferSerializer(serializers.ModelSerializer):
-    plans = GymPK(Plan, many=True, required=False)
+    plans = GymPK(Plan, many=True, required=False, help_text="Empty means every plan")
+    branches = GymPK(Branch, many=True, required=False, help_text="Empty means every branch")
 
     class Meta:
         model = Offer
-        fields = ["id", "name", "percent_off", "amount_off_paise", "plans", "starts", "ends", "is_active"]
+        fields = ["id", "name", "percent_off", "amount_off_paise", "plans", "branches", "starts", "ends", "is_active"]
 
     def validate(self, data):
         pct = data.get("percent_off", getattr(self.instance, "percent_off", None))
@@ -82,16 +88,10 @@ class OfferSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, data):
-        plans = data.pop("plans", [])
+        plans, branches = data.pop("plans", []), data.pop("branches", [])
         offer = Offer.objects.create(gym=gym_of(self.context), **data)
         offer.plans.set(plans)
-        return offer
-
-    def update(self, offer, data):
-        plans = data.pop("plans", None)
-        offer = super().update(offer, data)
-        if plans is not None:
-            offer.plans.set(plans)
+        offer.branches.set(branches)
         return offer
 
 

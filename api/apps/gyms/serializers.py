@@ -2,10 +2,14 @@ import secrets
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.accounts.models import normalize_phone
+from apps.accounts.services import check_login_is_this_gyms
 from apps.core.errors import RuleBroken
 
 from .models import Branch, BranchSession, Gym, GymRole, SupportAccess
@@ -86,6 +90,16 @@ class GymSettingsSerializer(serializers.ModelSerializer):
         read_only_fields = ["name", "slug", "timezone"]
 
 
+def _same_form(field, value):
+    """A sent name, email or phone in the form it's stored in, so resending an unchanged value isn't an edit."""
+    if field == "phone":
+        try:
+            return normalize_phone(value)
+        except DjangoValidationError:
+            return value
+    return value
+
+
 class StaffSerializer(serializers.ModelSerializer):
     """A trainer, receptionist or admin. Creating one creates their login (email + a first password they change)."""
 
@@ -139,6 +153,8 @@ class StaffSerializer(serializers.ModelSerializer):
     def update(self, role, data):
         u = data.pop("user", {})
         data.pop("password", None)
+        if any(_same_form(k, v) != getattr(role.user, k) for k, v in u.items()):
+            check_login_is_this_gyms(role, "name, email or mobile number")
         for k, v in u.items():
             setattr(role.user, k, v or None if k == "phone" else v)
         role.user.save()
@@ -149,6 +165,19 @@ class StaffSerializer(serializers.ModelSerializer):
         if branches is not None:
             role.branches.set(branches)
         return role
+
+
+class StaffPasswordSerializer(serializers.Serializer):
+    """A new password an admin sets for a receptionist or trainer, and tells them."""
+
+    password = serializers.CharField(write_only=True, max_length=128)
+
+    def validate_password(self, value):
+        try:
+            validate_password(value, self.context.get("user"))
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
 
 
 class SupportAccessSerializer(serializers.ModelSerializer):

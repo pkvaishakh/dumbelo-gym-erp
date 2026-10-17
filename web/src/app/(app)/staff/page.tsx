@@ -1,12 +1,12 @@
 "use client";
-import { UserPlus, Users } from "lucide-react";
+import { SearchX, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { useStaffList } from "@/api/gen/staff/staff";
 import { PageBar } from "@/components/shell";
-import { Chips, Empty, Icon, Photo, Section, SkeletonRows, Status } from "@/components/ui";
+import { AddButton, Chips, Empty, Photo, SearchField, Section, SkeletonRows, Status } from "@/components/ui";
 import { plural } from "@/lib/format";
 import { useSession } from "@/lib/session";
 
@@ -15,18 +15,26 @@ function StaffPage() {
   const roleName = params.get("role") === "receptionist" ? "receptionist" : "trainer";
   const { role } = useSession();
   const [branch, setBranch] = useState("all");
+  const [search, setSearch] = useState("");
   const q = useStaffList({ role: roleName, limit: 100 });
   const all = q.data?.data.results ?? [];
-  const rows = all.filter((s) => branch === "all" || s.branches.includes(Number(branch)));
+  // The whole list is already here, so search runs in the browser: name, phone or email.
+  const needle = search.trim().toLowerCase();
+  const digits = needle.replace(/\D/g, "");
+  const matches = (s: (typeof all)[number]) => !needle || s.name.toLowerCase().includes(needle) || s.email.toLowerCase().includes(needle)
+    || (digits.length > 0 && (s.phone ?? "").replace(/\D/g, "").includes(digits));
+  const rows = all.filter((s) => (branch === "all" || s.branches.includes(Number(branch))) && matches(s));
   const title = roleName === "trainer" ? "Trainers" : "Receptionists";
+  const addLabel = `Add ${roleName === "trainer" ? "Trainer" : "Receptionist"}`;
   const bname = (id: number) => role.branches.find((b) => b.id === id)?.name ?? "";
   return (
     <div className="rl-app rl-root">
-      <PageBar title={title} sub={`${plural(all.filter((s) => s.is_active).length, "active " + roleName)}`} back="/more" />
+      <PageBar title={title} sub={`${plural(all.filter((s) => s.is_active).length, "active " + roleName)}`} back="/more"
+        action={<AddButton href={`/staff/new?role=${roleName}`} label={addLabel} />} />
       <main className="rl-app__main">
-        <Section label="Add">
-          <Link className="rl-button rl-button--block" href={`/staff/new?role=${roleName}`}><Icon as={UserPlus} />Add {roleName === "trainer" ? "Trainer" : "Receptionist"}</Link>
-        </Section>
+        <div className="rl-searchbar">
+          <SearchField value={search} onChange={setSearch} placeholder="Name, phone or email" label="Search name, phone or email" />
+        </div>
         <Section label={title}>
           <Chips name="st-branch" label="Branch" value={branch} onChange={setBranch} style={{ marginTop: 0 }}
             options={[{ value: "all", label: "All branches", count: all.length }, ...role.branches.map((b) => ({ value: String(b.id), label: b.name, count: all.filter((s) => s.branches.includes(b.id)).length }))]} />
@@ -41,7 +49,15 @@ function StaffPage() {
                 </Link></li>
               ))}
             </ul>
-          ) : <Empty icon={Users} title={`No ${title.toLowerCase()} yet`} text="Add them so they can sign in and you can give them tasks." />}
+          ) : needle ? (
+            <Empty icon={SearchX} title={`No one matches “${search.trim()}”`} text="Check the spelling, or try their phone number or email.">
+              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => setSearch("")}>Clear Search</button>
+            </Empty>
+          ) : (
+            <Empty icon={Users} title={`No ${title.toLowerCase()} yet`} text="Add them so they can sign in and you can give them tasks.">
+              <Link className="rl-button rl-button--block" href={`/staff/new?role=${roleName}`}>{addLabel}</Link>
+            </Empty>
+          )}
         </Section>
       </main>
     </div>

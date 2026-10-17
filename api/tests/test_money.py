@@ -3,6 +3,7 @@ from datetime import timedelta
 from apps.audit.models import AuditLog
 from apps.expenses.models import Expense
 from apps.members.models import Offer, Payment
+from apps.members.services import sell, take_payment
 
 
 def test_new_member_with_plan_offer_and_payment(w):
@@ -36,6 +37,37 @@ def test_cannot_overpay_and_collection(w):
     col = c.get("/api/payments/collection/").json()
     assert col["total_paise"] == 150000 and col["by_method"]["upi"] == 150000
 
+
+
+def test_collection_filters_match_the_list(w):
+    ravi = w.new_member("Ravi", "9844444444", w.b)
+    sell(ravi, w.monthly, by=w.admin)
+    take_payment(ravi, 50000, "cash", by=w.admin, branch=w.b)
+    old = take_payment(ravi, 20000, "card", by=w.admin, branch=w.b)
+    old.taken_at -= timedelta(days=10)
+    old.save(update_fields=["taken_at"])
+    c = w.client(w.admin)
+    week = {"from": str(w.today - timedelta(days=6)), "to": str(w.today)}
+    col = c.get("/api/payments/collection/", week).json()
+    assert col["total_paise"] == 200000 and col["count"] == 2 and col["from"] == week["from"]
+    month = {"from": str(w.today - timedelta(days=30)), "to": str(w.today)}
+    assert c.get("/api/payments/collection/", month).json()["by_method"]["card"] == 20000
+    narrowed = {**month, "q": "ravi", "method": "cash", "branch": w.b.id}
+    assert c.get("/api/payments/collection/", narrowed).json()["total_paise"] == 50000
+    assert [p["amount_paise"] for p in c.get("/api/payments/", narrowed).json()["results"]] == [50000]
+    assert c.get("/api/payments/", {"q": w.member.phone[-6:]}).json()["count"] == 1
+    backwards = c.get("/api/payments/collection/", {"from": week["to"], "to": week["from"]})
+    assert backwards.status_code == 400 and "from" in backwards.json()["error"]["fields"]
+
+
+def test_receptionist_sees_one_day_at_a_time(w):
+    c = w.client(w.desk)
+    today = str(w.today)
+    assert c.get("/api/payments/collection/", {"from": today, "to": today}).json()["total_paise"] == 150000
+    week = {"from": str(w.today - timedelta(days=6)), "to": today}
+    for url in ("/api/payments/collection/", "/api/payments/"):
+        r = c.get(url, week)
+        assert r.status_code == 409 and r.json()["error"]["code"] == "not_allowed"
 
 def test_only_admin_corrects_or_voids_and_it_is_audited(w):
     p = Payment.objects.get()

@@ -3,7 +3,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from apps.accounts.views import LoginView, LogoutView, MeView, RefreshView
+from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, RefreshView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
 from apps.core.views import HealthView
 from apps.expenses.views import ExpenseViewSet
@@ -35,6 +35,7 @@ urlpatterns = [
     path("api/auth/refresh/", RefreshView.as_view(), name="refresh"),
     path("api/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/me/", MeView.as_view(), name="me"),
+    path("api/me/password/", PasswordView.as_view(), name="me-password"),
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
     path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/
     path("api/reports/summary/", SummaryView.as_view(), name="summary"),

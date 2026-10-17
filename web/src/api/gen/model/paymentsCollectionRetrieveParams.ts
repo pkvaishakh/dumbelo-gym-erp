@@ -5,8 +5,25 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { PaymentsCollectionRetrieveMethod } from './paymentsCollectionRetrieveMethod';
 
 export type PaymentsCollectionRetrieveParams = {
 branch?: number;
+/**
+ * YYYY-MM-DD: payments taken that local day
+ */
 date?: string;
+/**
+ * First local day, YYYY-MM-DD. Admins only when it spans more than a day
+ */
+from?: string;
+method?: PaymentsCollectionRetrieveMethod;
+/**
+ * Member name, member ID or phone, or the payment note
+ */
+q?: string;
+/**
+ * Last local day, YYYY-MM-DD
+ */
+to?: string;
 };

@@ -22,6 +22,10 @@ branch?: number;
  */
 category?: ExpensesListCategory;
 /**
+ * First day spent, YYYY-MM-DD
+ */
+from?: string;
+/**
  * Number of results to return per page.
  */
 limit?: number;
@@ -40,4 +44,12 @@ month?: string;
  * The initial index from which to return the results.
  */
 offset?: number;
+/**
+ * Who it was paid to, or the note
+ */
+q?: string;
+/**
+ * Last day spent, YYYY-MM-DD
+ */
+to?: string;
 };

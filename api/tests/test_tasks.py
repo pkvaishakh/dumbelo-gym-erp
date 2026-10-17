@@ -45,3 +45,20 @@ def test_filters_counts_and_open_first(w):
     assert c.get("/api/tasks/counts/?role=receptionist").json()["open"] == 1
     assert w.client(w.trainer).get("/api/tasks/counts/").json()["all"] == 1  # staff count only their own
     assert late
+
+
+def test_search_staff_and_branch_filters(w):
+    make(w, title="Restock towels", details="By the lockers")
+    make(w, title="Plan class", assignee=w.trainer.id)
+    c = w.client(w.admin)
+    titles = lambda url: [t["title"] for t in c.get(url).json()["results"]]  # noqa: E731
+    assert titles("/api/tasks/?q=locker") == ["Restock towels"]  # details
+    assert titles(f"/api/tasks/?q={w.trainer.user.name}") == ["Plan class"]  # assignee's name
+    assert titles(f"/api/tasks/?assignee={w.trainer.id}") == ["Plan class"]
+    make(w, title="Open up", assignee=w.desk_b.id)
+    assert titles(f"/api/tasks/?branch={w.b.id}") == ["Open up"]
+    assert titles(f"/api/tasks/?branch={w.a.id}&role=trainer") == ["Plan class"]
+    assert c.get(f"/api/tasks/counts/?assignee={w.desk.id}").json()["all"] == 1  # counts follow the filters
+    assert c.get("/api/tasks/counts/?q=locker").json()["by_role"] == {"all": 1, "trainer": 0, "receptionist": 1}
+    # Staff only ever see their own, whatever they ask for.
+    assert w.client(w.trainer).get(f"/api/tasks/?assignee={w.desk.id}").json()["results"] == []

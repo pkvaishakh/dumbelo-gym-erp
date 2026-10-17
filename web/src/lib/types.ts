@@ -24,7 +24,7 @@ export type CheckinSummary = {
 
 export type TaskCounts = { all: number; open: number; overdue: number; done: number; by_role: { all: number; trainer: number; receptionist: number } };
 
-export type Collection = { date: string; total_paise: number; count: number; by_method: Record<string, number> };
+export type Collection = { date: string; from: string; to: string; total_paise: number; count: number; by_method: Record<string, number> };
 
 export type TrainerMember = {
   id: number; code: string; name: string; phone: string; goal: string; home_branch: string;

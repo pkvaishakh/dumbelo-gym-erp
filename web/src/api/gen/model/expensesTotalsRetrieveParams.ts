@@ -8,7 +8,19 @@
 
 export type ExpensesTotalsRetrieveParams = {
 /**
+ * First day spent, YYYY-MM-DD
+ */
+from?: string;
+/**
  * YYYY-MM
  */
 month?: string;
+/**
+ * Who it was paid to, or the note
+ */
+q?: string;
+/**
+ * Last day spent, YYYY-MM-DD
+ */
+to?: string;
 };

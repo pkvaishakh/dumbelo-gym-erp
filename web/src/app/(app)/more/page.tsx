@@ -1,10 +1,12 @@
 "use client";
 import {
-  Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, LifeBuoy, LogOut, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Building2, CalendarCheck, ClipboardList, Dumbbell, HandCoins, KeyRound, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
+import { useState } from "react";
 
 import { PageBar } from "@/components/shell";
 import { Details, Icon, MenuRow, Section } from "@/components/ui";
+import { AccountSheet, PasswordSheet } from "@/features/account";
 import { phone, plural, rupees } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -16,6 +18,8 @@ export default function MorePage() {
   const label = { admin: "Admin", receptionist: "Receptionist", trainer: "Trainer", member: "Member" }[r];
   const summary = useGet<Summary>("/api/reports/summary/", undefined, r === "admin");
   const col = useGet<Collection>("/api/payments/collection/", undefined, r === "admin" || r === "receptionist");
+  const [sheet, setSheet] = useState<"details" | "password" | null>(null);
+  const staff = r !== "member"; // a member's details are changed by the desk
   return (
     <div className="rl-app rl-root">
       <PageBar title="More" sub={`${me.name} • ${label}`} />
@@ -28,7 +32,7 @@ export default function MorePage() {
               <MenuRow icon={UserRound} title="Receptionists" href="/staff?role=receptionist" />
               <MenuRow icon={ClipboardList} title="Tasks" href="/tasks" />
               <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={summary.data ? `${rupees(summary.data.expenses_month_paise)} this month` : undefined} />
-              <MenuRow icon={Wallet} title="Today’s collection" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
+              <MenuRow icon={Wallet} title="Collection" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
@@ -40,7 +44,7 @@ export default function MorePage() {
         {r === "receptionist" && (
           <Section title="Front desk">
             <ul className="rl-card rl-remind">
-              <MenuRow icon={Wallet} title="Today’s collection" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
+              <MenuRow icon={Wallet} title="Collection" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
               <MenuRow icon={HandCoins} title="Payment due" href="/members?status=due" />
               <MenuRow icon={CalendarCheck} title="Expiring this week" href="/members?status=expiring" />
               <MenuRow icon={ClipboardList} title="My Tasks" href="/tasks" />
@@ -72,6 +76,12 @@ export default function MorePage() {
             { icon: UserRound, label: "Mobile number", value: phone(me.phone) },
             { icon: Building2, label: "Gym", value: role.gym_name },
           ]} />
+          {staff && (
+            <ul className="rl-card rl-remind" style={{ marginTop: "var(--space-3)" }}>
+              <MenuRow icon={Pencil} title="Edit Details" onClick={() => setSheet("details")} />
+              <MenuRow icon={KeyRound} title="Change Password" onClick={() => setSheet("password")} />
+            </ul>
+          )}
         </Section>
         <Section label="Sign out">
           <ul className="rl-card rl-remind">
@@ -85,6 +95,8 @@ export default function MorePage() {
           </ul>
         </Section>
       </main>
+      {staff && <AccountSheet open={sheet === "details"} onClose={() => setSheet(null)} />}
+      {staff && <PasswordSheet open={sheet === "password"} onClose={() => setSheet(null)} />}
     </div>
   );
 }

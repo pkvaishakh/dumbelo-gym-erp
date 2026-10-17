@@ -7,7 +7,7 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 
-from .models import Member, Payment, Subscription
+from .models import Member, Payment, Subscription, sold_at
 
 
 def next_start(member: Member, today):
@@ -23,8 +23,11 @@ def sell(member, plan, by, offer=None, starts=None):
     today = clock.today(member.gym)
     if plan.gym_id != member.gym_id or not plan.on_sale:
         raise RuleBroken("plan_not_on_sale", f"{plan.name} isn't on sale")
+    branch = member.home_branch
+    if not sold_at(plan, branch):
+        raise RuleBroken("plan_not_at_branch", f"{plan.name} isn't sold at {branch.name}")
     if offer is not None:
-        if offer.gym_id != member.gym_id or not offer.applies_to(plan, today):
+        if offer.gym_id != member.gym_id or not offer.applies_to(plan, today, branch):
             raise RuleBroken("offer_not_valid", f"{offer.name} doesn't apply to {plan.name} today")
     starts = starts or next_start(member, today)
     discount = offer.discount_on(plan.price_paise) if offer else 0

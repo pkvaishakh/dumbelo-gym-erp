@@ -22,7 +22,7 @@ function NewSubscription() {
   const [offer, setOffer] = useState<number | null>(null);
   const [err, setErr] = useState<string>();
   const [done, setDone] = useState<Subscription | null>(null);
-  const price = usePriceOf(plan, offer);
+  const price = usePriceOf(member?.home_branch ?? null, plan, offer);
   const a = useAction();
 
   async function save() {
@@ -35,10 +35,10 @@ function NewSubscription() {
     <div className="rl-app rl-app--task rl-root">
       <TaskBar title="New Subscription" />
       <main className="rl-app__main">
-        {member ? <MemberCard m={member} onChange={pre ? undefined : () => setPicked(null)} /> : <MemberPicker onPick={(m) => { setPicked(m); setErr(undefined); }} />}
+        {member ? <MemberCard m={member} onChange={pre ? undefined : () => { setPicked(null); setPlan(null); setOffer(null); }} /> : <MemberPicker onPick={(m) => { setPicked(m); setErr(undefined); }} />}
         {member && (
           <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
-            <PlanPicker plan={plan} setPlan={(v) => { setPlan(v); setErr(undefined); }} offer={offer} setOffer={setOffer} />
+            <PlanPicker branch={member.home_branch} plan={plan} setPlan={(v) => { setPlan(v); setErr(undefined); }} offer={offer} setOffer={setOffer} />
             {price.off > 0 && <p className="rl-field__hint">{price.offer?.name}: {rupees(price.off)} off {rupees(price.list)}</p>}
             {member.plan && member.status !== "expired" && <p className="rl-field__hint">Starts the day after the current plan ends ({day(String((member.plan as { ends: string }).ends))}).</p>}
           </form>

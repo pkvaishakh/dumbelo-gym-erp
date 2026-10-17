@@ -678,8 +678,8 @@ paths:
   /api/expenses/:
     get:
       operationId: expenses_list
-      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
-        or category.
+      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
+        branch, category, method, or search with q.
       parameters:
       - in: query
         name: branch
@@ -707,6 +707,11 @@ paths:
           * `supplies` - Supplies
           * `marketing` - Marketing
           * `other` - Other
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First day spent, YYYY-MM-DD
       - name: limit
         required: false
         in: query
@@ -738,6 +743,16 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Who it was paid to, or the note
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last day spent, YYYY-MM-DD
       tags:
       - expenses
       security:
@@ -751,8 +766,8 @@ paths:
           description: ''
     post:
       operationId: expenses_create
-      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
-        or category.
+      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
+        branch, category, method, or search with q.
       tags:
       - expenses
       requestBody:
@@ -779,8 +794,8 @@ paths:
   /api/expenses/{id}/:
     get:
       operationId: expenses_retrieve
-      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
-        or category.
+      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
+        branch, category, method, or search with q.
       parameters:
       - in: path
         name: id
@@ -801,8 +816,8 @@ paths:
           description: ''
     put:
       operationId: expenses_update
-      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
-        or category.
+      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
+        branch, category, method, or search with q.
       parameters:
       - in: path
         name: id
@@ -835,8 +850,8 @@ paths:
           description: ''
     patch:
       operationId: expenses_partial_update
-      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
-        or category.
+      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
+        branch, category, method, or search with q.
       parameters:
       - in: path
         name: id
@@ -868,8 +883,8 @@ paths:
           description: ''
     delete:
       operationId: expenses_destroy
-      description: What the gym spends. Admins only. Filter by ?month=2026-10, branch
-        or category.
+      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
+        branch, category, method, or search with q.
       parameters:
       - in: path
         name: id
@@ -890,10 +905,25 @@ paths:
       description: Totals by category for the same filters.
       parameters:
       - in: query
+        name: from
+        schema:
+          type: string
+        description: First day spent, YYYY-MM-DD
+      - in: query
         name: month
         schema:
           type: string
         description: YYYY-MM
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Who it was paid to, or the note
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last day spent, YYYY-MM-DD
       tags:
       - expenses
       security:
@@ -974,8 +1004,9 @@ paths:
   /api/me/:
     get:
       operationId: me_retrieve
-      description: Who is signed in, and which gyms and branches they can open. The
-        app picks a gym and sends it as X-Gym.
+      description: |-
+        Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
+        Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
       tags:
       - me
       security:
@@ -986,6 +1017,61 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Me'
+          description: ''
+    patch:
+      operationId: me_partial_update
+      description: |-
+        Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
+        Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMeEditRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMeEditRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMeEditRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/me/password/:
+    post:
+      operationId: me_password_create
+      description: Change your own password. Every other device signed in as you is
+        signed out; this one gets new tokens.
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
           description: ''
   /api/members/:
     get:
@@ -1014,6 +1100,11 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: plan
+        schema:
+          type: integer
+        description: Members whose current plan is this one
       - in: query
         name: q
         schema:
@@ -1394,9 +1485,15 @@ paths:
   /api/offers/:
     get:
       operationId: offers_list
-      description: Fixed offers. Only admins create them; the desk can only pick one
-        that applies today.
+      description: |-
+        Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+        today at its branches.
       parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: Only what this branch can sell
       - in: query
         name: current
         schema:
@@ -1414,6 +1511,11 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name
       tags:
       - offers
       security:
@@ -1427,8 +1529,9 @@ paths:
           description: ''
     post:
       operationId: offers_create
-      description: Fixed offers. Only admins create them; the desk can only pick one
-        that applies today.
+      description: |-
+        Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+        today at its branches.
       tags:
       - offers
       requestBody:
@@ -1455,8 +1558,9 @@ paths:
   /api/offers/{id}/:
     get:
       operationId: offers_retrieve
-      description: Fixed offers. Only admins create them; the desk can only pick one
-        that applies today.
+      description: |-
+        Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+        today at its branches.
       parameters:
       - in: path
         name: id
@@ -1477,8 +1581,9 @@ paths:
           description: ''
     put:
       operationId: offers_update
-      description: Fixed offers. Only admins create them; the desk can only pick one
-        that applies today.
+      description: |-
+        Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+        today at its branches.
       parameters:
       - in: path
         name: id
@@ -1511,8 +1616,9 @@ paths:
           description: ''
     patch:
       operationId: offers_partial_update
-      description: Fixed offers. Only admins create them; the desk can only pick one
-        that applies today.
+      description: |-
+        Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+        today at its branches.
       parameters:
       - in: path
         name: id
@@ -1544,8 +1650,9 @@ paths:
           description: ''
     delete:
       operationId: offers_destroy
-      description: Fixed offers. Only admins create them; the desk can only pick one
-        that applies today.
+      description: |-
+        Fixed offers. Only admins create them and give them to branches; the desk can only pick one that applies
+        today at its branches.
       parameters:
       - in: path
         name: id
@@ -1575,6 +1682,12 @@ paths:
         schema:
           type: string
         description: 'YYYY-MM-DD: payments taken that local day'
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. Admins only when it spans more than
+          a day
       - name: limit
         required: false
         in: query
@@ -1605,6 +1718,16 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Member name, member ID or phone, or the payment note
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last local day, YYYY-MM-DD
       - in: query
         name: voided
         schema:
@@ -1775,8 +1898,9 @@ paths:
   /api/payments/collection/:
     get:
       operationId: payments_collection_retrieve
-      description: Money taken on a day (today by default) in the caller's branches,
-        by method — the desk's end-of-day count.
+      description: |-
+        Money taken (today by default) in the caller's branches, by method — the desk's end-of-day count.
+        Takes the same filters as the list, so the totals always match the payments shown under them.
       parameters:
       - in: query
         name: branch
@@ -1786,6 +1910,32 @@ paths:
         name: date
         schema:
           type: string
+        description: 'YYYY-MM-DD: payments taken that local day'
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. Admins only when it spans more than
+          a day
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - bank
+          - card
+          - cash
+          - upi
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Member name, member ID or phone, or the payment note
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last local day, YYYY-MM-DD
       tags:
       - payments
       security:
@@ -1800,9 +1950,14 @@ paths:
   /api/plans/:
     get:
       operationId: plans_list
-      description: Plans the gym sells. Admins set them up; everyone can see what's
-        on sale.
+      description: Plans the gym sells. Admins set them up and give them to branches;
+        everyone can see what's on sale at theirs.
       parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: Only what this branch can sell
       - in: query
         name: kind
         schema:
@@ -1829,6 +1984,11 @@ paths:
         name: on_sale
         schema:
           type: boolean
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name
       tags:
       - plans
       security:
@@ -1842,8 +2002,8 @@ paths:
           description: ''
     post:
       operationId: plans_create
-      description: Plans the gym sells. Admins set them up; everyone can see what's
-        on sale.
+      description: Plans the gym sells. Admins set them up and give them to branches;
+        everyone can see what's on sale at theirs.
       tags:
       - plans
       requestBody:
@@ -1870,8 +2030,8 @@ paths:
   /api/plans/{id}/:
     get:
       operationId: plans_retrieve
-      description: Plans the gym sells. Admins set them up; everyone can see what's
-        on sale.
+      description: Plans the gym sells. Admins set them up and give them to branches;
+        everyone can see what's on sale at theirs.
       parameters:
       - in: path
         name: id
@@ -1892,8 +2052,8 @@ paths:
           description: ''
     put:
       operationId: plans_update
-      description: Plans the gym sells. Admins set them up; everyone can see what's
-        on sale.
+      description: Plans the gym sells. Admins set them up and give them to branches;
+        everyone can see what's on sale at theirs.
       parameters:
       - in: path
         name: id
@@ -1926,8 +2086,8 @@ paths:
           description: ''
     patch:
       operationId: plans_partial_update
-      description: Plans the gym sells. Admins set them up; everyone can see what's
-        on sale.
+      description: Plans the gym sells. Admins set them up and give them to branches;
+        everyone can see what's on sale at theirs.
       parameters:
       - in: path
         name: id
@@ -1959,8 +2119,8 @@ paths:
           description: ''
     delete:
       operationId: plans_destroy
-      description: Plans the gym sells. Admins set them up; everyone can see what's
-        on sale.
+      description: Plans the gym sells. Admins set them up and give them to branches;
+        everyone can see what's on sale at theirs.
       parameters:
       - in: path
         name: id
@@ -2218,6 +2378,37 @@ paths:
         required: true
       tags:
       - staff
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/staff/{id}/set-password/:
+    post:
+      operationId: staff_set_password_create
+      description: Give a receptionist or trainer a new password (they forgot theirs).
+        They're signed out everywhere.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - staff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffPasswordRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
@@ -2500,6 +2691,11 @@ paths:
         schema:
           type: integer
       - in: query
+        name: branch
+        schema:
+          type: integer
+        description: Tasks of staff who work at this branch
+      - in: query
         name: due_date
         schema:
           type: string
@@ -2521,6 +2717,11 @@ paths:
         schema:
           type: boolean
         description: Same as state=overdue
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Task title or details, or the assignee's name
       - in: query
         name: role
         schema:
@@ -2820,8 +3021,22 @@ paths:
     get:
       operationId: tasks_counts_retrieve
       description: 'How many tasks each filter chip holds: open, overdue, done and
-        all for the role filter, and all by role.'
+        all for the filters, and all by role.'
       parameters:
+      - in: query
+        name: assignee
+        schema:
+          type: integer
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: Tasks of staff who work at this branch
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Task title or details, or the assignee's name
       - in: query
         name: role
         schema:
@@ -3193,9 +3408,8 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         paid_to:
@@ -3223,9 +3437,8 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         paid_to:
@@ -3585,20 +3798,24 @@ components:
           maxLength: 80
         percent_off:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           nullable: true
         amount_off_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           nullable: true
         plans:
           type: array
           items:
             type: integer
+          description: Empty means every plan
+        branches:
+          type: array
+          items:
+            type: integer
+          description: Empty means every branch
         starts:
           type: string
           format: date
@@ -3621,20 +3838,24 @@ components:
           maxLength: 80
         percent_off:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           nullable: true
         amount_off_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           nullable: true
         plans:
           type: array
           items:
             type: integer
+          description: Empty means every plan
+        branches:
+          type: array
+          items:
+            type: integer
+          description: Empty means every branch
         starts:
           type: string
           format: date
@@ -3946,6 +4167,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Task'
+    PasswordChangeRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+      required:
+      - current_password
+      - new_password
     PasswordRequest:
       type: object
       properties:
@@ -3996,9 +4233,8 @@ components:
           $ref: '#/components/schemas/CategoryEnum'
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         paid_to:
@@ -4018,6 +4254,23 @@ components:
         reminders_on:
           type: boolean
           description: Send members their renewal and dues reminders
+    PatchedMeEditRequest:
+      type: object
+      description: A staff member's own name, sign-in email and mobile number.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        phone:
+          type: string
+          nullable: true
+          maxLength: 20
     PatchedMemberRequest:
       type: object
       description: |-
@@ -4086,20 +4339,24 @@ components:
           maxLength: 80
         percent_off:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           nullable: true
         amount_off_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           nullable: true
         plans:
           type: array
           items:
             type: integer
+          description: Empty means every plan
+        branches:
+          type: array
+          items:
+            type: integer
+          description: Empty means every branch
         starts:
           type: string
           format: date
@@ -4114,9 +4371,8 @@ components:
       properties:
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -4137,26 +4393,28 @@ components:
           $ref: '#/components/schemas/PlanKindEnum'
         months:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           description: 'Memberships: 1, 3, 6, 12'
         sessions:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           description: 'Personal training: number of sessions'
         price_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         includes:
           type: string
           maxLength: 120
         on_sale:
           type: boolean
+        branches:
+          type: array
+          items:
+            type: integer
+          description: Empty means every branch
     PatchedStaffRequest:
       type: object
       description: A trainer, receptionist or admin. Creating one creates their login
@@ -4234,9 +4492,8 @@ components:
           type: integer
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -4271,9 +4528,8 @@ components:
       properties:
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -4288,9 +4544,8 @@ components:
       properties:
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -4316,9 +4571,8 @@ components:
           type: integer
         amount_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         method:
           $ref: '#/components/schemas/MethodEnum'
         note:
@@ -4341,26 +4595,28 @@ components:
           $ref: '#/components/schemas/PlanKindEnum'
         months:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           description: 'Memberships: 1, 3, 6, 12'
         sessions:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           description: 'Personal training: number of sessions'
         price_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         includes:
           type: string
           maxLength: 120
         on_sale:
           type: boolean
+        branches:
+          type: array
+          items:
+            type: integer
+          description: Empty means every branch
       required:
       - id
       - name
@@ -4384,26 +4640,28 @@ components:
           $ref: '#/components/schemas/PlanKindEnum'
         months:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           description: 'Memberships: 1, 3, 6, 12'
         sessions:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 32767
           minimum: 0
-          format: int64
           description: 'Personal training: number of sessions'
         price_paise:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
         includes:
           type: string
           maxLength: 120
         on_sale:
           type: boolean
+        branches:
+          type: array
+          items:
+            type: integer
+          description: Empty means every branch
       required:
       - name
       - price_paise
@@ -4563,6 +4821,18 @@ components:
       - is_owner
       - name
       - role
+    StaffPasswordRequest:
+      type: object
+      description: A new password an admin sets for a receptionist or trainer, and
+        tells them.
+      properties:
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+      required:
+      - password
     StaffRequest:
       type: object
       description: A trainer, receptionist or admin. Creating one creates their login

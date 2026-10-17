@@ -34,6 +34,7 @@ import type {
   PatchedStaffRequest,
   Staff,
   StaffListParams,
+  StaffPasswordRequest,
   StaffRequest
 } from '.././model';
 
@@ -665,6 +666,87 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getStaffDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Give a receptionist or trainer a new password (they forgot theirs). They're signed out everywhere.
+ */
+export type staffSetPasswordCreateResponse204 = {
+  data: void
+  status: 204
+}
+    
+export type staffSetPasswordCreateResponseSuccess = (staffSetPasswordCreateResponse204) & {
+  headers: Headers;
+};
+;
+
+export type staffSetPasswordCreateResponse = (staffSetPasswordCreateResponseSuccess)
+
+export const getStaffSetPasswordCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/staff/${id}/set-password/`
+}
+
+export const staffSetPasswordCreate = async (id: number,
+    staffPasswordRequest: StaffPasswordRequest, options?: RequestInit): Promise<staffSetPasswordCreateResponse> => {
+  
+  return apiFetch<staffSetPasswordCreateResponse>(getStaffSetPasswordCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      staffPasswordRequest,)
+  }
+);}
+
+
+
+
+export const getStaffSetPasswordCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof staffSetPasswordCreate>>, TError,{id: number;data: StaffPasswordRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof staffSetPasswordCreate>>, TError,{id: number;data: StaffPasswordRequest}, TContext> => {
+
+const mutationKey = ['staffSetPasswordCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof staffSetPasswordCreate>>, {id: number;data: StaffPasswordRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  staffSetPasswordCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StaffSetPasswordCreateMutationResult = NonNullable<Awaited<ReturnType<typeof staffSetPasswordCreate>>>
+    export type StaffSetPasswordCreateMutationBody = StaffPasswordRequest
+    export type StaffSetPasswordCreateMutationError = unknown
+
+    export const useStaffSetPasswordCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof staffSetPasswordCreate>>, TError,{id: number;data: StaffPasswordRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof staffSetPasswordCreate>>,
+        TError,
+        {id: number;data: StaffPasswordRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getStaffSetPasswordCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

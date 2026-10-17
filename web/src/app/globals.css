@@ -13,3 +13,9 @@ body { background: var(--surface); }
 }
 /* Roles without the create button (trainer, member) have four equal tabs. */
 .rl-tabbar__in:not(:has(.rl-fab)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* The app bar's add button: a filled round button in the brand ink, built only from design tokens. */
+.rl-iconbtn--primary { background: var(--ink); color: var(--ground); box-shadow: var(--shadow-button); transition: transform 120ms ease; }
+.rl-iconbtn--primary:active { background: var(--ink); transform: scale(.94); }
+/* Smaller than other icon buttons to sit lighter in the bar; the ::before keeps the 44px tap area. */
+.rl-iconbtn--primary { width: 36px; height: 36px; margin: 4px; }
+.rl-iconbtn--primary::before { content: ""; position: absolute; inset: -4px; }

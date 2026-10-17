@@ -74,11 +74,16 @@ export function discount(o: Offer | undefined, price: number) {
   return o.percent_off != null ? Math.floor((price * o.percent_off) / 100) : Math.min(o.amount_off_paise ?? 0, price);
 }
 
-export function PlanPicker({ plan, setPlan, offer, setOffer }: {
-  plan: number | null; setPlan: (id: number) => void; offer: number | null; setOffer: (id: number | null) => void;
+/** What `branch` (the member's home branch) can sell: plans and offers given to it or to every branch. */
+function useSoldAt(branch: number | null) {
+  const at = branch ? { branch } : {};
+  return { plans: usePlansList({ on_sale: true, limit: 100, ...at }), offers: useOffersList({ current: true, limit: 100, ...at }) };
+}
+
+export function PlanPicker({ branch, plan, setPlan, offer, setOffer }: {
+  branch: number | null; plan: number | null; setPlan: (id: number) => void; offer: number | null; setOffer: (id: number | null) => void;
 }) {
-  const plans = usePlansList({ on_sale: true, limit: 100 });
-  const offers = useOffersList({ current: true, limit: 100 });
+  const { plans, offers } = useSoldAt(branch);
   const list = plans.data?.data.results ?? [];
   const chosen = list.find((p) => p.id === plan);
   const usable = (offers.data?.data.results ?? []).filter((o) => offerApplies(o, chosen));
@@ -102,9 +107,8 @@ export function PlanPicker({ plan, setPlan, offer, setOffer }: {
   );
 }
 
-export function usePriceOf(plan: number | null, offer: number | null) {
-  const plans = usePlansList({ on_sale: true, limit: 100 });
-  const offers = useOffersList({ current: true, limit: 100 });
+export function usePriceOf(branch: number | null, plan: number | null, offer: number | null) {
+  const { plans, offers } = useSoldAt(branch);
   const p = plans.data?.data.results.find((x) => x.id === plan);
   const o = offers.data?.data.results.find((x) => x.id === offer);
   const list = p?.price_paise ?? 0;

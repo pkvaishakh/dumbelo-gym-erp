@@ -6,22 +6,29 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
-  Me
+  Me,
+  PasswordChangeRequest,
+  PatchedMeEditRequest,
+  Tokens
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -33,6 +40,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
  * Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
+Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
  */
 export type meRetrieveResponse200 = {
   data: Me
@@ -140,3 +148,165 @@ export function useMeRetrieve<TData = Awaited<ReturnType<typeof meRetrieve>>, TE
 
 
 
+/**
+ * Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
+Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+ */
+export type mePartialUpdateResponse200 = {
+  data: Me
+  status: 200
+}
+    
+export type mePartialUpdateResponseSuccess = (mePartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mePartialUpdateResponse = (mePartialUpdateResponseSuccess)
+
+export const getMePartialUpdateUrl = () => {
+
+
+  
+
+  return `/api/me/`
+}
+
+export const mePartialUpdate = async (patchedMeEditRequest: PatchedMeEditRequest, options?: RequestInit): Promise<mePartialUpdateResponse> => {
+  
+  return apiFetch<mePartialUpdateResponse>(getMePartialUpdateUrl(),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedMeEditRequest,)
+  }
+);}
+
+
+
+
+export const getMePartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mePartialUpdate>>, TError,{data: PatchedMeEditRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof mePartialUpdate>>, TError,{data: PatchedMeEditRequest}, TContext> => {
+
+const mutationKey = ['mePartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mePartialUpdate>>, {data: PatchedMeEditRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  mePartialUpdate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof mePartialUpdate>>>
+    export type MePartialUpdateMutationBody = PatchedMeEditRequest
+    export type MePartialUpdateMutationError = unknown
+
+    export const useMePartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mePartialUpdate>>, TError,{data: PatchedMeEditRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof mePartialUpdate>>,
+        TError,
+        {data: PatchedMeEditRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getMePartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Change your own password. Every other device signed in as you is signed out; this one gets new tokens.
+ */
+export type mePasswordCreateResponse200 = {
+  data: Tokens
+  status: 200
+}
+    
+export type mePasswordCreateResponseSuccess = (mePasswordCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mePasswordCreateResponse = (mePasswordCreateResponseSuccess)
+
+export const getMePasswordCreateUrl = () => {
+
+
+  
+
+  return `/api/me/password/`
+}
+
+export const mePasswordCreate = async (passwordChangeRequest: PasswordChangeRequest, options?: RequestInit): Promise<mePasswordCreateResponse> => {
+  
+  return apiFetch<mePasswordCreateResponse>(getMePasswordCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      passwordChangeRequest,)
+  }
+);}
+
+
+
+
+export const getMePasswordCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mePasswordCreate>>, TError,{data: PasswordChangeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof mePasswordCreate>>, TError,{data: PasswordChangeRequest}, TContext> => {
+
+const mutationKey = ['mePasswordCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mePasswordCreate>>, {data: PasswordChangeRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  mePasswordCreate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MePasswordCreateMutationResult = NonNullable<Awaited<ReturnType<typeof mePasswordCreate>>>
+    export type MePasswordCreateMutationBody = PasswordChangeRequest
+    export type MePasswordCreateMutationError = unknown
+
+    export const useMePasswordCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mePasswordCreate>>, TError,{data: PasswordChangeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof mePasswordCreate>>,
+        TError,
+        {data: PasswordChangeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getMePasswordCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    

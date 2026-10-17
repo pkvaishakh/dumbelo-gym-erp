@@ -40,7 +40,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Plans the gym sells. Admins set them up; everyone can see what's on sale.
+ * Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs.
  */
 export type plansListResponse200 = {
   data: PaginatedPlanList
@@ -156,7 +156,7 @@ export function usePlansList<TData = Awaited<ReturnType<typeof plansList>>, TErr
 
 
 /**
- * Plans the gym sells. Admins set them up; everyone can see what's on sale.
+ * Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs.
  */
 export type plansCreateResponse201 = {
   data: Plan
@@ -236,7 +236,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Plans the gym sells. Admins set them up; everyone can see what's on sale.
+ * Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs.
  */
 export type plansRetrieveResponse200 = {
   data: Plan
@@ -345,7 +345,7 @@ export function usePlansRetrieve<TData = Awaited<ReturnType<typeof plansRetrieve
 
 
 /**
- * Plans the gym sells. Admins set them up; everyone can see what's on sale.
+ * Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs.
  */
 export type plansUpdateResponse200 = {
   data: Plan
@@ -426,7 +426,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Plans the gym sells. Admins set them up; everyone can see what's on sale.
+ * Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs.
  */
 export type plansPartialUpdateResponse200 = {
   data: Plan
@@ -507,7 +507,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Plans the gym sells. Admins set them up; everyone can see what's on sale.
+ * Plans the gym sells. Admins set them up and give them to branches; everyone can see what's on sale at theirs.
  */
 export type plansDestroyResponse204 = {
   data: void

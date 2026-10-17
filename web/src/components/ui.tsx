@@ -1,6 +1,6 @@
 "use client";
 /* Small building blocks that render the Rackline design system's markup (src/styles/rackline.css). */
-import { AlertCircle, Check, ChevronRight, Search, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, Check, ChevronRight, Plus, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 
@@ -8,6 +8,15 @@ import { initials, STATUS_LABEL } from "@/lib/format";
 
 export function Icon({ as: C, size }: { as: LucideIcon; size?: "sm" | "xs" }) {
   return <C className={`rl-icon${size ? ` rl-icon--${size}` : ""}`} strokeWidth={1.75} aria-hidden="true" />;
+}
+
+/** The round ink "+" at the end of an app bar that opens a create screen: `href` for a page, `onClick` for a sheet.
+ * `label` is what a screen reader hears ("Add Member"). */
+export function AddButton({ label, ...to }: { label: string } & ({ href: string } | { onClick: () => void })) {
+  const icon = <Icon as={Plus} size="sm" />;
+  return "href" in to
+    ? <Link className="rl-iconbtn rl-iconbtn--primary" href={to.href} aria-label={label}>{icon}</Link>
+    : <button className="rl-iconbtn rl-iconbtn--primary" type="button" aria-label={label} aria-haspopup="dialog" onClick={to.onClick}>{icon}</button>;
 }
 
 export function Mark({ className = "rl-logo__mark" }: { className?: string }) {
@@ -97,16 +106,18 @@ type FieldProps = {
   optional?: boolean;
   hint?: React.ReactNode;
   prefix?: string;
+  /** The control is a textarea: the box grows with it instead of one line high. */
+  area?: boolean;
   children: (id: string, describedBy?: string) => React.ReactNode;
 };
-export function Field({ label, error, optional, hint, prefix, children }: FieldProps) {
+export function Field({ label, error, optional, hint, prefix, area, children }: FieldProps) {
   const id = useId();
   return (
     <div className={`rl-field${error ? " is-invalid" : ""}`}>
       <label className="rl-field__label" htmlFor={id}>
         {label} {optional && <span className="rl-optional">(optional)</span>}
       </label>
-      <div className="rl-field__control">
+      <div className={`rl-field__control${area ? " rl-field__control--area" : ""}`}>
         {prefix && <span className="rl-field__prefix">{prefix}</span>}
         {children(id, error ? `${id}-e` : undefined)}
       </div>
@@ -174,14 +185,18 @@ export function Sheet({ open, onClose, title, children, closable = true }: {
 }) {
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
+  // Callers often pass a fresh onClose each render; keeping it in a ref stops the effect below from re-running
+  // on every keystroke, which would pull focus out of the field being typed in.
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && closable) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && closable) closeRef.current(); };
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("keydown", onKey); prev?.focus?.(); };
-  }, [open, onClose, closable]);
+  }, [open, closable]);
   return (
     <>
       <div className={`rl-scrim${open ? " is-open" : ""}`} onClick={closable ? onClose : undefined} />
@@ -244,13 +259,22 @@ export function SkeletonRows({ n = 5 }: { n?: number }) {
   );
 }
 
-export function SearchField({ value, onChange, placeholder, label, autoFocus }: { value: string; onChange: (v: string) => void; placeholder: string; label: string; autoFocus?: boolean }) {
+/** `filter` adds the design's sliders button at the end; `on` shows its volt dot while a filter differs from the default. */
+export function SearchField({ value, onChange, placeholder, label, autoFocus, filter }: {
+  value: string; onChange: (v: string) => void; placeholder: string; label: string; autoFocus?: boolean;
+  filter?: { on: boolean; onClick: () => void };
+}) {
   return (
     <div className="rl-searchfield">
       <Search className="rl-icon rl-icon--sm rl-searchfield__lead" strokeWidth={1.75} aria-hidden="true" />
       <input className="rl-searchfield__input" type="search" inputMode="search" enterKeyHint="search" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false}
         placeholder={placeholder} aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} autoFocus={autoFocus} />
       {value && <button className="rl-searchfield__btn" type="button" aria-label="Clear search" onClick={() => onChange("")}><Icon as={X} size="sm" /></button>}
+      {filter && (
+        <button className={`rl-searchfield__btn${filter.on ? " is-on" : ""}`} type="button" aria-haspopup="dialog" aria-label={filter.on ? "Filters, some on" : "Filters"} onClick={filter.onClick}>
+          <Icon as={SlidersHorizontal} />
+        </button>
+      )}
     </div>
   );
 }

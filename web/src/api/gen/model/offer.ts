@@ -12,17 +12,20 @@ export interface Offer {
   name: string;
   /**
    * @minimum 0
-   * @maximum 9223372036854776000
+   * @maximum 32767
    * @nullable
    */
   percent_off?: number | null;
   /**
    * @minimum 0
-   * @maximum 9223372036854776000
+   * @maximum 2147483647
    * @nullable
    */
   amount_off_paise?: number | null;
+  /** Empty means every plan */
   plans?: number[];
+  /** Empty means every branch */
+  branches?: number[];
   starts: string;
   ends: string;
   is_active?: boolean;

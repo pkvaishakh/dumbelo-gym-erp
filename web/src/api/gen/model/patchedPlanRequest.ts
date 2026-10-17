@@ -17,21 +17,23 @@ export interface PatchedPlanRequest {
   /**
    * Memberships: 1, 3, 6, 12
    * @minimum 0
-   * @maximum 9223372036854776000
+   * @maximum 32767
    */
   months?: number;
   /**
    * Personal training: number of sessions
    * @minimum 0
-   * @maximum 9223372036854776000
+   * @maximum 32767
    */
   sessions?: number;
   /**
    * @minimum 0
-   * @maximum 9223372036854776000
+   * @maximum 2147483647
    */
   price_paise?: number;
   /** @maxLength 120 */
   includes?: string;
   on_sale?: boolean;
+  /** Empty means every branch */
+  branches?: number[];
 }

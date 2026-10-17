@@ -19,6 +19,10 @@ limit?: number;
  */
 offset?: number;
 /**
+ * Members whose current plan is this one
+ */
+plan?: number;
+/**
  * Name, member ID or phone
  */
 q?: string;

@@ -1,6 +1,8 @@
 import hashlib
 
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
@@ -10,7 +12,11 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 
+from apps.core.errors import RuleBroken
 from apps.gyms.models import GymRole
+
+from . import services
+from .models import User, normalize_phone
 
 
 class LoginSerializer(serializers.Serializer):
@@ -101,11 +107,81 @@ class MeSerializer(serializers.Serializer):
     roles = RoleSerializer(many=True)
 
 
+class MeEditSerializer(serializers.ModelSerializer):
+    """A staff member's own name, sign-in email and mobile number."""
+
+    name = serializers.CharField(max_length=120)
+    email = serializers.EmailField(max_length=254)
+    phone = serializers.CharField(max_length=20, required=False, allow_null=True, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ["name", "email", "phone"]
+
+    def validate_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Enter your name")
+        return value.strip()
+
+    def validate_email(self, value):
+        value = User.objects.normalize_email(value)
+        if User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("Someone else signs in with this email")
+        return value
+
+    def validate_phone(self, value):
+        try:
+            value = normalize_phone(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages[0])
+        if value and User.objects.filter(phone=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("Someone else has this mobile number")
+        return value
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, max_length=128, style={"input_type": "password"})
+    new_password = serializers.CharField(write_only=True, max_length=128, style={"input_type": "password"})
+
+    def validate_new_password(self, value):
+        try:
+            validate_password(value, self.context["request"].user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
+
+
+def me_data(u):
+    roles = GymRole.objects.filter(user=u, is_active=True, gym__status__in=["trial", "active"]).select_related("gym")
+    return MeSerializer({"id": u.id, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles}).data
+
+
 class MeView(APIView):
-    """Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym."""
+    """Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
+    Staff can change their own name, email and mobile number; a member's details are changed by the front desk."""
 
     @extend_schema(responses=MeSerializer)
     def get(self, request):
-        u = request.user
-        roles = GymRole.objects.filter(user=u, is_active=True, gym__status__in=["trial", "active"]).select_related("gym")
-        return Response(MeSerializer({"id": u.id, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles}).data)
+        return Response(me_data(request.user))
+
+    @extend_schema(request=MeEditSerializer, responses=MeSerializer)
+    def patch(self, request):
+        if not request.user.email:  # members sign in with the phone number the desk keeps on their profile
+            raise RuleBroken("details_by_desk", "Ask the front desk to change your details")
+        edit = MeEditSerializer(request.user, data=request.data, partial=True)
+        edit.is_valid(raise_exception=True)
+        edit.save()
+        return Response(me_data(request.user))
+
+
+class PasswordView(APIView):
+    """Change your own password. Every other device signed in as you is signed out; this one gets new tokens."""
+
+    throttle_scope = "login"  # per account, like sign-in: guessing the current password must stay slow
+
+    @extend_schema(request=PasswordChangeSerializer, responses=TokensSerializer)
+    def post(self, request):
+        data = PasswordChangeSerializer(data=request.data, context={"request": request})
+        data.is_valid(raise_exception=True)
+        v = data.validated_data
+        return Response(services.change_own_password(request.user, v["current_password"], v["new_password"]))

@@ -46,7 +46,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * What the gym spends. Admins only. Filter by ?month=2026-10, branch or category.
+ * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
  */
 export type expensesListResponse200 = {
   data: PaginatedExpenseList
@@ -232,7 +232,7 @@ export function useExpensesList<TData = Awaited<ReturnType<typeof expensesList>>
 
 
 /**
- * What the gym spends. Admins only. Filter by ?month=2026-10, branch or category.
+ * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
  */
 export type expensesCreateResponse201 = {
   data: Expense
@@ -312,7 +312,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * What the gym spends. Admins only. Filter by ?month=2026-10, branch or category.
+ * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
  */
 export type expensesRetrieveResponse200 = {
   data: Expense
@@ -421,7 +421,7 @@ export function useExpensesRetrieve<TData = Awaited<ReturnType<typeof expensesRe
 
 
 /**
- * What the gym spends. Admins only. Filter by ?month=2026-10, branch or category.
+ * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
  */
 export type expensesUpdateResponse200 = {
   data: Expense
@@ -502,7 +502,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * What the gym spends. Admins only. Filter by ?month=2026-10, branch or category.
+ * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
  */
 export type expensesPartialUpdateResponse200 = {
   data: Expense
@@ -583,7 +583,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * What the gym spends. Admins only. Filter by ?month=2026-10, branch or category.
+ * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
  */
 export type expensesDestroyResponse204 = {
   data: void
