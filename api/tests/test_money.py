@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from apps.audit.models import AuditLog
+from apps.expenses.models import Expense
 from apps.members.models import Offer, Payment
 
 
@@ -59,3 +60,14 @@ def test_summary(w):
     s = w.client(w.admin).get("/api/reports/summary/").json()
     assert s["members"]["active"] == 1 and s["revenue"]["today_paise"] == 150000
     assert w.client(w.desk).get("/api/reports/summary/").status_code == 403
+
+
+def test_summary_splits_the_day_by_branch(w):
+    Expense.objects.create(gym=w.gym, branch=w.b, category="rent", method="cash", amount_paise=40000, spent_on=w.today, created_by=w.admin)
+    s = w.client(w.admin).get("/api/reports/summary/").json()
+    assert s["expenses_today_paise"] == 40000
+    by = {b["name"]: b for b in s["branches"]}
+    assert by["A"]["revenue_today_paise"] == 150000 and by["A"]["active_members"] == 1 and by["A"]["expenses_today_paise"] == 0
+    assert by["B"]["expenses_today_paise"] == 40000 and by["B"]["revenue_today_paise"] == 0
+    one = w.client(w.admin).get(f"/api/reports/summary/?branch={w.b.id}").json()
+    assert one["expenses_today_paise"] == 40000 and "branches" not in one

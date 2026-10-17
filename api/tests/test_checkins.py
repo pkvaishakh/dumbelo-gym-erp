@@ -86,3 +86,22 @@ def test_summary_counts_member_check_ins_by_source(w):
     r = w.client(w.desk).get("/api/checkins/summary/").json()
     assert r["member_sources"] == {"desk": 0, "qr": 1, "device": 0}
     assert r["totals"]["member"] == 1 and r["totals"]["trainer"] == 1
+
+
+def test_summary_without_branch_counts_each_branch(w):
+    from apps.attendance.models import CheckIn
+    from apps.attendance.services import check_in
+
+    from apps.members.services import sell
+
+    bee = w.new_member("Bee", "9833333333", w.b)
+    sell(bee, w.monthly, by=w.admin)
+    check_in(w.a, member=w.member, source=CheckIn.DEVICE)
+    check_in(w.b, member=bee, source=CheckIn.QR)
+    r = w.client(w.admin).get("/api/checkins/summary/").json()
+    by = {b["id"]: b for b in r["branches"]}
+    assert by[w.a.id]["member"] == 1 and by[w.a.id]["member_sources"]["device"] == 1
+    assert by[w.b.id]["member"] == 1 and by[w.b.id]["member_sources"]["qr"] == 1
+    assert r["totals"]["member"] == 2
+    assert "branches" not in w.client(w.admin).get(f"/api/checkins/summary/?branch={w.a.id}").json()
+    assert [b["id"] for b in w.client(w.desk).get("/api/checkins/summary/").json()["branches"]] == [w.a.id]

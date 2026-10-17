@@ -20,21 +20,26 @@ function Avatar() {
 /** The greeting at the top of a home screen, with the admin's branch switcher. Goes first inside <main>. */
 export function Greeting() {
   const { me, role, branchName } = useSession();
+  return (
+    <div className="rl-greeting">
+      <h1 className="rl-greeting__hello">{greeting(me.name, true)}</h1>
+      {role.role === "admin" ? <BranchChip /> : (
+        <p className="rl-appbar__branch" style={{ margin: 0 }}>{branchName}{role.role !== "member" ? " branch" : ""}</p>
+      )}
+    </div>
+  );
+}
+
+/** The admin's branch switcher: a chip naming the branch, opening the branch sheet. */
+export function BranchChip() {
+  const { branchName } = useSession();
   const [open, setOpen] = useState(false);
-  const isAdmin = role.role === "admin";
   return (
     <>
-      <div className="rl-greeting">
-        <h1 className="rl-greeting__hello">{greeting(me.name, true)}</h1>
-        {isAdmin ? (
-          <button className="rl-chip" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Branch: ${branchName}. Switch branch`}>
-            {branchName}<Icon as={ChevronDown} size="xs" />
-          </button>
-        ) : (
-          <p className="rl-appbar__branch" style={{ margin: 0 }}>{branchName}{role.role !== "member" ? " branch" : ""}</p>
-        )}
-      </div>
-      {isAdmin && <BranchSheet open={open} onClose={() => setOpen(false)} />}
+      <button className="rl-chip" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Branch: ${branchName}. Switch branch`}>
+        {branchName}<Icon as={ChevronDown} size="xs" />
+      </button>
+      <BranchSheet open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
@@ -71,8 +76,8 @@ export function BranchSheet({ open, onClose }: { open: boolean; onClose: () => v
   );
 }
 
-/** A tab screen's header: title, a line under it, avatar. */
-export function PageBar({ title, sub, back }: { title: string; sub?: React.ReactNode; back?: string | true }) {
+/** A tab screen's header: title, a line under it, and the avatar or an `action` in its place (Reports' branch chip). */
+export function PageBar({ title, sub, back, action }: { title: string; sub?: React.ReactNode; back?: string | true; action?: React.ReactNode }) {
   const router = useRouter();
   return (
     <header className="rl-appbar rl-appbar--scroll"><div className="rl-appbar__in">
@@ -82,7 +87,7 @@ export function PageBar({ title, sub, back }: { title: string; sub?: React.React
         </button>
       )}
       <div className="rl-appbar__who"><h1 className="rl-pagetitle">{title}</h1>{sub && <p className="rl-appbar__branch">{sub}</p>}</div>
-      {!back && <Avatar />}
+      {action ?? (!back && <Avatar />)}
     </div></header>
   );
 }

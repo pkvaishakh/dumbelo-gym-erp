@@ -10,7 +10,7 @@ from apps.expenses.views import ExpenseViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, SubscriptionViewSet
 from apps.messages.views import MessageViewSet
-from apps.reports.views import SummaryView
+from apps.reports.views import PeriodView, SummaryView
 from apps.tasks.views import TaskViewSet
 
 router = DefaultRouter()
@@ -38,6 +38,7 @@ urlpatterns = [
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
     path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/
     path("api/reports/summary/", SummaryView.as_view(), name="summary"),
+    path("api/reports/period/", PeriodView.as_view(), name="period"),
     path("api/gym/settings/", GymSettingsView.as_view(), name="gym-settings"),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

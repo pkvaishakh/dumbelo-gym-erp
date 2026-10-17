@@ -60,12 +60,21 @@ export function Section({ title, aside, children, label }: { title?: string; asi
   );
 }
 
-export function Stat({ icon, value, label, note, href }: { icon: LucideIcon; value: React.ReactNode; label: string; note?: React.ReactNode; href?: string }) {
+/** A figure card. `accent` puts the icon on an ink plate (volt icon) for the lead figure; `share` (0–1) adds a volt
+ *  bar under the label, which the `note` must say in words. */
+export function Stat({ icon, value, label, note, href, accent, share }: {
+  icon: LucideIcon; value: React.ReactNode; label: string; note?: React.ReactNode; href?: string; accent?: boolean; share?: number;
+}) {
   const body = (
     <>
-      <span className="rl-stat__icon"><Icon as={icon} size="sm" /></span>
+      <span className="rl-stat__icon" style={accent ? { background: "var(--ink)", color: "var(--volt)" } : undefined}><Icon as={icon} size="sm" /></span>
       <p className="rl-stat__value">{value}</p>
       <p className="rl-stat__label">{label}</p>
+      {share !== undefined && (
+        <span className="rl-bar" aria-hidden="true" style={{ marginTop: "var(--space-2)", background: "var(--surface)" }}>
+          <span className="rl-bar__fill" style={{ ["--v" as string]: share }} />
+        </span>
+      )}
       {note && <p className="rl-stat__note">{note}</p>}
     </>
   );

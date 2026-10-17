@@ -6,12 +6,12 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.tenancy import ADMIN, STAFF, GymViewMixin
 from apps.gyms.models import GymRole
 
 from .models import Task, TaskUpdate
+from .services import overdue
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
@@ -66,12 +66,6 @@ class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
     roles = {"list": STAFF, "retrieve": STAFF, "start": STAFF, "done": STAFF, "reopen": STAFF, "updates": STAFF, "counts": STAFF, "*": ADMIN}
     filterset_fields = ["status", "assignee", "due_date"]
 
-    def _overdue(self):
-        """Not done, and the due day has passed, or it's today and the due time has passed (in the gym's clock)."""
-        now = clock.local(self.gym)
-        late = Q(due_date__lt=now.date()) | Q(due_date=now.date(), due_time__isnull=False, due_time__lt=now.time())
-        return ~Q(status=Task.DONE) & late
-
     def _mine(self, by_role=True):
         """Tasks the caller may see (admins: all; staff: their own), narrowed to ?role= when by_role."""
         qs = Task.objects.filter(gym=self.gym)
@@ -87,7 +81,7 @@ class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
         if state == "open":
             qs = qs.exclude(status=Task.DONE)
         elif state == "overdue":
-            qs = qs.filter(self._overdue())
+            qs = qs.filter(overdue(self.gym))
         elif state == "done":
             qs = qs.filter(status=Task.DONE)
         # Open work first (by due date), finished work after it.
@@ -99,7 +93,7 @@ class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
     def counts(self, request):
         """How many tasks each filter chip holds: open, overdue, done and all for the role filter, and all by role."""
         qs = self._mine()
-        by_state = qs.aggregate(all=Count("id"), done=Count("id", filter=Q(status=Task.DONE)), overdue=Count("id", filter=self._overdue()))
+        by_state = qs.aggregate(all=Count("id"), done=Count("id", filter=Q(status=Task.DONE)), overdue=Count("id", filter=overdue(self.gym)))
         by_state["open"] = by_state["all"] - by_state["done"]
         by_role = dict(self._mine(by_role=False).values_list("assignee__role").annotate(n=Count("id")))
         return Response({**by_state, "by_role": {"all": sum(by_role.values()), "trainer": by_role.get("trainer", 0), "receptionist": by_role.get("receptionist", 0)}})

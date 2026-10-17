@@ -1,5 +1,5 @@
 "use client";
-import { CalendarX, ClipboardCheck, UserCheck } from "lucide-react";
+import { CalendarX, ChevronRight, ClipboardCheck, DoorOpen, QrCode, UserCheck } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
@@ -14,14 +14,26 @@ import { paged, pages, useAction, useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import type { CheckinSummary } from "@/lib/types";
 
+/** How members came in, in the order the Summary shows them. */
+const SOURCES = [
+  { key: "device", label: "Through the turnstile", icon: DoorOpen },
+  { key: "qr", label: "By wall QR", icon: QrCode },
+  { key: "desk", label: "At the desk", icon: ClipboardCheck },
+] as const;
+
 function lastDays(n: number) {
   return Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (n - 1 - i)); return d; });
 }
 
 function Attendance() {
   const params = useSearchParams();
-  const { role, branch, branchName } = useSession();
+  const { role, branch, branchName, setBranch } = useSession();
   const desk = role.role === "admin" || role.role === "receptionist";
+  const isAdmin = role.role === "admin";
+  const branchOptions = [
+    ...(isAdmin ? [{ value: "all", label: "All branches" }] : []),
+    ...role.branches.map((b) => ({ value: String(b.id), label: b.name })),
+  ];
   const days = lastDays(7);
   const [date, setDate] = useState(isoDate(new Date()));
   const isToday = date === isoDate(new Date());
@@ -43,7 +55,7 @@ function Attendance() {
 
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Attendance" sub={<>{label} • {branchName}</>} />
+      <PageBar title="Attendance" sub={<>{label} â€¢ {branchName}</>} />
       <main className="rl-app__main">
         <div className="rl-searchbar rl-searchbar--days">
           <div className="rl-daystrip" role="radiogroup" aria-label="Day">
@@ -58,6 +70,10 @@ function Attendance() {
             })}
           </div>
         </div>
+        {branchOptions.length > 1 && (
+          <Chips name="at-branch" label="Branch" value={branch ? String(branch) : "all"} onChange={(v) => setBranch(v === "all" ? null : Number(v))}
+            style={{ marginTop: 0 }} options={branchOptions} />
+        )}
         <Seg label="Whose attendance" onSurface value={who} onChange={setWho} options={[{ value: "members", label: "Members" }, { value: "staff", label: "Staff" }]} />
 
         {who === "members" ? (
@@ -75,14 +91,22 @@ function Attendance() {
             )}
             <Section label="Summary">
               <div className="rl-kpis rl-kpis--pair">
-                <Stat icon={UserCheck} value={summary.data ? memberCount : "–"} label={isToday ? "Check-ins so far" : "Check-ins"} />
-                <Stat icon={ClipboardCheck} value={src ? src.device : "–"} label="Through the turnstile" note={src ? `${src.qr} by wall QR, ${src.desk} at the desk` : undefined} />
+                <Stat icon={UserCheck} accent value={summary.data ? memberCount : "â€“"} label={isToday ? "Check-ins so far" : "Check-ins"}
+                  note={summary.data ? (branch ? branchName : `Across ${plural(summary.data.branches?.length ?? role.branches.length, "branch", "branches")}`) : undefined} />
+                {SOURCES.map((s) => (
+                  <Stat key={s.key} icon={s.icon} value={src ? src[s.key] : "â€“"} label={s.label}
+                    share={src && memberCount ? src[s.key] / memberCount : src ? 0 : undefined}
+                    note={src ? (memberCount ? `${Math.round((src[s.key] / memberCount) * 100)}% of check-ins` : "None yet") : undefined} />
+                ))}
               </div>
             </Section>
+            {!branch && (summary.data?.branches?.length ?? 0) > 1 && (
+              <Section title="By branch"><BranchCheckins rows={summary.data!.branches!} /></Section>
+            )}
             <Section title="Check-ins">
               <Chips name="at-filter" label="Filter check-ins by session" value={session} onChange={setSession} style={{ marginTop: 0 }}
                 options={[{ value: "all", label: "All", count: memberCount }, ...sessions.map((s) => ({ value: s.session, label: s.session, count: s.member }))]} />
-              <div className="rl-listmeta" style={{ marginTop: "var(--space-3)" }}><p role="status">{list.isLoading ? "Loading…" : `Showing ${plural(shown.length, "check-in")}${shown.length < shownCount ? ` of ${shownCount}` : ""}`}</p><p>Latest first</p></div>
+              <div className="rl-listmeta" style={{ marginTop: "var(--space-3)" }}><p role="status">{list.isLoading ? "Loadingâ€¦" : `Showing ${plural(shown.length, "check-in")}${shown.length < shownCount ? ` of ${shownCount}` : ""}`}</p><p>Latest first</p></div>
               {list.isLoading ? <SkeletonRows /> : shown.length ? <><VisitList rows={shown} /><LoadMore q={list} /></> : (
                 <Empty icon={CalendarX} title={isToday ? "No check-ins yet today" : "No check-ins this day"} text="Check-ins from the desk, the wall QR and the turnstile show up here." />
               )}
@@ -96,6 +120,32 @@ function Attendance() {
   );
 }
 
+/** All branches: each branch's member check-ins and how they came in. Tapping one switches to that branch. */
+function BranchCheckins({ rows }: { rows: NonNullable<CheckinSummary["branches"]> }) {
+  const { setBranch } = useSession();
+  const top = Math.max(1, ...rows.map((b) => b.member));
+  return (
+    <ul className="rl-card rl-brday">
+      {rows.map((b) => (
+        <li key={b.id}><button className="rl-brday__row" type="button" onClick={() => setBranch(b.id)}
+          aria-label={`${b.name}: ${plural(b.member, "check-in")}, ${b.member_sources.device} through the turnstile, ${b.member_sources.qr} by wall QR, ${b.member_sources.desk} at the desk. Show this branch`}>
+          <span className="rl-brday__top">
+            <span className="rl-row__title">{b.name}</span>
+            <ChevronRight className="rl-icon rl-icon--sm rl-attn__chev" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="rl-bar" aria-hidden="true"><span className="rl-bar__fill" style={{ ["--v" as string]: b.member / top }} /></span>
+          <span className="rl-brday__nums" aria-hidden="true">
+            <span><b>{b.member}</b><small>Check-ins</small></span>
+            <span><b>{b.member_sources.device}</b><small>Turnstile</small></span>
+            <span><b>{b.member_sources.qr}</b><small>Wall QR</small></span>
+            <span><b>{b.member_sources.desk}</b><small>Desk</small></span>
+          </span>
+        </button></li>
+      ))}
+    </ul>
+  );
+}
+
 function VisitList({ rows }: { rows: CheckIn[] }) {
   return (
     <ul className="rl-card rl-mlist rl-mlist--compact">
@@ -103,7 +153,7 @@ function VisitList({ rows }: { rows: CheckIn[] }) {
         <li key={c.id}><a className="rl-mrow" href={c.kind === "member" ? `/members/${c.person_id}` : undefined}>
           <Photo name={c.name} />
           <span className="rl-row__title rl-mrow__name">{c.name}</span>
-          <span className="rl-row__meta rl-mrow__meta">{[c.code, c.session, c.source === "device" ? "Turnstile" : c.source === "qr" ? "Wall QR" : "Desk"].filter(Boolean).join(" • ")}</span>
+          <span className="rl-row__meta rl-mrow__meta">{[c.code, c.session, c.source === "device" ? "Turnstile" : c.source === "qr" ? "Wall QR" : "Desk"].filter(Boolean).join(" â€¢ ")}</span>
           <span className="rl-mrow__time">{c.time}</span>
         </a></li>
       ))}
@@ -142,7 +192,7 @@ function StaffPane({ checkins, kind, setKind, canCheckIn, loading }: {
                 <li key={s.id}><div className="rl-mrow">
                   <Photo name={s.name} />
                   <span className="rl-row__title rl-mrow__name">{s.name}</span>
-                  <span className="rl-row__meta rl-mrow__meta">{s.role === "trainer" ? "Trainer" : "Receptionist"}{s.shift ? ` • ${s.shift} shift` : ""}{c?.session ? ` • ${c.session}` : ""}</span>
+                  <span className="rl-row__meta rl-mrow__meta">{s.role === "trainer" ? "Trainer" : "Receptionist"}{s.shift ? ` â€¢ ${s.shift} shift` : ""}{c?.session ? ` â€¢ ${c.session}` : ""}</span>
                   {c ? <span className="rl-mrow__time">{c.time}</span> : canCheckIn ? (
                     <button className="rl-button rl-button--secondary rl-button--sm" type="button" onClick={() => setTarget(s)}>Check In</button>
                   ) : <span className="rl-status rl-status--off">Not in</span>}
@@ -168,7 +218,7 @@ function StaffCheckIn({ staff, onClose }: { staff: Staff | null; onClose: () => 
     <Sheet open={!!staff} onClose={() => { a.clearError(); onClose(); }} title="Check in staff">
       {staff && <p className="rl-row__meta">Check {staff.name} in now at {role.branches.find((b) => b.id === at)?.name ?? "their branch"}.</p>}
       <ErrorText>{a.error?.message}</ErrorText>
-      <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Checking in…" : "Check In"}</button></div>
+      <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Checking inâ€¦" : "Check In"}</button></div>
     </Sheet>
   );
 }

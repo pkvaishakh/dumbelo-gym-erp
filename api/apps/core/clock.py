@@ -46,7 +46,7 @@ def plan_end(starts: date, months: int) -> date:
     return add_months(starts, months or 3) - timedelta(days=1)
 
 
-def parse_date(value, default):
+def parse_date(value, default, field="date"):
     if not value:
         return default
     try:
@@ -54,4 +54,9 @@ def parse_date(value, default):
     except ValueError:
         from rest_framework.exceptions import ValidationError
 
-        raise ValidationError({"date": ["Use YYYY-MM-DD"]})
+        raise ValidationError({field: ["Use YYYY-MM-DD"]})
+
+
+def days_between(first: date, last: date) -> list[date]:
+    """Every day from first to last, both included."""
+    return [first + timedelta(days=i) for i in range((last - first).days + 1)]

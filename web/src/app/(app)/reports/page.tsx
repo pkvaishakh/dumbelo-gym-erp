@@ -1,55 +1,106 @@
 "use client";
-import { CalendarCheck, HandCoins, IndianRupee, Receipt } from "lucide-react";
-import { useState } from "react";
+import { addDays, differenceInCalendarDays, parseISO, subMonths } from "date-fns";
+import { BarChart3, CalendarCheck, ClipboardCheck, IndianRupee, UserPlus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-import { PageBar } from "@/components/shell";
-import { Section, SkeletonRows, Stat } from "@/components/ui";
-import { SessionsTable } from "@/features/homes";
-import { isoDate, plural, rupees, STATUS_LABEL } from "@/lib/format";
+import { BranchChip, PageBar } from "@/components/shell";
+import { Empty, Field, Section, Seg, SkeletonRows, Stat } from "@/components/ui";
+import { AttendanceCard, LateTasks, MembersCard, MoneyCard, RevenueCard, TasksCard, Trend } from "@/features/reports";
+import { isoDate, rangeLabel, rupees } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
-import type { Summary } from "@/lib/types";
+import type { PeriodReport, Summary } from "@/lib/types";
 
-export default function ReportsPage() {
-  const { branch, branchName } = useSession();
-  const [date, setDate] = useState(isoDate(new Date()));
-  const s = useGet<Summary>("/api/reports/summary/", { date, branch }).data;
-  const statuses = s ? (["active", "expiring", "due", "frozen", "expired"] as const).map((k) => [k, s.members[k]] as const) : [];
-  const max = Math.max(1, ...statuses.map(([, v]) => v));
+type Period = "7d" | "30d" | "3m" | "custom";
+const PERIODS: { value: Period; label: string }[] = [
+  { value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }, { value: "3m", label: "3 months" }, { value: "custom", label: "Custom" },
+];
+const MAX_DAYS = 366; // the API's limit too
+
+/** The first and last day a period covers, ending today unless the range is custom. */
+function rangeOf(period: Period, today: string, from: string | null, to: string | null): [string, string] {
+  const t = parseISO(today);
+  if (period === "30d") return [isoDate(addDays(t, -29)), today];
+  if (period === "3m") return [isoDate(addDays(subMonths(t, 3), 1)), today];
+  if (period === "custom") return [from || isoDate(addDays(t, -6)), to || today];
+  return [isoDate(addDays(t, -6)), today];
+}
+
+function rangeError(from: string, to: string) {
+  if (from > to) return "Pick a start date on or before the end date";
+  if (differenceInCalendarDays(parseISO(to), parseISO(from)) >= MAX_DAYS) return "Pick a range of a year or less";
+  return undefined;
+}
+
+function ReportsPage() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const { branch } = useSession();
+  const today = isoDate(new Date());
+  const period = (PERIODS.some((p) => p.value === params.get("period")) ? params.get("period") : "7d") as Period;
+  const [from, to] = rangeOf(period, today, params.get("from"), params.get("to"));
+  const error = rangeError(from, to);
+
+  // Filters live in the URL, so Back and a shared link keep them.
+  const go = (next: Record<string, string>) => router.replace(`/reports?${new URLSearchParams(next)}`, { scroll: false });
+  const pick = (p: Period) => go(p === "custom" ? { period: p, from, to } : p === "7d" ? {} : { period: p });
+
+  const r = useGet<PeriodReport>("/api/reports/period/", { from, to, branch }, !error);
+  const s = useGet<Summary>("/api/reports/summary/", { date: to, branch }, !error).data;
+  const rep = r.data;
+
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Reports" sub={branchName} />
+      <PageBar title="Reports" sub={rangeLabel(from, to)} action={<BranchChip />} />
       <main className="rl-app__main">
-        <div className="rl-field" style={{ marginTop: "var(--space-2)" }}>
-          <label className="rl-field__label" htmlFor="rp-date">Day</label>
-          <div className="rl-field__control"><input className="rl-field__input" id="rp-date" type="date" max={isoDate(new Date())} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+        <div className="rl-searchbar rl-searchbar--period">
+          <Seg label="Period" value={period} onChange={pick} options={PERIODS} onSurface />
         </div>
-        {!s ? <SkeletonRows n={4} /> : (
+        {period === "custom" && (
+          <div className="rl-pair" style={{ marginTop: "var(--space-4)" }}>
+            <Field label="From" error={error}>{(id, desc) => (
+              <input className="rl-field__input" id={id} type="date" max={today} value={from} aria-describedby={desc} aria-invalid={!!error}
+                onChange={(e) => e.target.value && go({ period, from: e.target.value, to })} />
+            )}</Field>
+            <Field label="To">{(id) => (
+              <input className="rl-field__input" id={id} type="date" max={today} value={to}
+                onChange={(e) => e.target.value && go({ period, from, to: e.target.value })} />
+            )}</Field>
+          </div>
+        )}
+
+        {error ? null : r.error ? (
+          <Empty icon={BarChart3} title="This report didn't load" text={r.error.message}>
+            <button className="rl-button rl-button--secondary" type="button" onClick={() => r.refetch()}>Try Again</button>
+          </Empty>
+        ) : !rep ? <SkeletonRows n={6} /> : (
           <>
-            <Section label="Money">
-              <div className="rl-kpis rl-kpis--pair">
-                <Stat icon={IndianRupee} value={rupees(s.revenue.today_paise)} label="Collected that day" />
-                <Stat icon={IndianRupee} value={rupees(s.revenue.month_paise)} label="Collected this month" note="To that day" />
-                <Stat icon={Receipt} value={rupees(s.expenses_month_paise)} label="Spent this month" />
-                <Stat icon={HandCoins} value={rupees(s.dues.total_paise)} label="Outstanding dues" note={`From ${plural(s.dues.members, "member")}`} />
+            <Section label="Summary">
+              <div className="rl-kpis">
+                <Stat icon={IndianRupee} accent value={rupees(rep.totals.revenue_paise)} label="Revenue" note={<Trend now={rep.totals.revenue_paise} before={rep.previous.revenue_paise} days={rep.days} />} />
+                <Stat icon={UserPlus} value={rep.totals.new_members.toLocaleString("en-IN")} label="New members" note={<Trend now={rep.totals.new_members} before={rep.previous.new_members} days={rep.days} />} />
+                <Stat icon={CalendarCheck} value={rep.totals.checkins.toLocaleString("en-IN")} label="Check-ins" note={<Trend now={rep.totals.checkins} before={rep.previous.checkins} days={rep.days} />} />
+                <Stat icon={ClipboardCheck} value={`${rep.tasks.done} of ${rep.tasks.total}`} label="Tasks done" note={<Trend now={rep.totals.tasks_done} before={rep.previous.tasks_done} days={rep.days} />} />
               </div>
             </Section>
-            <Section title="Members by status" aside={<p className="rl-section__aside">{plural(s.members.total, "member")}</p>}>
-              <ul className="rl-card rl-barlist" style={{ listStyle: "none", margin: 0, padding: "var(--space-3) var(--space-4)" }}>
-                {statuses.map(([k, v]) => (
-                  <li key={k} style={{ padding: "var(--space-1) 0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}><span>{STATUS_LABEL[k]}</span><strong>{v}</strong></div>
-                    <span className="rl-bar" aria-hidden="true"><span className="rl-bar__fill" style={{ ["--v" as string]: v / max, background: "var(--ink)" }} /></span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-            <Section title="Check-ins" aside={<p className="rl-section__aside"><CalendarCheck className="rl-icon rl-icon--xs" aria-hidden /> {s.checkins.total}</p>}>
-              <SessionsTable sessions={s.checkins.sessions} />
-            </Section>
+            <div className="rl-app__cols">
+              <div className="rl-app__col">
+                <RevenueCard r={rep} today={today} />
+                <MoneyCard r={rep} />
+                <TasksCard r={rep} />
+              </div>
+              <div className="rl-app__col">
+                <MembersCard r={rep} s={s} today={today} />
+                <AttendanceCard r={rep} today={today} />
+                <LateTasks r={rep} />
+              </div>
+            </div>
           </>
         )}
       </main>
     </div>
   );
 }
+
+export default function Page() { return <Suspense><ReportsPage /></Suspense>; }
