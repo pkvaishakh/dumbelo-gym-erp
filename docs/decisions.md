@@ -50,5 +50,9 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Backend: Django 5 + DRF + Postgres, JWT (simplejwt), drf-spectacular for OpenAPI. Redis/Celery for jobs (later).
 - Frontend: Next.js 15 App Router, TypeScript, Serwist PWA, the design system's CSS, TanStack Query with an
   orval-generated client, date-fns, lucide icons, html5-qrcode, Vitest/Playwright.
-- Hosting: AWS Mumbai (ap-south-1) for the API and database. Web on Amplify or Vercel (open).
+- Hosting: AWS Mumbai (ap-south-1) for the API and database — App Runner for the API, RDS Postgres,
+  ElastiCache Redis, and the Celery worker and beat on ECS Fargate (App Runner runs HTTP services only).
+  The web app on Vercel. Every step, and every setting a server needs, is in `docs/deploy.md`.
+- A server runs with `PRODUCTION=true`, which refuses to start without `SECRET_KEY`, `ALLOWED_HOSTS`,
+  `DATABASE_URL` and `CACHE_URL`. `/api/health/` is the load balancer's question: no sign-in, no gym.
 - Open: more languages than English.

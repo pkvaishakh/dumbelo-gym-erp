@@ -35,6 +35,7 @@ export * from './expensesListParams';
 export * from './expensesTotalsRetrieveParams';
 export * from './freezeRequest';
 export * from './gymSettings';
+export * from './healthRetrieve200';
 export * from './loginRequest';
 export * from './me';
 export * from './member';
