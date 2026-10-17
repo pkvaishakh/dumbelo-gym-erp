@@ -9,6 +9,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 
@@ -66,7 +69,19 @@ class LoginView(APIView):
         return Response({"access": str(token.access_token), "refresh": str(token)})
 
 
+class RefreshSerializer(TokenRefreshSerializer):
+    """simplejwt 5.3 refreshes without asking whether the account is still there: a deleted or disabled login
+    would keep getting access tokens, and the app would sit on 401s instead of going back to sign-in."""
+
+    def validate(self, attrs):
+        user_id = RefreshToken(attrs["refresh"]).payload.get(jwt_settings.USER_ID_CLAIM)
+        if not User.objects.filter(**{jwt_settings.USER_ID_FIELD: user_id}, is_active=True).exists():
+            raise AuthenticationFailed("Sign in again", code="user_inactive")
+        return super().validate(attrs)
+
+
 class RefreshView(TokenRefreshView):
+    serializer_class = RefreshSerializer
     throttle_scope = "refresh"
 
 

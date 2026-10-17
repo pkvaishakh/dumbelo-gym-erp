@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.attendance",
     "apps.tasks",
     "apps.expenses",
+    "apps.payroll",
     "apps.audit",
     "apps.reports",
     "apps.reminders",
@@ -144,6 +145,13 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api",  # set, not detected: detection uses os.path and breaks on Windows (tags become "api")
+    # Several models have a `kind` or `status`; name the payroll and dues ones so the web's types read clearly.
+    "ENUM_NAME_OVERRIDES": {
+        "SalaryItemKindEnum": "apps.payroll.models.SalaryItem.KINDS",
+        "PayslipLineKindEnum": "apps.payroll.models.PayslipLine.KINDS",
+        "PayslipStatusEnum": "apps.payroll.models.Payslip.STATUSES",
+        "ExpenseDueStatusEnum": "apps.expenses.models.ExpenseDue.STATUSES",
+    },
 }
 # ---- Background jobs (see config/celery.py) ----
 # No broker means no worker: tasks run where they are called, which is what the tests and a laptop without

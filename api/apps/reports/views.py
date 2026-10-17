@@ -15,6 +15,8 @@ from apps.core import clock
 from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, InGym
 from apps.expenses.models import Expense
+from apps.expenses.services import bills_due, sync_dues
+from apps.payroll.services import salaries_owed
 from apps.gyms.models import Branch
 from apps.members.models import STATUSES, Member, Payment, Subscription
 from apps.tasks.models import Task
@@ -70,6 +72,7 @@ class SummaryView(APIView):
             "members": {"total": sum(statuses.values()), **{s: statuses.get(s, 0) for s in STATUSES}},
             "dues": {"members": dues_count, "total_paise": dues_paise},
             "checkins": {"total": sum(totals.values()), "sessions": sessions},
+            "expense_dues": self._expense_dues(gym, branch),
         }
         if branch is None:
             visits = Counter(c.branch_id for c in checkins)
@@ -79,6 +82,16 @@ class SummaryView(APIView):
                 for b in Branch.objects.filter(gym=gym, is_active=True)
             ]
         return Response(body)
+
+    @staticmethod
+    def _expense_dues(gym, branch):
+        """What the gym owes: bills inside their reminder days and approved salaries not paid in full. Always as of
+        today, whatever day the summary shows, because a due is about now. The Dues screen shows the same figures."""
+        today = clock.today(gym)
+        sync_dues(gym, today)
+        bills, salaries = bills_due(gym, today, branch), salaries_owed(gym, branch)
+        return {"count": bills["count"] + salaries["count"], "overdue_bills": bills["overdue"], "bills": bills["count"],
+                "salaries": salaries["count"], "total_paise": bills["total_paise"] + salaries["total_paise"]}
 
 
 MAX_DAYS = 366

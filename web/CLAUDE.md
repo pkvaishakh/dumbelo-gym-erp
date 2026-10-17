@@ -14,7 +14,9 @@ src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskSta
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
                               TabBar per role, CreateSheet, BranchSheet
 src/features/                 bigger parts shared by routes: homes, checkin (desk), self-checkin (QR), sell
-                              (MemberPicker, PlanPicker, ActionBar, METHODS), staff-form, branch-form, members-ui
+                              (MemberPicker, PlanPicker, ActionBar, METHODS), staff-form, branch-form, members-ui,
+                              money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, rateText),
+                              recurring-form
 src/lib/api.ts                fetch wrapper: token, refresh, X-Gym, ApiError; apiFetch is orval's mutator
 src/lib/session.tsx           useSession(): me, role, gym, branch, setBranch, signOut
 src/lib/hooks.ts              useGet (loosely typed GETs), useAction (writes + refresh), fieldError

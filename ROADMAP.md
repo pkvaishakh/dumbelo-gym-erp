@@ -28,6 +28,9 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 ## Staff work
 - [x] Tasks: assign with due date, start, updates, done, reopen
 - [x] Expenses with totals (admin)
+- [x] Recurring expenses with due dates, reminders on Home, pay or skip each date
+- [x] Payroll: salary rules (fixed, by attendance, hourly, daily), monthly payslips from check-ins, approval,
+      part payments, salary history and printable slips
 - [x] Admin home summary and reports
 
 ## Before the pilot

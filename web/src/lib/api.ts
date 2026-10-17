@@ -72,10 +72,13 @@ async function send(url: string, init: RequestInit, retry = true): Promise<Respo
   if (gym && !headers.has("X-Gym")) headers.set("X-Gym", gym);
   if (init.body && typeof init.body === "string" && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const res = await fetch(url.startsWith("http") ? url : `${API_URL}${url}`, { ...init, headers });
-  if (res.status === 401 && retry && tokens.refresh && !url.includes("/auth/")) {
-    if (await refreshAccess()) return send(url, init, false);
-    tokens.clear();
-    onSignedOut.handler();
+  if (res.status === 401 && !url.includes("/auth/")) {
+    if (retry && tokens.refresh && await refreshAccess()) return send(url, init, false);
+    // No way to refresh, or still refused with a fresh token (the account is gone): sign in again, never sit on 401s.
+    if (tokens.access || tokens.refresh) {
+      tokens.clear();
+      onSignedOut.handler();
+    }
   }
   return res;
 }

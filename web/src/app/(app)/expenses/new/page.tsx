@@ -5,11 +5,11 @@ import { useState } from "react";
 import { TaskBar } from "@/components/shell";
 import { Choices, Confirm, ErrorText, Field, Sheet } from "@/components/ui";
 import { ActionBar, METHODS, type Method } from "@/features/sell";
-import { isoDate, rupees, toPaise } from "@/lib/format";
+import { EXPENSE_CATEGORY, isoDate, rupees, toPaise } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
-const CATS = ["rent", "salaries", "utilities", "equipment", "maintenance", "supplies", "marketing", "other"];
+const CATS = Object.keys(EXPENSE_CATEGORY);
 
 export default function AddExpense() {
   const { role, branch } = useSession();
@@ -35,7 +35,7 @@ export default function AddExpense() {
             <ErrorText>{errs.amount}</ErrorText>
           </fieldset>
           <fieldset className="rl-fieldset"><legend>For</legend>
-            <div className="rl-chips">{CATS.map((c) => <label className="rl-chipopt" key={c}><input type="radio" name="cat" checked={f.category === c} onChange={() => setF({ ...f, category: c })} /><span>{c[0]!.toUpperCase() + c.slice(1)}</span></label>)}</div>
+            <div className="rl-chips">{CATS.map((c) => <label className="rl-chipopt" key={c}><input type="radio" name="cat" checked={f.category === c} onChange={() => setF({ ...f, category: c })} /><span>{EXPENSE_CATEGORY[c]}</span></label>)}</div>
             <ErrorText>{errs.category}</ErrorText>
           </fieldset>
           {/* The desk adds expenses for the branch it's working in; only admins pick one. */}

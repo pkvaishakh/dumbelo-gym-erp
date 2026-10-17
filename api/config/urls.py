@@ -6,10 +6,11 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, RefreshView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
 from apps.core.views import HealthView
-from apps.expenses.views import ExpenseViewSet
+from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpenseViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, SubscriptionViewSet
 from apps.messages.views import MessageViewSet
+from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
 from apps.reports.views import PeriodView, SummaryView
 from apps.tasks.views import TaskViewSet
 
@@ -26,6 +27,10 @@ router.register("checkins", CheckInViewSet, basename="checkin")
 router.register("devices", DeviceViewSet, basename="device")
 router.register("tasks", TaskViewSet, basename="task")
 router.register("expenses", ExpenseViewSet, basename="expense")
+router.register("recurring-expenses", RecurringExpenseViewSet, basename="recurring-expense")
+router.register("expense-dues", ExpenseDueViewSet, basename="expense-due")
+router.register("salary-rules", SalaryRuleViewSet, basename="salary-rule")
+router.register("payslips", PayslipViewSet, basename="payslip")
 router.register("messages", MessageViewSet, basename="message")
 
 urlpatterns = [

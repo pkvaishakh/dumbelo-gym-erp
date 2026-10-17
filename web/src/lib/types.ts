@@ -11,6 +11,8 @@ export type Summary = {
   checkins: { total: number; sessions: SessionCounts[] };
   /** Each branch's day; only when the summary covers all branches. */
   branches?: BranchDay[];
+  /** What the gym owes now: bills inside their reminder days and approved salaries not paid in full. */
+  expense_dues: { count: number; overdue_bills: number; bills: number; salaries: number; total_paise: number };
 };
 
 export type BranchDay = { id: number; name: string; revenue_today_paise: number; expenses_today_paise: number; checkins: number; active_members: number };

@@ -24,4 +24,9 @@ export interface Expense {
   /** @maxLength 200 */
   note?: string;
   spent_on?: string;
+  /**
+   * bill or salary when it paid one, so it is changed from there
+   * @nullable
+   */
+  readonly paid_for: string | null;
 }

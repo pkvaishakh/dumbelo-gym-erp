@@ -1,16 +1,20 @@
 "use client";
-import { CalendarCheck, CalendarOff, Clock, Dumbbell, Fingerprint, Mail, MapPin, Phone, Pencil } from "lucide-react";
+import { Banknote, CalendarCheck, CalendarOff, Clock, Dumbbell, Fingerprint, Mail, MapPin, Minus, Phone, Pencil, Plus, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
+import { usePayslipsListInfinite } from "@/api/gen/payslips/payslips";
+import { useSalaryRulesList } from "@/api/gen/salary-rules/salary-rules";
 import { useStaffRetrieve } from "@/api/gen/staff/staff";
 import { DetailBar } from "@/components/shell";
 import type { Staff } from "@/api/gen/model";
-import { Details, ErrorText, Field, Icon, Photo, Section, Sheet, SkeletonRows, Status } from "@/components/ui";
-import { day, isoDate, phone } from "@/lib/format";
-import { fieldError, useAction } from "@/lib/hooks";
+import { Details, ErrorText, Field, Icon, LoadMore, Photo, Section, Sheet, SkeletonRows, Status } from "@/components/ui";
+import { PayslipStatus } from "@/features/money-out";
+import { rateText } from "@/features/payroll";
+import { day, isoDate, monthLabel, PAY_TYPE, phone, rupees } from "@/lib/format";
+import { fieldError, paged, pages, useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
 export default function StaffProfile() {
@@ -48,6 +52,7 @@ export default function StaffProfile() {
             { icon: Fingerprint, label: "Turnstile number", value: s.device_user_id || "Not set" },
           ]} />
         </Section>
+        {role.role === "admin" && <SalarySection staffId={s.id} />}
         <Section title="Recent check-ins">
           {visits.data?.data.results.length ? (
             <ul className="rl-card rl-mlist rl-mlist--compact">
@@ -114,5 +119,47 @@ function ResetSheet({ open, staff, onClose }: { open: boolean; staff: Staff; onC
         </>
       )}
     </Sheet>
+  );
+}
+
+/** How they're paid and what they've been paid: admins only (the API refuses everyone else). */
+function SalarySection({ staffId }: { staffId: number }) {
+  const rules = useSalaryRulesList({ staff: staffId });
+  const rule = rules.data?.data[0];
+  const history = usePayslipsListInfinite({ staff: staffId, limit: 6 }, { query: paged });
+  const { rows } = pages(history);
+  const items = rule?.items ?? [];
+  return (
+    <>
+      <Section title="Salary" aside={rule ? <Link className="rl-link" href={`/staff/${staffId}/salary/edit`}><span>Change</span></Link> : undefined}>
+        {rules.isLoading ? <SkeletonRows n={2} /> : rule ? (
+          <Details rows={[
+            { icon: Wallet, label: PAY_TYPE[rule.pay_type] ?? "Paid", value: rateText(rule) },
+            ...items.filter((i) => i.kind === "allowance").map((i) => ({ icon: Plus, label: `${i.label}, every month`, value: `+${rupees(i.amount_paise)}` })),
+            ...items.filter((i) => i.kind === "deduction").map((i) => ({ icon: Minus, label: `${i.label}, every month`, value: `−${rupees(i.amount_paise)}` })),
+            { icon: MapPin, label: "Paid from", value: rule.branch_name },
+          ]} />
+        ) : (
+          <div className="rl-card rl-card--pad">
+            <p className="rl-row__meta" style={{ marginTop: 0 }}>No salary set, so payroll leaves them out.</p>
+            <Link className="rl-button rl-button--secondary rl-button--block" href={`/staff/${staffId}/salary/edit`}>Set Salary</Link>
+          </div>
+        )}
+      </Section>
+      {rows.length > 0 && (
+        <Section title="Salary history">
+          <ul className="rl-card rl-activity">
+            {rows.map((p) => (
+              <li key={p.id}><Link className="rl-activity__row" href={`/payroll/${p.id}`}>
+                <span className="rl-chipicon" aria-hidden="true"><Icon as={Banknote} size="sm" /></span>
+                <span className="rl-activity__text"><span className="rl-row__title">{monthLabel(p.month)}</span><span className="rl-row__meta">{rupees(p.paid_paise)} paid of {rupees(p.net_paise)}</span></span>
+                <PayslipStatus status={p.status} payment={p.payment_status} />
+              </Link></li>
+            ))}
+          </ul>
+          <LoadMore q={history} />
+        </Section>
+      )}
+    </>
   );
 }

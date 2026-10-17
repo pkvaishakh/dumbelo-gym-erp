@@ -59,10 +59,15 @@ def test_list_queries_dont_grow_with_rows(w, who, url):
     assert queries(client, url) == small, f"{url} runs more queries with more rows: an N+1"
 
 
+#: Home's summary is many figures in one call; since it shows expense dues it also writes any new bill dates
+#: (one read, one insert at most) and counts bills and salaries owed.
+BUDGET = {"/api/reports/summary/": 15}
+
+
 @pytest.mark.parametrize("who,url", LISTS)
 def test_list_query_budget(w, who, url):
     grow(w, 5)
-    assert queries(w.client(getattr(w, who)), url) <= 12
+    assert queries(w.client(getattr(w, who)), url) <= BUDGET.get(url, 12)
 
 
 def test_listed_status_and_balance_match_single_member(w):

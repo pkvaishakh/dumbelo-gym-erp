@@ -50,7 +50,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 /**
  * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
 Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-day's payments; only admins see longer spans, edit or remove.
+day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+changed from there, never here, so the two can't disagree.
  */
 export type expensesListResponse200 = {
   data: PaginatedExpenseList
@@ -238,7 +239,8 @@ export function useExpensesList<TData = Awaited<ReturnType<typeof expensesList>>
 /**
  * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
 Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-day's payments; only admins see longer spans, edit or remove.
+day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+changed from there, never here, so the two can't disagree.
  */
 export type expensesCreateResponse201 = {
   data: Expense
@@ -320,7 +322,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
 Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-day's payments; only admins see longer spans, edit or remove.
+day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+changed from there, never here, so the two can't disagree.
  */
 export type expensesRetrieveResponse200 = {
   data: Expense
@@ -431,7 +434,8 @@ export function useExpensesRetrieve<TData = Awaited<ReturnType<typeof expensesRe
 /**
  * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
 Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-day's payments; only admins see longer spans, edit or remove.
+day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+changed from there, never here, so the two can't disagree.
  */
 export type expensesUpdateResponse200 = {
   data: Expense
@@ -514,7 +518,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
 Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-day's payments; only admins see longer spans, edit or remove.
+day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+changed from there, never here, so the two can't disagree.
  */
 export type expensesPartialUpdateResponse200 = {
   data: Expense
@@ -597,7 +602,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
 Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-day's payments; only admins see longer spans, edit or remove.
+day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+changed from there, never here, so the two can't disagree.
  */
 export type expensesDestroyResponse204 = {
   data: void

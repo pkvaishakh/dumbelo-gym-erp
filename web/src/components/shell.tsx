@@ -2,7 +2,7 @@
 /* App frame: headers, bottom navigation per role, the create sheet and the branch switcher. */
 import {
   ArrowLeft, BarChart3, Building2, CalendarCheck, ChevronDown, ClipboardCheck, ClipboardList, Home, LayoutGrid, ListChecks,
-  Plus, QrCode, Receipt, Ticket, UserPlus, Users, Wallet, X,
+  Plus, QrCode, Receipt, Repeat, Ticket, UserPlus, Users, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -161,7 +161,7 @@ export function TabBar() {
   const tabs = TABS[role.role];
   if (/\/(new|edit)(\/|$)/.test(path)) return null; // task screens have their own action bar
   const hasCreate = role.role === "admin" || role.role === "receptionist";
-  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/expenses") && role.role === "receptionist") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
+  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|payroll|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/expenses") && role.role === "receptionist") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
   const render = (t: Tab) => (
     <Link key={t.href} className="rl-tab" href={t.href} aria-current={current(t.href) ? "page" : undefined}>
       <span className="rl-tab__icon"><Icon as={t.icon} /></span>{t.label}
@@ -210,6 +210,7 @@ function CreateSheet({ open, onClose, onCheckIn }: { open: boolean; onClose: () 
             {item("Add Receptionist", UserPlus, "/staff/new?role=receptionist")}
             {item("Assign Task", ClipboardList, "/tasks?new=1")}
             {item("Add Expense", Receipt, "/expenses/new")}
+            {item("Add Recurring Expense", Repeat, "/expenses/recurring/new")}
           </ul>
         </>
       )}

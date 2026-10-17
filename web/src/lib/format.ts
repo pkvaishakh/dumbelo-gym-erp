@@ -96,3 +96,20 @@ export function trend(now: number, before: number, days: number): { dir: "up" | 
   const dir = now > before ? "up" : "down";
   return { dir, text: `${pct > 0 ? "+" : pct === 0 ? (dir === "up" ? "+" : "-") : ""}${pct}% ${vs}` };
 }
+
+/** "October 2026" from "2026-10-01" or "2026-10". */
+export const monthLabel = (iso: string) => format(parseISO(iso.length === 7 ? `${iso}-01` : iso), "MMMM yyyy");
+
+export const EXPENSE_CATEGORY: Record<string, string> = {
+  rent: "Rent", salaries: "Salaries", utilities: "Utilities", equipment: "Equipment", maintenance: "Maintenance", supplies: "Supplies", marketing: "Marketing", other: "Other",
+};
+export const PAY_METHOD: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", bank: "Bank transfer" };
+export const FREQUENCY: Record<string, string> = { weekly: "Every week", monthly: "Every month", quarterly: "Every 3 months", yearly: "Every year" };
+export const PAY_TYPE: Record<string, string> = {
+  fixed: "Fixed monthly salary", attendance: "Monthly salary, by days present", hourly: "By the hour", daily: "By the day",
+};
+/** The pay type in a list row's few words. */
+export const PAY_TYPE_SHORT: Record<string, string> = { fixed: "Fixed", attendance: "By attendance", hourly: "By the hour", daily: "By the day" };
+/** What a salary's rate is per, for "₹800 a day". */
+export const RATE_PER: Record<string, string> = { fixed: "a month", attendance: "a month", hourly: "an hour", daily: "a day" };
+export const LINE_KIND: Record<string, string> = { allowance: "Allowance", incentive: "Incentive", referral: "Referral bonus", deduction: "Deduction" };
