@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { plural, rangeLabel, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
+import { monthLabel, plural, rangeLabel, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
 
@@ -84,5 +84,12 @@ describe("reports", () => {
     expect(trend(5, 0, 7)).toEqual({ dir: "up", text: "Up from 0 vs previous 7 days" });
     expect(trend(0, 0, 7)).toEqual({ dir: "flat", text: "Same as previous 7 days" });
     expect(trend(1001, 1000, 7).text).toBe("+0% vs previous 7 days");
+  });
+});
+
+describe("monthLabel", () => {
+  it("names the month a payslip is for", () => {
+    expect(monthLabel("2026-10-01")).toBe("October 2026");
+    expect(monthLabel("2027-01")).toBe("January 2027");
   });
 });

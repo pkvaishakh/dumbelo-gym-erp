@@ -21,20 +21,34 @@ import type { BranchDay, CheckinSummary, Collection, MemberSelf, Page, SessionCo
 
 import { CheckInSheet } from "./checkin";
 
-function Attention({ rows }: { rows: { count: number; title: string; meta: string; href: string }[] }) {
+type AttentionRow = { count: number; title: string; meta: string; href: string; dot?: "" | "ring" | "ink" | "muted" };
+
+/** The Needs attention card. With four rows it carries the design's dots: filled for today, a ring for this week,
+ *  ink for money; the label always says it too. */
+function Attention({ rows }: { rows: AttentionRow[] }) {
   const shown = rows.filter((r) => r.count > 0);
   if (!shown.length) return <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>Nothing needs you right now.</p></div>;
+  const dots = shown.length >= 4;
   return (
-    <ul className="rl-attn">
+    <ul className={`rl-attn${dots ? " rl-attn--dots" : ""}`}>
       {shown.map((r) => (
         <li key={r.title}><Link className="rl-attn__row" href={r.href}>
           <span className="rl-attn__count">{r.count}</span>
+          {dots && r.dot !== undefined && <span className={`rl-attn__dot${r.dot ? ` rl-attn__dot--${r.dot}` : ""}`} aria-hidden="true" />}
           <span className="rl-attn__text"><span className="rl-row__title">{r.title}</span><span className="rl-row__meta">{r.meta}</span></span>
           <ChevronRight className="rl-icon rl-icon--sm rl-attn__chev" strokeWidth={1.75} aria-hidden />
         </Link></li>
       ))}
     </ul>
   );
+}
+
+/** "₹1,20,000 to pay • 1 bill late": what the gym owes in bills and salaries, the late part first to the eye. */
+function expenseDuesMeta(d: Summary["expense_dues"]) {
+  const parts = [`${rupees(d.total_paise)} to pay`];
+  if (d.overdue_bills) parts.push(`${plural(d.overdue_bills, "bill")} late`);
+  else if (d.salaries) parts.push(plural(d.salaries, "salary", "salaries"));
+  return parts.join(" • ");
 }
 
 /** Check-ins by session: members, trainers and receptionists, as on the Attendance tab. */
@@ -216,9 +230,10 @@ export function AdminHome() {
             </Section>
             <Section title="Needs attention">
               {sum ? <Attention rows={[
-                { count: sum.members.expiring, title: "Memberships expiring soon", meta: "In the next 7 days", href: "/members?status=expiring" },
-                { count: sum.dues.members, title: "Pending payments", meta: `${rupees(sum.dues.total_paise)} due`, href: "/members?status=due" },
-                { count: late, title: "Overdue tasks", meta: "Past their due time", href: "/tasks?filter=overdue" },
+                { count: sum.members.expiring, title: "Memberships expiring soon", meta: "In the next 7 days", href: "/members?status=expiring", dot: "ring" },
+                { count: sum.dues.members, title: "Pending payments", meta: `${rupees(sum.dues.total_paise)} due`, href: "/members?status=due", dot: "ink" },
+                { count: sum.expense_dues.count, title: "Expense dues", meta: expenseDuesMeta(sum.expense_dues), href: "/expenses/dues", dot: "ink" },
+                { count: late, title: "Overdue tasks", meta: "Past their due time", href: "/tasks?filter=overdue", dot: "" },
               ]} /> : <SkeletonRows n={2} />}
             </Section>
           </div>

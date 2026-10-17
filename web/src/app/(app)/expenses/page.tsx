@@ -1,6 +1,6 @@
 "use client";
 import { endOfMonth, parseISO, startOfMonth, subMonths } from "date-fns";
-import { Receipt, SearchX } from "lucide-react";
+import { Banknote, CalendarClock, Receipt, Repeat, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -8,13 +8,14 @@ import { Suspense, useState } from "react";
 import { useExpensesListInfinite } from "@/api/gen/expenses/expenses";
 import type { ExpensesListCategory, ExpensesListMethod } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
-import { AddButton, Chips, DayStrip, Empty, Field, Icon, LoadMore, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
-import { day, isoDate, plural, rangeLabel, rupees } from "@/lib/format";
+import { AddButton, Chips, DayStrip, Empty, Field, Icon, LoadMore, MenuRow, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
+import { day, EXPENSE_CATEGORY, isoDate, PAY_METHOD, plural, rangeLabel, rupees } from "@/lib/format";
 import { paged, pages, useGet, useSearch } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
+import type { Summary } from "@/lib/types";
 
-const CATEGORIES: Record<string, string> = { rent: "Rent", salaries: "Salaries", utilities: "Utilities", equipment: "Equipment", maintenance: "Maintenance", supplies: "Supplies", marketing: "Marketing", other: "Other" };
-const METHODS: Record<string, string> = { cash: "Cash", upi: "UPI", card: "Card", bank: "Bank transfer" };
+const CATEGORIES = EXPENSE_CATEGORY;
+const METHODS = PAY_METHOD;
 
 type Period = "month" | "last" | "3m" | "fy" | "custom";
 const PERIODS: { value: Period; label: string }[] = [
@@ -83,6 +84,7 @@ function ExpensesPage() {
   const list = useExpensesListInfinite(filters, { query: { ...paged, enabled: !backwards } });
   const totals = useGet<{ total_paise: number; by_category: Record<string, number> }>("/api/expenses/totals/", filters, !backwards);
   const { rows, count } = pages(list);
+  const owed = useGet<Summary>("/api/reports/summary/", { branch: homeBranch }, isAdmin).data?.expense_dues;
   const byCategory = Object.entries(totals.data?.by_category ?? {});
   const max = Math.max(1, ...byCategory.map(([, v]) => v));
 
@@ -130,6 +132,16 @@ function ExpensesPage() {
                     </li>
                   ))}
                   {!byCategory.length && <li className="rl-row__meta">Nothing spent in these dates.</li>}
+                </ul>
+              </Section>
+            )}
+            {isAdmin && (
+              <Section title="Bills and salaries">
+                <ul className="rl-card rl-remind">
+                  <MenuRow icon={CalendarClock} title="Dues" href="/expenses/dues"
+                    value={owed ? (owed.count ? `${rupees(owed.total_paise)} to pay` : "All paid") : undefined} />
+                  <MenuRow icon={Repeat} title="Recurring expenses" href="/expenses/recurring" />
+                  <MenuRow icon={Banknote} title="Payroll" href="/payroll" />
                 </ul>
               </Section>
             )}

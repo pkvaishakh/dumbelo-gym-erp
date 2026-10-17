@@ -120,3 +120,23 @@ test("admin: turns the gym's reminders off and on, and sees what a member was se
   await theirs.click();
   await expect(theirs.getByRole("switch")).toBeChecked();
 });
+
+test("admin: work out payroll, approve and pay a salary, then pay a bill from Dues", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/payroll");
+  await page.getByRole("button", { name: /^(Update|Work Out) Payroll$/ }).first().click();
+  await page.locator("a.rl-mrow", { hasText: "Imran Khan" }).click();
+  await expect(page.getByText("Take-home pay").first()).toBeVisible();
+  if (await page.getByRole("button", { name: /^Approve ₹/ }).isVisible()) await page.getByRole("button", { name: /^Approve ₹/ }).click();
+  await page.getByRole("button", { name: /^Pay (Salary|More)$/ }).click();
+  await page.getByRole("button", { name: /^Pay ₹/ }).click();
+  await expect(page.getByRole("heading", { name: /₹[\d,]+ paid/ })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.locator(".rl-status", { hasText: "Paid" }).first()).toBeVisible();
+
+  await page.goto("/expenses/dues");
+  await page.locator("section[aria-label=Bills] button.rl-activity__row").first().click();
+  await page.getByRole("button", { name: /^Pay ₹/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /^Pay ₹/ }).click();
+  await expect(page.getByRole("heading", { name: /₹[\d,]+ paid/ })).toBeVisible();
+});

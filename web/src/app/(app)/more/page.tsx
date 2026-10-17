@@ -1,6 +1,6 @@
 "use client";
 import {
-  Building2, CalendarCheck, ClipboardList, Dumbbell, KeyRound, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Banknote, Building2, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -35,6 +35,8 @@ export default function MorePage() {
               <MenuRow icon={UserRound} title="Receptionists" href="/staff?role=receptionist" />
               <MenuRow icon={ClipboardList} title="Tasks" href="/tasks" />
               <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={summary.data ? `${rupees(summary.data.expenses_month_paise)} this month` : undefined} />
+              <MenuRow icon={CalendarClock} title="Dues" href="/expenses/dues" value={summary.data ? (summary.data.expense_dues.count ? `${rupees(summary.data.expense_dues.total_paise)} to pay` : "All paid") : undefined} />
+              <MenuRow icon={Banknote} title="Payroll" href="/payroll" />
               <MenuRow icon={Wallet} title="Payments" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />

@@ -15,11 +15,14 @@ apps/gyms/           Gym, Branch, BranchSession (named opening hours), GymRole (
 apps/members/        Plan, Offer, Member, MemberNote, Subscription, Payment; services.py (sell, take_payment)
 apps/attendance/     CheckIn (member XOR staff), Device; services.py (check_in: the one rule book)
 apps/tasks/          Task, TaskUpdate (note | status)
-apps/expenses/       Expense
+apps/expenses/       Expense, RecurringExpense + ExpenseDue (each date a bill is due); services.py (sync_dues,
+                     pay_due, skip_due, bills_due)
+apps/payroll/        SalaryRule (+ SalaryItem), Payslip (+ PayslipLine), SalaryPayment; services.py (generate,
+                     pay_for, approve, pay, salaries_owed). Paying a bill or salary writes an Expense
 apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
 apps/messages/       WhatsApp reminders: senders.py (FakeSender by default), Message, and the 6 AM job that
                      writes the day's list and sends it (tasks.py). App label "gym_messages": see apps.py
-apps/reports/        SummaryView (admin home)
+apps/reports/        SummaryView (admin home, including expense dues), PeriodView (reports)
 apps/audit/          AuditLog + record(request, action, obj, before, after)
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)
 ```

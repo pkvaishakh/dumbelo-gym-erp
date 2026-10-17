@@ -6,6 +6,7 @@ Every demo login uses the password `rackline-demo`:
 """
 import random
 from datetime import datetime, time, timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -15,13 +16,16 @@ from apps.attendance.models import CheckIn, Device
 from apps.attendance.services import check_in
 from apps.core import clock
 from apps.core.errors import RuleBroken
-from apps.expenses.models import Expense
+from apps.expenses.models import Expense, ExpenseDue, RecurringExpense
+from apps.expenses.services import pay_due, sync_dues
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Offer, Plan
 from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
 from apps.messages.models import Message
 from apps.messages.services import send_due
+from apps.payroll import services as payroll
+from apps.payroll.models import Payslip, PayslipLine, SalaryItem, SalaryPayment, SalaryRule
 from apps.reminders.services import queue_for
 from apps.tasks.models import Task, TaskUpdate
 
@@ -174,9 +178,8 @@ class Command(BaseCommand):
             if status == Task.DONE:
                 TaskUpdate.objects.create(task=t, author=staff[who], kind=TaskUpdate.STATUS, text="Marked done")
 
-        for b in branches.values():
-            Expense.objects.create(gym=gym, branch=b, category="rent", amount_paise=rnd.choice([85000, 120000, 95000]) * 100, method="bank", paid_to="Landlord", spent_on=today.replace(day=1), created_by=meera)
-            Expense.objects.create(gym=gym, branch=b, category="utilities", amount_paise=rnd.randint(8, 18) * 1000 * 100, method="upi", paid_to="BESCOM", spent_on=today.replace(day=min(5, today.day)), created_by=meera)
+        self._bills(gym, branches, meera, today, rnd)
+        self._payroll(gym, staff, branches, meera, today)
         Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today, created_by=meera)
 
         # Yesterday's and today's reminders, sent by the fake sender, so the Reminders card has something in it.
@@ -189,6 +192,49 @@ class Command(BaseCommand):
             f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
             f"Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
         ))
+
+    def _bills(self, gym, branches, meera, today, rnd):
+        """Rent and electricity as recurring expenses since two months ago: paid, except this month's rent at
+        Whitefield, which is late, so Dues and Home have something to show."""
+        first = clock.add_months(today.replace(day=1), -2)
+        for name, b in branches.items():
+            rent = RecurringExpense.objects.create(gym=gym, branch=b, name="Rent", category="rent", amount_paise=rnd.choice([85000, 120000, 95000]) * 100,
+                                                   method="bank", paid_to="Landlord", frequency="monthly", starts=first, remind_days=5, created_by=meera)
+            power = RecurringExpense.objects.create(gym=gym, branch=b, name="Electricity", category="utilities", amount_paise=rnd.randint(8, 18) * 1000 * 100,
+                                                    method="upi", paid_to="BESCOM", frequency="monthly", starts=first.replace(day=10), remind_days=3, created_by=meera)
+            sync_dues(gym, today)
+            for due in ExpenseDue.objects.filter(recurring__in=[rent, power], due_on__lte=today):
+                if name == "Whitefield" and due.recurring == rent and due.due_on.month == today.month:
+                    continue
+                pay_due(due, amount_paise=due.amount_paise if due.recurring == rent else due.amount_paise + rnd.randint(-20, 20) * 10000,
+                        method=due.recurring.method, paid_on=due.due_on, by=meera)
+        RecurringExpense.objects.create(gym=gym, branch=branches["Indiranagar"], name="Gym software", category="other", amount_paise=2499 * 100, method="card",
+                                        paid_to="Rackline", frequency="monthly", starts=today + timedelta(days=2), remind_days=3, created_by=meera)
+        sync_dues(gym, today)
+
+    def _payroll(self, gym, staff, branches, meera, today):
+        """A salary for every staff member: last month worked out, approved and paid; this month a draft."""
+        home = next(iter(branches.values()))
+        pay = {"meera": ("fixed", 60000), "arjun": ("attendance", 22000), "kavya": ("attendance", 21000), "neha": ("attendance", 28000),
+               "neeraj": ("daily", 900), "alex": ("hourly", 250), "imran": ("fixed", 25000)}
+        for key, role in staff.items():
+            kind, rupees_ = pay.get(key, ("fixed", 20000))
+            rule = SalaryRule.objects.create(gym=gym, staff=role, branch=role.branches.first() or home, pay_type=kind, rate_paise=rupees_ * 100,
+                                             hours_per_day=Decimal(6) if kind == "hourly" else Decimal(0))
+            if role.role != GymRole.ADMIN:
+                SalaryItem.objects.create(rule=rule, kind="allowance", label="Travel", amount_paise=1000 * 100)
+            if kind in ("fixed", "attendance") and rupees_ >= 22000:
+                SalaryItem.objects.create(rule=rule, kind="deduction", label="PF", amount_paise=1800 * 100)
+        last = clock.add_months(today.replace(day=1), -1)
+        rnd = random.Random(7)
+        for slip in payroll.generate(gym, last):
+            # The demo's check-ins cover the last few weeks only, so last month's days are set as the admin would.
+            if slip.pay_type != "fixed":
+                slip = payroll.set_days(slip, max(slip.working_days - rnd.randint(0, 3), 0))
+            payroll.approve(slip, meera)
+            if slip.net_paise:
+                payroll.pay(slip, amount_paise=slip.net_paise, method="bank", paid_on=today.replace(day=1), by=meera)
+        payroll.generate(gym, today.replace(day=1))
 
     def _try(self, branch, at, status_day=None, **kw):
         try:
@@ -204,6 +250,12 @@ class Command(BaseCommand):
         TaskUpdate.objects.filter(task__gym=gym).delete()
         Task.objects.filter(gym=gym).delete()
         CheckIn.objects.filter(gym=gym).delete()
+        SalaryPayment.objects.filter(gym=gym).delete()
+        PayslipLine.objects.filter(payslip__gym=gym).delete()
+        Payslip.objects.filter(gym=gym).delete()
+        SalaryRule.objects.filter(gym=gym).delete()  # its items go with it
+        ExpenseDue.objects.filter(gym=gym).delete()
+        RecurringExpense.objects.filter(gym=gym).delete()
         Expense.objects.filter(gym=gym).delete()
         Payment.objects.filter(gym=gym).delete()
         Subscription.objects.filter(member__gym=gym).delete()

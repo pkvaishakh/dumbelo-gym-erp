@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import type { Me, Role } from "@/api/gen/model";
-import { api, gymSlug, onSignedOut, tokens } from "./api";
+import { api, ApiError, gymSlug, onSignedOut, tokens } from "./api";
 
 export type RoleName = "admin" | "receptionist" | "trainer" | "member";
 
@@ -111,6 +111,16 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
         <h1 className="rl-display">No gym yet</h1>
         <p className="rl-lede">Your account isn&apos;t part of any gym. Ask your gym&apos;s admin to add you.</p>
         <button className="rl-button" style={{ marginTop: 24 }} onClick={signOut}>Sign Out</button>
+      </div>
+    );
+  }
+  const signedOut = meQ.error instanceof ApiError && meQ.error.status === 401; // api.ts is already sending them to sign-in
+  if (meQ.isError && !meQ.isFetching && !signedOut) {
+    return (
+      <div className="rl-root" style={{ padding: 24 }}>
+        <h1 className="rl-display">Can&apos;t reach Rackline</h1>
+        <p className="rl-lede">{meQ.error instanceof ApiError && meQ.error.status ? meQ.error.message : "Check your connection and try again."}</p>
+        <button className="rl-button" style={{ marginTop: 24 }} onClick={() => meQ.refetch()}>Try Again</button>
       </div>
     );
   }

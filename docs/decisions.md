@@ -33,6 +33,26 @@ What was decided, so code and screens stay consistent. Change this file when a d
   means every branch (including ones opened later). The desk sees and sells only what its branches have; a sale
   checks the plan and the offer against the member's home branch.
 
+## Expenses and payroll (admins only)
+- Recurring expenses (rent, utilities, subscriptions) repeat weekly, monthly, every 3 months or yearly from their
+  first due date, keeping its day of the month (31st stays the 31st, or the month's last day). Each date is an
+  `ExpenseDue`: paid (it becomes an ordinary expense, at whatever the bill came to), skipped, or still due. A due
+  shows in Dues and on Home from its reminder day (0 to 30 days before). Dates are fixed once written: to change
+  when one is due, stop it and add a new one. Stopping skips the dates still to come; late ones stay.
+- Each staff member can have one salary: fixed monthly, monthly by days present (salary × days present ÷ working
+  days, never more than the salary; working days are the month less their weekly day off), by the day, or by the
+  hour. Hours are never measured (check-in time only), so hourly pay is the rate × their shift's hours × days they
+  checked in. A salary can carry fixed monthly allowances and deductions.
+- Payroll is worked out per month, never ahead. A draft payslip follows the salary and check-ins until an admin
+  approves it; the admin can set days present by hand (a day worked without a check-in, paid leave) and add
+  incentives, referral bonuses, allowances or deductions for that month. Approved payslips don't change until
+  reopened. Pay is rounded to the rupee, and the take-home pay never drops below zero or below what's already paid.
+- Salaries are paid in full or in parts, after approval; daily wages can be paid as the days go. Each payment, like
+  each paid bill, is also an expense (Salaries, or the bill's category), so expense totals and reports include them.
+  An expense that paid a bill or a salary is changed from Dues or Payroll, never from Expenses.
+- Home's "Expense dues" counts bills inside their reminder days and approved salaries not paid in full.
+- Referral bonuses are entered on the payslip by hand: members don't record who referred them yet.
+
 ## Attendance
 - Check-in sources: front desk, a fixed wall QR per branch (members/staff scan it), and turnstile/biometric
   (ZKTeco/eSSL pushing punches to `/api/devices/punch/`).

@@ -675,13 +675,165 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/expense-dues/:
+    get:
+      operationId: expense_dues_list
+      description: The dates recurring expenses are due, to pay or skip. Admins only.
+        Reading writes any dates not yet listed.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: recurring
+        schema:
+          type: integer
+        description: One recurring expense's dates
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - all
+          - open
+          - overdue
+          - paid
+          - skipped
+          - upcoming
+        description: 'open (default): inside its reminder days and not paid'
+      tags:
+      - expense-dues
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExpenseDueList'
+          description: ''
+  /api/expense-dues/{id}/:
+    get:
+      operationId: expense_dues_retrieve
+      description: The dates recurring expenses are due, to pay or skip. Admins only.
+        Reading writes any dates not yet listed.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense due.
+        required: true
+      tags:
+      - expense-dues
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseDue'
+          description: ''
+  /api/expense-dues/{id}/pay/:
+    post:
+      operationId: expense_dues_pay_create
+      description: Pay this date. The amount can differ from the usual one (a bill
+        that varies); it becomes an expense.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense due.
+        required: true
+      tags:
+      - expense-dues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayDueRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PayDueRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PayDueRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseDue'
+          description: ''
+  /api/expense-dues/{id}/skip/:
+    post:
+      operationId: expense_dues_skip_create
+      description: 'This date won''t be paid: it leaves the list and nothing is spent.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this expense due.
+        required: true
+      tags:
+      - expense-dues
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseDue'
+          description: ''
+  /api/expense-dues/summary/:
+    get:
+      operationId: expense_dues_summary_retrieve
+      description: 'The open bills in one figure: how many, how many are late, and
+        the amount.'
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      tags:
+      - expense-dues
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillsDue'
+          description: ''
   /api/expenses/:
     get:
       operationId: expenses_list
       description: |-
         What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
         Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-        day's payments; only admins see longer spans, edit or remove.
+        day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+        changed from there, never here, so the two can't disagree.
       parameters:
       - in: query
         name: branch
@@ -771,7 +923,8 @@ paths:
       description: |-
         What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
         Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-        day's payments; only admins see longer spans, edit or remove.
+        day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+        changed from there, never here, so the two can't disagree.
       tags:
       - expenses
       requestBody:
@@ -801,7 +954,8 @@ paths:
       description: |-
         What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
         Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-        day's payments; only admins see longer spans, edit or remove.
+        day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+        changed from there, never here, so the two can't disagree.
       parameters:
       - in: path
         name: id
@@ -825,7 +979,8 @@ paths:
       description: |-
         What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
         Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-        day's payments; only admins see longer spans, edit or remove.
+        day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+        changed from there, never here, so the two can't disagree.
       parameters:
       - in: path
         name: id
@@ -861,7 +1016,8 @@ paths:
       description: |-
         What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
         Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-        day's payments; only admins see longer spans, edit or remove.
+        day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+        changed from there, never here, so the two can't disagree.
       parameters:
       - in: path
         name: id
@@ -896,7 +1052,8 @@ paths:
       description: |-
         What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
         Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
-        day's payments; only admins see longer spans, edit or remove.
+        day's payments; only admins see longer spans, edit or remove. An expense that paid a bill or a salary is
+        changed from there, never here, so the two can't disagree.
       parameters:
       - in: path
         name: id
@@ -1956,6 +2113,362 @@ paths:
               schema:
                 $ref: '#/components/schemas/Payment'
           description: ''
+  /api/payslips/:
+    get:
+      operationId: payslips_list
+      description: |-
+        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
+        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM; every month when missing
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: owed
+        schema:
+          type: boolean
+        description: Only approved salaries not yet paid in full
+      - in: query
+        name: staff
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - approved
+          - draft
+        description: |-
+          * `draft` - Draft
+          * `approved` - Approved
+      tags:
+      - payslips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPayslipList'
+          description: ''
+  /api/payslips/{id}/:
+    get:
+      operationId: payslips_retrieve
+      description: |-
+        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
+        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/{id}/approve/:
+    post:
+      operationId: payslips_approve_create
+      description: |-
+        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
+        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/{id}/days/:
+    post:
+      operationId: payslips_days_create
+      description: Set the days present by hand, for a day worked without a check-in
+        or a paid leave.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DaysRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DaysRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DaysRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/{id}/lines/:
+    post:
+      operationId: payslips_lines_create
+      description: Add an allowance, incentive, referral bonus or deduction to this
+        month only.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LineRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LineRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/{id}/pay/:
+    post:
+      operationId: payslips_pay_create
+      description: Pay all or part of what's owed. Each payment is also an expense
+        under Salaries.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaySalaryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaySalaryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaySalaryRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/{id}/remove-line/:
+    post:
+      operationId: payslips_remove_line_create
+      description: |-
+        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
+        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveLineRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RemoveLineRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RemoveLineRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/{id}/reopen/:
+    post:
+      operationId: payslips_reopen_create
+      description: |-
+        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
+        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this payslip.
+        required: true
+      tags:
+      - payslips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayslipDetail'
+          description: ''
+  /api/payslips/generate/:
+    post:
+      operationId: payslips_generate_create
+      description: Make or refresh the month's payslips from salary rules and check-ins.
+        Approved ones stay as they are.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: staff
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - approved
+          - draft
+        description: |-
+          * `draft` - Draft
+          * `approved` - Approved
+      tags:
+      - payslips
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonthRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MonthRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MonthRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPayslipList'
+          description: ''
+  /api/payslips/summary/:
+    get:
+      operationId: payslips_summary_retrieve
+      description: The month in figures, and how many active staff have no salary
+        set (they get no payslip).
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM; this month when missing
+      tags:
+      - payslips
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollSummary'
+          description: ''
   /api/plans/:
     get:
       operationId: plans_list
@@ -2144,6 +2657,211 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/recurring-expenses/:
+    get:
+      operationId: recurring_expenses_list
+      description: |-
+        Rent, bills and subscriptions the gym pays again and again. Admins only. Never deleted: stopped instead,
+        and stopping skips the dates still to come.
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Running (true) or stopped (false)
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - equipment
+          - maintenance
+          - marketing
+          - other
+          - rent
+          - salaries
+          - supplies
+          - utilities
+        description: |-
+          * `rent` - Rent
+          * `salaries` - Salaries
+          * `utilities` - Utilities
+          * `equipment` - Equipment
+          * `maintenance` - Maintenance
+          * `supplies` - Supplies
+          * `marketing` - Marketing
+          * `other` - Other
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - recurring-expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRecurringExpenseList'
+          description: ''
+    post:
+      operationId: recurring_expenses_create
+      description: |-
+        Rent, bills and subscriptions the gym pays again and again. Admins only. Never deleted: stopped instead,
+        and stopping skips the dates still to come.
+      tags:
+      - recurring-expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecurringExpenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecurringExpenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecurringExpenseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringExpense'
+          description: ''
+  /api/recurring-expenses/{id}/:
+    get:
+      operationId: recurring_expenses_retrieve
+      description: |-
+        Rent, bills and subscriptions the gym pays again and again. Admins only. Never deleted: stopped instead,
+        and stopping skips the dates still to come.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recurring expense.
+        required: true
+      tags:
+      - recurring-expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringExpense'
+          description: ''
+    put:
+      operationId: recurring_expenses_update
+      description: |-
+        Rent, bills and subscriptions the gym pays again and again. Admins only. Never deleted: stopped instead,
+        and stopping skips the dates still to come.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recurring expense.
+        required: true
+      tags:
+      - recurring-expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecurringExpenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecurringExpenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecurringExpenseRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringExpense'
+          description: ''
+    patch:
+      operationId: recurring_expenses_partial_update
+      description: |-
+        Rent, bills and subscriptions the gym pays again and again. Admins only. Never deleted: stopped instead,
+        and stopping skips the dates still to come.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recurring expense.
+        required: true
+      tags:
+      - recurring-expenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRecurringExpenseRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRecurringExpenseRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRecurringExpenseRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringExpense'
+          description: ''
+  /api/recurring-expenses/{id}/stop/:
+    post:
+      operationId: recurring_expenses_stop_create
+      description: 'No more dates from today on: the ones still to come are skipped;
+        late ones stay to be paid or skipped.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this recurring expense.
+        required: true
+      tags:
+      - recurring-expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringExpense'
+          description: ''
   /api/reports/period/:
     get:
       operationId: reports_period_retrieve
@@ -2201,6 +2919,169 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/salary-rules/:
+    get:
+      operationId: salary_rules_list
+      description: |-
+        How each staff member is paid. Admins only. `?staff=` finds one person's. Changes reach this month's draft
+        payslip the next time payroll is worked out; approved payslips never change.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: pay_type
+        schema:
+          type: string
+          enum:
+          - attendance
+          - daily
+          - fixed
+          - hourly
+        description: |-
+          * `fixed` - Fixed monthly salary
+          * `attendance` - Monthly salary, by days present
+          * `hourly` - By the hour
+          * `daily` - By the day
+      - in: query
+        name: staff
+        schema:
+          type: integer
+      tags:
+      - salary-rules
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalaryRule'
+          description: ''
+    post:
+      operationId: salary_rules_create
+      description: |-
+        How each staff member is paid. Admins only. `?staff=` finds one person's. Changes reach this month's draft
+        payslip the next time payroll is worked out; approved payslips never change.
+      tags:
+      - salary-rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalaryRuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SalaryRuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SalaryRuleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryRule'
+          description: ''
+  /api/salary-rules/{id}/:
+    get:
+      operationId: salary_rules_retrieve
+      description: |-
+        How each staff member is paid. Admins only. `?staff=` finds one person's. Changes reach this month's draft
+        payslip the next time payroll is worked out; approved payslips never change.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this salary rule.
+        required: true
+      tags:
+      - salary-rules
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryRule'
+          description: ''
+    put:
+      operationId: salary_rules_update
+      description: |-
+        How each staff member is paid. Admins only. `?staff=` finds one person's. Changes reach this month's draft
+        payslip the next time payroll is worked out; approved payslips never change.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this salary rule.
+        required: true
+      tags:
+      - salary-rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalaryRuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SalaryRuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SalaryRuleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryRule'
+          description: ''
+    patch:
+      operationId: salary_rules_partial_update
+      description: |-
+        How each staff member is paid. Admins only. `?staff=` finds one person's. Changes reach this month's draft
+        payslip the next time payroll is worked out; approved payslips never change.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this salary rule.
+        required: true
+      tags:
+      - salary-rules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSalaryRuleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSalaryRuleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSalaryRuleRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryRule'
           description: ''
   /api/staff/:
     get:
@@ -3071,6 +3952,19 @@ paths:
           description: ''
 components:
   schemas:
+    BillsDue:
+      type: object
+      properties:
+        count:
+          type: integer
+        overdue:
+          type: integer
+        total_paise:
+          type: integer
+      required:
+      - count
+      - overdue
+      - total_paise
     Branch:
       type: object
       description: A branch with its opening sessions. Sending `sessions` replaces
@@ -3268,6 +4162,15 @@ components:
       description: |-
         * `every_day` - Every day
         * `mon_sat` - Monday to Saturday
+    DaysRequest:
+      type: object
+      properties:
+        days_present:
+          type: integer
+          maximum: 31
+          minimum: 0
+      required:
+      - days_present
     Device:
       type: object
       description: 'A device as the Devices screen shows it. Never the token: that
@@ -3444,6 +4347,11 @@ components:
         spent_on:
           type: string
           format: date
+        paid_for:
+          type: string
+          nullable: true
+          readOnly: true
+          description: bill or salary when it paid one, so it is changed from there
       required:
       - amount_paise
       - branch
@@ -3451,6 +4359,85 @@ components:
       - category
       - id
       - method
+      - paid_for
+    ExpenseDue:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recurring:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        category:
+          type: string
+          readOnly: true
+        method:
+          type: string
+          readOnly: true
+          description: How it is usually paid
+        paid_to:
+          type: string
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        branch_name:
+          type: string
+          readOnly: true
+        due_on:
+          type: string
+          format: date
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+          description: Expected amount, from the recurring expense
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ExpenseDueStatusEnum'
+          readOnly: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/StateEnum'
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+          nullable: true
+        paid_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+      required:
+      - amount_paise
+      - branch
+      - branch_name
+      - category
+      - due_on
+      - id
+      - method
+      - name
+      - paid_on
+      - paid_paise
+      - paid_to
+      - recurring
+      - state
+      - status
+    ExpenseDueStatusEnum:
+      enum:
+      - due
+      - paid
+      - skipped
+      type: string
+      description: |-
+        * `due` - Due
+        * `paid` - Paid
+        * `skipped` - Skipped
     ExpenseRequest:
       type: object
       properties:
@@ -3503,6 +4490,18 @@ components:
           format: date
       required:
       - until
+    FrequencyEnum:
+      enum:
+      - weekly
+      - monthly
+      - quarterly
+      - yearly
+      type: string
+      description: |-
+        * `weekly` - Every week
+        * `monthly` - Every month
+        * `quarterly` - Every 3 months
+        * `yearly` - Every year
     GymSettings:
       type: object
       description: The gym's own rules. Only the switches can be changed here; the
@@ -3526,6 +4525,24 @@ components:
       - name
       - slug
       - timezone
+    LineRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/PayslipLineKindEnum'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+      required:
+      - amount_paise
+      - kind
+      - label
     LoginRequest:
       type: object
       properties:
@@ -3796,6 +4813,15 @@ components:
         * `upi` - UPI
         * `card` - Card
         * `bank` - Bank transfer
+    MonthRequest:
+      type: object
+      properties:
+        month:
+          type: string
+          minLength: 1
+          pattern: ^\d{4}-\d{2}$
+      required:
+      - month
     Note:
       type: object
       properties:
@@ -3974,6 +5000,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Device'
+    PaginatedExpenseDueList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseDue'
     PaginatedExpenseList:
       type: object
       required:
@@ -4089,6 +5138,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Payment'
+    PaginatedPayslipList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payslip'
     PaginatedPlanList:
       type: object
       required:
@@ -4112,6 +5184,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Plan'
+    PaginatedRecurringExpenseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringExpense'
     PaginatedStaffList:
       type: object
       required:
@@ -4452,6 +5547,79 @@ components:
           items:
             type: integer
           description: Empty means every branch
+    PatchedRecurringExpenseRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            How it is usually paid
+
+            * `cash` - Cash
+            * `upi` - UPI
+            * `card` - Card
+            * `bank` - Bank transfer
+        paid_to:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 200
+        frequency:
+          $ref: '#/components/schemas/FrequencyEnum'
+        starts:
+          type: string
+          format: date
+          description: The first date it is due
+        ends:
+          type: string
+          format: date
+          nullable: true
+          description: The last date it can be due; empty means it keeps going
+        remind_days:
+          type: integer
+          maximum: 30
+          minimum: 0
+          description: How many days before it is due it shows on Home
+    PatchedSalaryRuleRequest:
+      type: object
+      description: 'How one person is paid. `items` are replaced as a whole on every
+        save: the form sends the full list.'
+      properties:
+        staff:
+          type: integer
+        branch:
+          type: integer
+        pay_type:
+          $ref: '#/components/schemas/PayTypeEnum'
+        rate_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        hours_per_day:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          description: 'Hourly pay only: the hours of their shift'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalaryItemRequest'
     PatchedStaffRequest:
       type: object
       description: A trainer, receptionist or admin. Creating one creates their login
@@ -4511,6 +5679,56 @@ components:
           format: time
           nullable: true
           description: Without a time, due by the end of the day
+    PayDueRequest:
+      type: object
+      properties:
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        paid_on:
+          type: string
+          format: date
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - amount_paise
+      - method
+    PaySalaryRequest:
+      type: object
+      properties:
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        paid_on:
+          type: string
+          format: date
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - amount_paise
+      - method
+    PayTypeEnum:
+      enum:
+      - fixed
+      - attendance
+      - hourly
+      - daily
+      type: string
+      description: |-
+        * `fixed` - Fixed monthly salary
+        * `attendance` - Monthly salary, by days present
+        * `hourly` - By the hour
+        * `daily` - By the day
     Payment:
       type: object
       properties:
@@ -4619,6 +5837,320 @@ components:
       - amount_paise
       - member
       - method
+    PaymentStatusEnum:
+      enum:
+      - unpaid
+      - part
+      - paid
+      type: string
+      description: |-
+        * `unpaid` - unpaid
+        * `part` - part
+        * `paid` - paid
+    PayrollSummary:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        payslips:
+          type: integer
+        drafts:
+          type: integer
+        approved:
+          type: integer
+        net_paise:
+          type: integer
+        paid_paise:
+          type: integer
+        staff_without_salary:
+          type: integer
+      required:
+      - approved
+      - drafts
+      - month
+      - net_paise
+      - paid_paise
+      - payslips
+      - staff_without_salary
+    Payslip:
+      type: object
+      description: A row on the Payroll list. Paid amounts come from Payslip.objects.with_paid().
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        staff:
+          type: integer
+          readOnly: true
+        staff_name:
+          type: string
+          readOnly: true
+        staff_role:
+          type: string
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        branch_name:
+          type: string
+          readOnly: true
+        month:
+          type: string
+          format: date
+          readOnly: true
+          description: The first day of the month it pays for
+        pay_type:
+          allOf:
+          - $ref: '#/components/schemas/PayTypeEnum'
+          readOnly: true
+        rate_paise:
+          type: integer
+          readOnly: true
+        hours_per_day:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          readOnly: true
+        working_days:
+          type: integer
+          readOnly: true
+          description: Days in the month less their weekly day off
+        days_present:
+          type: integer
+          readOnly: true
+          description: Days they checked in, unless an admin set it
+        days_set_by_hand:
+          type: boolean
+          readOnly: true
+        pay_paise:
+          type: integer
+          readOnly: true
+          description: Earned from the pay type and days, before lines
+        additions_paise:
+          type: integer
+          readOnly: true
+          description: Allowances, incentives and referral bonuses
+        deductions_paise:
+          type: integer
+          readOnly: true
+        net_paise:
+          type: integer
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+        owed_paise:
+          type: integer
+          readOnly: true
+        payment_status:
+          allOf:
+          - $ref: '#/components/schemas/PaymentStatusEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PayslipStatusEnum'
+          readOnly: true
+      required:
+      - additions_paise
+      - branch
+      - branch_name
+      - days_present
+      - days_set_by_hand
+      - deductions_paise
+      - hours_per_day
+      - id
+      - month
+      - net_paise
+      - owed_paise
+      - paid_paise
+      - pay_paise
+      - pay_type
+      - payment_status
+      - rate_paise
+      - staff
+      - staff_name
+      - staff_role
+      - status
+      - working_days
+    PayslipDetail:
+      type: object
+      description: 'One payslip with its breakdown and payments: the record screen
+        and the printable slip.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        staff:
+          type: integer
+          readOnly: true
+        staff_name:
+          type: string
+          readOnly: true
+        staff_role:
+          type: string
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        branch_name:
+          type: string
+          readOnly: true
+        month:
+          type: string
+          format: date
+          readOnly: true
+          description: The first day of the month it pays for
+        pay_type:
+          allOf:
+          - $ref: '#/components/schemas/PayTypeEnum'
+          readOnly: true
+        rate_paise:
+          type: integer
+          readOnly: true
+        hours_per_day:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          readOnly: true
+        working_days:
+          type: integer
+          readOnly: true
+          description: Days in the month less their weekly day off
+        days_present:
+          type: integer
+          readOnly: true
+          description: Days they checked in, unless an admin set it
+        days_set_by_hand:
+          type: boolean
+          readOnly: true
+        pay_paise:
+          type: integer
+          readOnly: true
+          description: Earned from the pay type and days, before lines
+        additions_paise:
+          type: integer
+          readOnly: true
+          description: Allowances, incentives and referral bonuses
+        deductions_paise:
+          type: integer
+          readOnly: true
+        net_paise:
+          type: integer
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+        owed_paise:
+          type: integer
+          readOnly: true
+        payment_status:
+          allOf:
+          - $ref: '#/components/schemas/PaymentStatusEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PayslipStatusEnum'
+          readOnly: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayslipLine'
+          readOnly: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalaryPayment'
+          readOnly: true
+        approved_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        staff_phone:
+          type: string
+          readOnly: true
+          nullable: true
+        gym_name:
+          type: string
+          readOnly: true
+      required:
+      - additions_paise
+      - approved_at
+      - approved_by_name
+      - branch
+      - branch_name
+      - days_present
+      - days_set_by_hand
+      - deductions_paise
+      - gym_name
+      - hours_per_day
+      - id
+      - lines
+      - month
+      - net_paise
+      - owed_paise
+      - paid_paise
+      - pay_paise
+      - pay_type
+      - payment_status
+      - payments
+      - rate_paise
+      - staff
+      - staff_name
+      - staff_phone
+      - staff_role
+      - status
+      - working_days
+    PayslipLine:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/PayslipLineKindEnum'
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+        from_rule:
+          type: boolean
+          readOnly: true
+      required:
+      - amount_paise
+      - from_rule
+      - id
+      - kind
+      - label
+    PayslipLineKindEnum:
+      enum:
+      - allowance
+      - incentive
+      - referral
+      - deduction
+      type: string
+      description: |-
+        * `allowance` - Allowance
+        * `incentive` - Incentive
+        * `referral` - Referral bonus
+        * `deduction` - Deduction
+    PayslipStatusEnum:
+      enum:
+      - draft
+      - approved
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `approved` - Approved
     Plan:
       type: object
       properties:
@@ -4724,6 +6256,148 @@ components:
           description: The code printed on the branch's wall QR
       required:
       - code
+    RecurringExpense:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+        branch_name:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            How it is usually paid
+
+            * `cash` - Cash
+            * `upi` - UPI
+            * `card` - Card
+            * `bank` - Bank transfer
+        paid_to:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 200
+        frequency:
+          $ref: '#/components/schemas/FrequencyEnum'
+        starts:
+          type: string
+          format: date
+          description: The first date it is due
+        ends:
+          type: string
+          format: date
+          nullable: true
+          description: The last date it can be due; empty means it keeps going
+        remind_days:
+          type: integer
+          maximum: 30
+          minimum: 0
+          description: How many days before it is due it shows on Home
+        is_active:
+          type: boolean
+          readOnly: true
+        next_due:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: The next date not yet paid or skipped
+        dates_fixed:
+          type: boolean
+          readOnly: true
+          description: A date has been written, so starts and frequency can't change
+      required:
+      - amount_paise
+      - branch
+      - branch_name
+      - category
+      - dates_fixed
+      - frequency
+      - id
+      - is_active
+      - method
+      - name
+      - next_due
+      - starts
+    RecurringExpenseRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            How it is usually paid
+
+            * `cash` - Cash
+            * `upi` - UPI
+            * `card` - Card
+            * `bank` - Bank transfer
+        paid_to:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 200
+        frequency:
+          $ref: '#/components/schemas/FrequencyEnum'
+        starts:
+          type: string
+          format: date
+          description: The first date it is due
+        ends:
+          type: string
+          format: date
+          nullable: true
+          description: The last date it can be due; empty means it keeps going
+        remind_days:
+          type: integer
+          maximum: 30
+          minimum: 0
+          description: How many days before it is due it shows on Home
+      required:
+      - amount_paise
+      - branch
+      - category
+      - frequency
+      - method
+      - name
+      - starts
+    RemoveLineRequest:
+      type: object
+      properties:
+        line:
+          type: integer
+      required:
+      - line
     Role:
       type: object
       properties:
@@ -4762,6 +6436,151 @@ components:
         * `receptionist` - Receptionist
         * `trainer` - Trainer
         * `member` - Member
+    SalaryItem:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/SalaryItemKindEnum'
+        label:
+          type: string
+          maxLength: 60
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+      required:
+      - amount_paise
+      - kind
+      - label
+    SalaryItemKindEnum:
+      enum:
+      - allowance
+      - deduction
+      type: string
+      description: |-
+        * `allowance` - Allowance
+        * `deduction` - Deduction
+    SalaryItemRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/SalaryItemKindEnum'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+      required:
+      - amount_paise
+      - kind
+      - label
+    SalaryPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          readOnly: true
+        paid_on:
+          type: string
+          format: date
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        paid_by_name:
+          type: string
+          readOnly: true
+      required:
+      - amount_paise
+      - id
+      - method
+      - note
+      - paid_by_name
+      - paid_on
+    SalaryRule:
+      type: object
+      description: 'How one person is paid. `items` are replaced as a whole on every
+        save: the form sends the full list.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        staff:
+          type: integer
+        staff_name:
+          type: string
+          readOnly: true
+        branch:
+          type: integer
+        branch_name:
+          type: string
+          readOnly: true
+        pay_type:
+          $ref: '#/components/schemas/PayTypeEnum'
+        rate_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        hours_per_day:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          description: 'Hourly pay only: the hours of their shift'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalaryItem'
+      required:
+      - branch
+      - branch_name
+      - id
+      - pay_type
+      - rate_paise
+      - staff
+      - staff_name
+    SalaryRuleRequest:
+      type: object
+      description: 'How one person is paid. `items` are replaced as a whole on every
+        save: the form sends the full list.'
+      properties:
+        staff:
+          type: integer
+        branch:
+          type: integer
+        pay_type:
+          $ref: '#/components/schemas/PayTypeEnum'
+        rate_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        hours_per_day:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          description: 'Hourly pay only: the hours of their shift'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalaryItemRequest'
+      required:
+      - branch
+      - pay_type
+      - rate_paise
+      - staff
     Session:
       type: object
       properties:
@@ -4915,6 +6734,22 @@ components:
       - email
       - name
       - role
+    StateEnum:
+      enum:
+      - overdue
+      - today
+      - soon
+      - later
+      - paid
+      - skipped
+      type: string
+      description: |-
+        * `overdue` - overdue
+        * `today` - today
+        * `soon` - soon
+        * `later` - later
+        * `paid` - paid
+        * `skipped` - skipped
     Subscription:
       type: object
       properties:

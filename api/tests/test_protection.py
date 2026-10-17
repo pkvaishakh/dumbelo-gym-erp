@@ -29,6 +29,22 @@ def test_a_used_refresh_token_cant_be_used_again(w, client):
     assert client.post("/api/auth/refresh/", {"refresh": refresh}, content_type="application/json").status_code == 401
 
 
+@pytest.mark.parametrize("gone", ["deleted", "inactive"])
+def test_a_refresh_token_dies_with_its_account(w, client, gone):
+    """After `seed_demo --reset` (accounts deleted) or a disabled login, a saved refresh token must not mint a new
+    access token: the app would get 401 everywhere instead of being sent back to sign-in."""
+    refresh = login(client).json()["refresh"]
+    user = w.admin.user
+    if gone == "deleted":
+        w.admin.delete()
+        user.delete()
+    else:
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+    r = client.post("/api/auth/refresh/", {"refresh": refresh}, content_type="application/json")
+    assert r.status_code == 401, r.content
+
+
 def test_page_size_is_capped(w):
     for i in range(3):
         w.new_member(f"M{i}", f"96{6000 + i:08d}", w.a)
