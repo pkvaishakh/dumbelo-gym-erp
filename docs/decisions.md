@@ -12,7 +12,10 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Admin, Receptionist, Trainer, Member. No branch manager role. Several admins per gym; one is the account owner
   (handles billing, can't be removed). A person can work at several branches, with one role per gym.
 - Receptionist: records payments, applies fixed offers only (admins create offers), sees today's collection,
-  checks people in, adds members and sells plans. No revenue totals, reports, staff data or expenses.
+  checks people in, adds members and sells plans. Expenses work like the day's payments: they see and add their
+  branches' expenses one day at a time (today's total is on Home, `GET /api/expenses/today/`), so the desk can
+  record cash paid out and square it at close. Only admins see longer spans or edit and remove expenses.
+  No revenue totals, reports or staff data.
 - Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks.
 - Member: their own membership, visits, and self check-in.
 - Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).

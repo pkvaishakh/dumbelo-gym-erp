@@ -1,6 +1,6 @@
 "use client";
 import {
-  BellRing, CalendarCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, UserRound,
+  BellRing, CalendarCheck, CircleCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -9,17 +9,17 @@ import { useState } from "react";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useMembersRetrieve } from "@/api/gen/members/members";
 import { useMessagesList } from "@/api/gen/messages/messages";
-import type { Member, Note, Payment, Subscription } from "@/api/gen/model";
+import type { CurrentPlan, Member, Note, Payment } from "@/api/gen/model";
+import { usePaymentsListInfinite } from "@/api/gen/payments/payments";
 import { useStaffList } from "@/api/gen/staff/staff";
+import { useSubscriptionsRetrieve } from "@/api/gen/subscriptions/subscriptions";
 import { DetailBar } from "@/components/shell";
-import { Details, ErrorText, Field, Icon, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
+import { Details, ErrorText, Field, Icon, LoadMore, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { CheckInResult, useCheckIn } from "@/features/checkin";
 import { day, daysLeft, isoDate, phone, rupees } from "@/lib/format";
-import { useAction, useGet } from "@/lib/hooks";
+import { paged, pages, useAction, useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import type { TrainerMember } from "@/lib/types";
-
-type History = { subscriptions: Subscription[]; payments: Payment[]; balance_paise: number };
 
 export default function MemberProfile() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +28,12 @@ export default function MemberProfile() {
   const desk = role.role === "admin" || role.role === "receptionist";
   const q = useMembersRetrieve(mid);
   const m = q.data?.data as (Member & Partial<TrainerMember>) | undefined;
-  const history = useGet<History>(`/api/members/${mid}/history/`, undefined, desk);
+  // Payments come a few at a time, newest first: a long-time member's history never loads all at once.
+  const paysQ = usePaymentsListInfinite({ member: mid, limit: 5 }, { query: { ...paged, enabled: desk } });
+  const pays = pages(paysQ).rows;
+  // The current plan's price, offer and what's been paid toward it, for the membership card (desk only: amounts).
+  const planId = (q.data?.data as Member | undefined)?.plan?.id;
+  const subQ = useSubscriptionsRetrieve(planId ?? 0, { query: { enabled: desk && !!planId } });
   const visits = useCheckinsList({ member: mid, limit: 10 });
   const notes = useGet<Note[]>(`/api/members/${mid}/notes/`, undefined, role.role !== "member");
   const { checkIn, outcome, busy, close } = useCheckIn();
@@ -39,11 +44,11 @@ export default function MemberProfile() {
   if (q.isError) return <div className="rl-app rl-root"><DetailBar title="Member" /><main className="rl-app__main"><p className="rl-row__meta">This member couldn&apos;t be found.</p></main></div>;
   if (!m) return <div className="rl-app rl-root"><DetailBar title="Member" /><main className="rl-app__main"><SkeletonRows n={4} /></main></div>;
 
-  const plan = m.plan as { id?: number; name: string; starts: string; ends: string } | null | undefined;
+  const plan = m.plan as (Partial<CurrentPlan> & { name: string; starts: string; ends: string }) | null | undefined;
   const ends = plan?.ends ?? m.plan_ends ?? null;
-  const subs = history.data?.subscriptions ?? [];
-  const current = subs.find((s) => !s.cancelled && s.starts && s.starts <= today && s.ends >= today) ?? subs.find((s) => !s.cancelled);
-  const balance = history.data?.balance_paise ?? m.balance_paise ?? 0;
+  const current = desk && plan?.id ? (plan as CurrentPlan) : null;  // the plan the desk can freeze or unfreeze
+  const balance = m.balance_paise ?? 0;
+  const sub = subQ.data?.data;
   const digits = m.phone.replace(/\D/g, "").slice(-10);
 
   return (
@@ -61,9 +66,12 @@ export default function MemberProfile() {
         <Section label="Actions">
           <div className="rl-actions">
             {desk && (inToday ? (
-              <p className="rl-statusline" style={{ alignSelf: "center" }}>Checked in at {inToday.time}</p>
+              <p className="rl-button" role="status" aria-label={`Checked in at ${inToday.time}`} title={`Checked in at ${inToday.time}`}
+                style={{ background: "var(--volt-soft)", color: "var(--ink)", boxShadow: "none", cursor: "default" }}>
+                <Icon as={CircleCheck} />In at {inToday.time}
+              </p>
             ) : (
-              <button className="rl-button" type="button" disabled={busy === m.id} onClick={() => checkIn(m as Member)}>{busy === m.id ? "Checking in…" : "Check In"}</button>
+              <button className="rl-button rl-button--accent" type="button" disabled={busy === m.id} onClick={() => checkIn(m as Member)}>{busy === m.id ? "Checking in…" : "Check In"}</button>
             ))}
             {desk && (balance > 0
               ? <Link className="rl-button rl-button--secondary" href={`/payments/new?member=${m.id}`}>Collect {rupees(balance)}</Link>
@@ -83,7 +91,13 @@ export default function MemberProfile() {
                   <div className="rl-pass__top"><Status status={m.status} /><span className="rl-pass__plan">{plan?.name ?? "Membership"}</span></div>
                   {ends && <p className="rl-figure">{Math.max(0, daysLeft(ends) + 1)} <small>{m.status === "expired" ? "days left" : "days remaining"}</small></p>}
                   <div className="rl-pass__dates"><span>{plan?.starts ? day(plan.starts) : ""}</span><span>{m.status === "expired" ? "Expired" : "Expires"} {ends ? day(ends) : ""}</span></div>
-                  {desk && balance > 0 && <div className="rl-sub"><span><strong>Payment due:</strong> {rupees(balance)}</span></div>}
+                  {desk && (sub || balance > 0) && (
+                    <div className="rl-sub">
+                      {sub && <span><strong>Price:</strong> {rupees(sub.price_paise)}{sub.offer_name ? ` with ${sub.offer_name} (was ${rupees(sub.list_price_paise)})` : ""}</span>}
+                      {sub && <span><strong>Paid:</strong> {rupees(sub.paid_paise)}{sub.paid_paise < sub.price_paise ? ` of ${rupees(sub.price_paise)}` : " in full"}</span>}
+                      {balance > 0 && <span><strong>Payment due:</strong> {rupees(balance)}</span>}
+                    </div>
+                  )}
                   {!desk && m.payment_due && <div className="rl-sub"><span><strong>Payment due.</strong> The front desk will collect it.</span></div>}
                   {current?.frozen_from && <div className="rl-sub"><span><strong>Frozen</strong> {day(current.frozen_from)} to {current.frozen_until ? day(current.frozen_until) : "further notice"}</span></div>}
                 </div>
@@ -103,16 +117,16 @@ export default function MemberProfile() {
           <div className="rl-app__col">
             {desk && (
               <Section title="Payments">
-                {history.isLoading ? <SkeletonRows n={2} /> : history.data?.payments.length ? (
-                  <ul className="rl-card rl-mlist rl-mlist--compact">
-                    {history.data.payments.map((p) => (
+                {paysQ.isLoading ? <SkeletonRows n={2} /> : pays.length ? (
+                  <><ul className="rl-card rl-mlist rl-mlist--compact">
+                    {pays.map((p) => (
                       <li key={p.id}><button className="rl-mrow" type="button" disabled={role.role !== "admin" || p.voided} onClick={() => setSheet({ void: p })}>
                         <span className="rl-chipicon" aria-hidden="true"><Icon as={UserRound} size="sm" /></span>
                         <span className="rl-row__title rl-mrow__name" style={p.voided ? { textDecoration: "line-through" } : undefined}>{rupees(p.amount_paise)} by {p.method.toUpperCase()}</span>
                         <span className="rl-row__meta rl-mrow__meta">{day(p.taken_at)} • {p.taken_by_name}{p.voided ? ` • Voided: ${p.void_reason}` : ""}</span>
                       </button></li>
                     ))}
-                  </ul>
+                  </ul><LoadMore q={paysQ} /></>
                 ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No payments yet.</p></div>}
               </Section>
             )}
@@ -236,7 +250,7 @@ function NoteSheet({ open, id, onClose }: { open: boolean; id: number; onClose: 
   );
 }
 
-function FreezeSheet({ open, sub, onClose }: { open: boolean; sub: Subscription; onClose: () => void }) {
+function FreezeSheet({ open, sub, onClose }: { open: boolean; sub: CurrentPlan; onClose: () => void }) {
   const [until, setUntil] = useState("");
   const [err, setErr] = useState<string>();
   const a = useAction();

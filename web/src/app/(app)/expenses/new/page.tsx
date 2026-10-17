@@ -38,7 +38,8 @@ export default function AddExpense() {
             <div className="rl-chips">{CATS.map((c) => <label className="rl-chipopt" key={c}><input type="radio" name="cat" checked={f.category === c} onChange={() => setF({ ...f, category: c })} /><span>{c[0]!.toUpperCase() + c.slice(1)}</span></label>)}</div>
             <ErrorText>{errs.category}</ErrorText>
           </fieldset>
-          <Field label="Branch">{(id) => <select className="rl-field__input" id={id} value={f.branch} onChange={(e) => setF({ ...f, branch: Number(e.target.value) })}>{role.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select>}</Field>
+          {/* The desk adds expenses for the branch it's working in; only admins pick one. */}
+          {role.role === "admin" && <Field label="Branch">{(id) => <select className="rl-field__input" id={id} value={f.branch} onChange={(e) => setF({ ...f, branch: Number(e.target.value) })}>{role.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select>}</Field>}
           <Field label="Paid to" optional>{(id) => <input className="rl-field__input" id={id} value={f.paid_to} placeholder="BESCOM" onChange={(e) => setF({ ...f, paid_to: e.target.value })} />}</Field>
           <Field label="Date">{(id) => <input className="rl-field__input" id={id} type="date" max={isoDate(new Date())} value={f.spent_on} onChange={(e) => setF({ ...f, spent_on: e.target.value })} />}</Field>
           <fieldset className="rl-fieldset"><legend>Paid by</legend><Choices name="method" two value={f.method} onChange={(v) => setF({ ...f, method: v })} options={METHODS} /></fieldset>

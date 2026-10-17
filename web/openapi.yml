@@ -678,8 +678,10 @@ paths:
   /api/expenses/:
     get:
       operationId: expenses_list
-      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
-        branch, category, method, or search with q.
+      description: |-
+        What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+        Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+        day's payments; only admins see longer spans, edit or remove.
       parameters:
       - in: query
         name: branch
@@ -766,8 +768,10 @@ paths:
           description: ''
     post:
       operationId: expenses_create
-      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
-        branch, category, method, or search with q.
+      description: |-
+        What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+        Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+        day's payments; only admins see longer spans, edit or remove.
       tags:
       - expenses
       requestBody:
@@ -794,8 +798,10 @@ paths:
   /api/expenses/{id}/:
     get:
       operationId: expenses_retrieve
-      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
-        branch, category, method, or search with q.
+      description: |-
+        What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+        Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+        day's payments; only admins see longer spans, edit or remove.
       parameters:
       - in: path
         name: id
@@ -816,8 +822,10 @@ paths:
           description: ''
     put:
       operationId: expenses_update
-      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
-        branch, category, method, or search with q.
+      description: |-
+        What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+        Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+        day's payments; only admins see longer spans, edit or remove.
       parameters:
       - in: path
         name: id
@@ -850,8 +858,10 @@ paths:
           description: ''
     patch:
       operationId: expenses_partial_update
-      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
-        branch, category, method, or search with q.
+      description: |-
+        What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+        Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+        day's payments; only admins see longer spans, edit or remove.
       parameters:
       - in: path
         name: id
@@ -883,8 +893,10 @@ paths:
           description: ''
     delete:
       operationId: expenses_destroy
-      description: What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=,
-        branch, category, method, or search with q.
+      description: |-
+        What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+        Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+        day's payments; only admins see longer spans, edit or remove.
       parameters:
       - in: path
         name: id
@@ -899,6 +911,27 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/expenses/today/:
+    get:
+      operationId: expenses_today_retrieve
+      description: 'Spent today in the caller''s branches: a total and a count, for
+        the receptionist''s Home.'
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      tags:
+      - expenses
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpensesToday'
+          description: ''
   /api/expenses/totals/:
     get:
       operationId: expenses_totals_retrieve
@@ -1278,30 +1311,6 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/members/{id}/history/:
-    get:
-      operationId: members_history_retrieve
-      description: 'Plans and payments for the member profile. Not for trainers: it
-        has amounts.'
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this member.
-        required: true
-      tags:
-      - members
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
   /api/members/{id}/notes/:
     get:
       operationId: members_notes_list
@@ -2417,8 +2426,9 @@ paths:
   /api/subscriptions/:
     get:
       operationId: subscriptions_list
-      description: Selling a plan (new member or renewal), freezing, and cancelling.
-        A renewal starts after the current plan ends.
+      description: |-
+        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+        `?member=` is a member's plans, newest first, a page at a time (the member profile).
       parameters:
       - name: limit
         required: false
@@ -2453,8 +2463,9 @@ paths:
           description: ''
     post:
       operationId: subscriptions_create
-      description: Selling a plan (new member or renewal), freezing, and cancelling.
-        A renewal starts after the current plan ends.
+      description: |-
+        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+        `?member=` is a member's plans, newest first, a page at a time (the member profile).
       tags:
       - subscriptions
       requestBody:
@@ -2481,8 +2492,9 @@ paths:
   /api/subscriptions/{id}/:
     get:
       operationId: subscriptions_retrieve
-      description: Selling a plan (new member or renewal), freezing, and cancelling.
-        A renewal starts after the current plan ends.
+      description: |-
+        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+        `?member=` is a member's plans, newest first, a page at a time (the member profile).
       parameters:
       - in: path
         name: id
@@ -2504,8 +2516,9 @@ paths:
   /api/subscriptions/{id}/cancel/:
     post:
       operationId: subscriptions_cancel_create
-      description: Selling a plan (new member or renewal), freezing, and cancelling.
-        A renewal starts after the current plan ends.
+      description: |-
+        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
+        `?member=` is a member's plans, newest first, a page at a time (the member profile).
       parameters:
       - in: path
         name: id
@@ -3232,8 +3245,18 @@ components:
         ends:
           type: string
           format: date
+        frozen_from:
+          type: string
+          format: date
+          nullable: true
+        frozen_until:
+          type: string
+          format: date
+          nullable: true
       required:
       - ends
+      - frozen_from
+      - frozen_until
       - id
       - name
       - starts
@@ -3455,6 +3478,20 @@ components:
       - branch
       - category
       - method
+    ExpensesToday:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        total_paise:
+          type: integer
+        count:
+          type: integer
+      required:
+      - count
+      - date
+      - total_paise
     FreezeRequest:
       type: object
       properties:

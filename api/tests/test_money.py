@@ -103,3 +103,25 @@ def test_summary_splits_the_day_by_branch(w):
     assert by["B"]["expenses_today_paise"] == 40000 and by["B"]["revenue_today_paise"] == 0
     one = w.client(w.admin).get(f"/api/reports/summary/?branch={w.b.id}").json()
     assert one["expenses_today_paise"] == 40000 and "branches" not in one
+
+
+def test_profile_pages_plans_and_payments_newest_first(w):
+    """The member profile asks for a few plans and payments at a time, never the whole history."""
+    for _ in range(3):
+        sub = sell(w.member, w.monthly, by=w.desk)
+        take_payment(w.member, sub.price_paise, "cash", by=w.desk)
+    c = w.client(w.desk)
+    subs = c.get(f"/api/subscriptions/?member={w.member.id}&limit=2").json()
+    assert subs["count"] == 4 and len(subs["results"]) == 2 and subs["next"]
+    starts = [s["starts"] for s in subs["results"] + c.get(subs["next"]).json()["results"]]
+    assert starts == sorted(starts, reverse=True)
+    pays = c.get(f"/api/payments/?member={w.member.id}&limit=2").json()
+    assert pays["count"] == 4 and len(pays["results"]) == 2 and pays["next"]
+
+
+def test_profile_plan_says_when_it_is_frozen(w):
+    sub = w.member.current_subscription()
+    until = w.today + timedelta(days=9)
+    w.client(w.desk).post(f"/api/subscriptions/{sub.id}/freeze/", {"until": str(until)}, format="json")
+    plan = w.client(w.desk).get(f"/api/members/{w.member.id}/").json()["plan"]
+    assert plan["id"] == sub.id and plan["frozen_from"] == str(w.today) and plan["frozen_until"] == str(until)

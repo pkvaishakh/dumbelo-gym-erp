@@ -1,13 +1,14 @@
 "use client";
 import {
   AlertTriangle, CalendarCheck, CalendarX, ChevronRight, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, Receipt, ScanLine,
-  Ticket, UserPlus, Users, Wallet,
+  Ticket, UserPlus, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useRef } from "react";
+import { useMemo, useState } from "react";
 
 import { useBranchesList } from "@/api/gen/branches/branches";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
+import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
 import { useMembersList } from "@/api/gen/members/members";
 import { useStaffList } from "@/api/gen/staff/staff";
 import { useTasksList } from "@/api/gen/tasks/tasks";
@@ -16,9 +17,9 @@ import { Icon, Photo, Section, SkeletonRows, Stat, Status, TaskStatus } from "@/
 import { day, daysLeft, isoDate, plural, rupees, span } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
-import type { BranchDay, CheckinSummary, MemberSelf, Page, SessionCounts, Summary, TaskCounts, TrainerMember } from "@/lib/types";
+import type { BranchDay, CheckinSummary, Collection, MemberSelf, Page, SessionCounts, Summary, TaskCounts, TrainerMember } from "@/lib/types";
 
-import { CheckInSearch } from "./checkin";
+import { CheckInSheet } from "./checkin";
 
 function Attention({ rows }: { rows: { count: number; title: string; meta: string; href: string }[] }) {
   const shown = rows.filter((r) => r.count > 0);
@@ -194,6 +195,7 @@ export function AdminHome() {
   const staff = useStaffCounts();
   const sum = s.data;
   const late = tasks.data?.overdue ?? 0;
+  const [checking, setChecking] = useState(false);
   return (
     <div className="rl-app rl-root">
       <HomeBar />
@@ -209,7 +211,7 @@ export function AdminHome() {
                 <Link className="rl-tile rl-tile--primary rl-pressable" href="/members/new"><Icon as={UserPlus} /><span>Add Member</span></Link>
                 <Link className="rl-tile rl-tile--primary rl-pressable" href="/payments/new"><Icon as={Wallet} /><span>Collect Payment</span></Link>
                 <Link className="rl-tile rl-pressable" href="/subscriptions/new"><Icon as={Ticket} /><span>New Subscription</span></Link>
-                <Link className="rl-tile rl-pressable" href="/attendance?checkin=1"><Icon as={ClipboardCheck} /><span>Mark Attendance</span></Link>
+                <button className="rl-tile rl-pressable" type="button" onClick={() => setChecking(true)} aria-haspopup="dialog"><Icon as={ClipboardCheck} /><span>Mark Attendance</span></button>
               </div>
             </Section>
             <Section title="Needs attention">
@@ -232,46 +234,97 @@ export function AdminHome() {
           </Section>
         )}
       </main>
+      <CheckInSheet open={checking} onClose={() => setChecking(false)} />
     </div>
   );
 }
 
-export function ReceptionHome() {
+/** The desk's day on one phone screen, no sideways scroll: money in and out on the ink card, then the four member
+ *  counts in a 2 × 2 card. A count that needs the desk turns amber (red for expired). Each money figure opens that
+ *  day's list. */
+function DeskGlance() {
   const { branch } = useSession();
   const today = isoDate(new Date());
   const counts = useGet<CheckinSummary>("/api/checkins/summary/", { date: today, branch });
   const expiring = useGet<Page<unknown>>("/api/members/", { status: "expiring", limit: 1, branch });
   const due = useGet<Page<unknown>>("/api/members/", { status: "due", limit: 1, branch });
-  const searchRef = useRef<HTMLDivElement>(null);
-  const focusSearch = () => searchRef.current?.querySelector("input")?.focus();
+  const expired = useGet<Page<unknown>>("/api/members/", { status: "expired", limit: 1, branch });
+  const col = useGet<Collection>("/api/payments/collection/", { branch });
+  const spentQ = useExpensesTodayRetrieve(branch ? { branch } : undefined);
+  const spent = spentQ.data?.data;
+  const people: { n?: number; label: string; note: string; icon: LucideIcon; href: string; tone?: "attention" | "danger" }[] = [
+    { n: counts.data?.totals.member, label: "Check-ins today", note: "Members so far", icon: CalendarCheck, href: "/attendance" },
+    { n: expiring.data?.count, label: "Expiring this week", note: "Renew before they go", icon: AlertTriangle, href: "/members?status=expiring", tone: "attention" },
+    { n: due.data?.count, label: "Payment due", note: "Members with a balance", icon: HandCoins, href: "/members?status=due", tone: "attention" },
+    { n: expired.data?.count, label: "Expired", note: "Not renewed yet", icon: CalendarX, href: "/members?status=expired", tone: "danger" },
+  ];
+  return (
+    <div className="rl-glance rl-glance--desk">
+      <div className="rl-glance__money">
+        <div className="rl-glance__pair">
+          <Link className="rl-glance__cell rl-pressable" href="/collection">
+            <span className="rl-glance__label"><span className="rl-glance__chip" aria-hidden="true"><Icon as={IndianRupee} size="sm" /></span>Collection today</span>
+            <span className="rl-glance__value">{col.data ? rupees(col.data.total_paise) : "–"}</span>
+            <span className="rl-glance__note">{col.data ? plural(col.data.count, "payment") : " "}</span>
+          </Link>
+          <Link className="rl-glance__cell rl-pressable" href="/expenses">
+            <span className="rl-glance__label"><span className="rl-glance__chip" aria-hidden="true"><Icon as={Receipt} size="sm" /></span>Expenses today</span>
+            <span className="rl-glance__value">{spent ? rupees(spent.total_paise) : "–"}</span>
+            <span className="rl-glance__note">{spent ? (spent.count ? plural(spent.count, "expense") : "Nothing spent yet") : " "}</span>
+          </Link>
+        </div>
+      </div>
+      <div className="rl-glance__people rl-glance__people--four">
+        {people.map((p) => (
+          <Link className="rl-glance__cell rl-pressable" href={p.href} key={p.label}>
+            <span className="rl-glance__label"><Icon as={p.icon} size="sm" />{p.label}</span>
+            <span className={`rl-glance__value${p.tone && p.n ? ` rl-glance__value--${p.tone}` : ""}`}>{p.n?.toLocaleString("en-IN") ?? "–"}</span>
+            <span className="rl-glance__note">{p.note}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const DESK_ACTIONS = [
+  { href: "/members/new", icon: UserPlus, label: "Add Member" },
+  { href: "/payments/new", icon: Wallet, label: "Collect Payment" },
+  { href: "/subscriptions/new", icon: Ticket, label: "New Subscription" },
+];
+
+export function ReceptionHome() {
+  const { branch } = useSession();
+  const today = isoDate(new Date());
+  const counts = useGet<CheckinSummary>("/api/checkins/summary/", { date: today, branch });
+  const [checking, setChecking] = useState(false);
   return (
     <div className="rl-app rl-root">
       <HomeBar />
       <main className="rl-app__main">
         <Greeting />
-        <div ref={searchRef}><CheckInSearch /></div>
         <Section label="Quick actions">
           <div className="rl-quick">
-            <button className="rl-tile rl-tile--accent rl-pressable" type="button" onClick={focusSearch}>
+            <button className="rl-tile rl-tile--accent rl-pressable" type="button" onClick={() => setChecking(true)} aria-haspopup="dialog">
               <Icon as={ScanLine} /><span className="rl-tile__text">Check In Member<span className="rl-tile__hint">Search, then one tap</span></span><Icon as={ChevronRight} size="sm" />
             </button>
-            <Link className="rl-tile rl-tile--stack rl-pressable" href="/members/new"><Icon as={UserPlus} /><span>Add Member</span></Link>
-            <Link className="rl-tile rl-tile--stack rl-pressable" href="/payments/new"><Icon as={Wallet} /><span>Collect Payment</span></Link>
-            <Link className="rl-tile rl-tile--stack rl-pressable" href="/subscriptions/new"><Icon as={Ticket} /><span>New Subscription</span></Link>
+            {DESK_ACTIONS.map((a) => (
+              <Link className="rl-tile rl-tile--stack rl-tile--desk rl-pressable" href={a.href} key={a.href}>
+                <span className="rl-tile__plate" aria-hidden="true"><Icon as={a.icon} size="sm" /></span>
+                <span className="rl-tile__label">{a.label}</span>
+              </Link>
+            ))}
           </div>
         </Section>
         <Section label="Today’s overview">
-          <div className="rl-scroller">
-            <Stat icon={CalendarCheck} value={counts.data?.totals.member ?? "–"} label="Check-ins today" href="/attendance" />
-            <Stat icon={AlertTriangle} value={expiring.data?.count ?? "–"} label="Expiring this week" note={<Status status="expiring" />} href="/members?status=expiring" />
-            <Stat icon={HandCoins} value={due.data?.count ?? "–"} label="Payment due" href="/members?status=due" />
-          </div>
+          <DeskGlance />
         </Section>
         <Section title="Check-ins today" aside={<p className="rl-section__aside">By session</p>}>
           {counts.data ? <SessionsTable sessions={counts.data.sessions} /> : <SkeletonRows n={3} />}
         </Section>
         <Section title="My tasks" aside={<Link className="rl-link" href="/tasks"><span>View all</span></Link>}><MyTasks /></Section>
       </main>
+      <CheckInSheet open={checking} onClose={() => setChecking(false)} />
     </div>
   );
 }

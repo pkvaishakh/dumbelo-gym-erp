@@ -18,7 +18,7 @@ function PlansPage() {
   const admin = role.role === "admin";
   const params = useSearchParams();
   const router = useRouter();
-  const [branch, setBranch] = useState(params.get("branch") ?? "all");
+  const [branch, setBranch] = useState((admin && params.get("branch")) || "all");
   const [q, setQ] = useState("");
   const dq = useSearch(q);
   const filters = { limit: 100, ...(dq ? { q: dq } : {}), ...(branch !== "all" ? { branch: Number(branch) } : {}) };
@@ -53,7 +53,7 @@ function PlansPage() {
         )}
         <div className="rl-searchbar rl-searchbar--filters">
           <SearchField value={q} onChange={setQ} placeholder="Plan or offer name" label="Search plans and offers" />
-          {many && <Chips name="pl-branch" label="Filter by branch" value={branch} onChange={pickBranch}
+          {admin && many && <Chips name="pl-branch" label="Filter by branch" value={branch} onChange={pickBranch}
             options={[{ value: "all", label: "All branches" }, ...role.branches.map((b) => ({ value: String(b.id), label: b.name }))]} />}
         </div>
         <Section title="Plans">

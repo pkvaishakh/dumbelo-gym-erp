@@ -33,6 +33,8 @@ import type {
   Expense,
   ExpenseRequest,
   ExpensesListParams,
+  ExpensesToday,
+  ExpensesTodayRetrieveParams,
   ExpensesTotalsRetrieveParams,
   PaginatedExpenseList,
   PatchedExpenseRequest
@@ -46,7 +48,9 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+ * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+day's payments; only admins see longer spans, edit or remove.
  */
 export type expensesListResponse200 = {
   data: PaginatedExpenseList
@@ -232,7 +236,9 @@ export function useExpensesList<TData = Awaited<ReturnType<typeof expensesList>>
 
 
 /**
- * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+ * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+day's payments; only admins see longer spans, edit or remove.
  */
 export type expensesCreateResponse201 = {
   data: Expense
@@ -312,7 +318,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+ * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+day's payments; only admins see longer spans, edit or remove.
  */
 export type expensesRetrieveResponse200 = {
   data: Expense
@@ -421,7 +429,9 @@ export function useExpensesRetrieve<TData = Awaited<ReturnType<typeof expensesRe
 
 
 /**
- * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+ * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+day's payments; only admins see longer spans, edit or remove.
  */
 export type expensesUpdateResponse200 = {
   data: Expense
@@ -502,7 +512,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+ * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+day's payments; only admins see longer spans, edit or remove.
  */
 export type expensesPartialUpdateResponse200 = {
   data: Expense
@@ -583,7 +595,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * What the gym spends. Admins only. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+ * What the gym spends. Filter by ?month=2026-10 or ?from=&to=, branch, category, method, or search with q.
+Receptionists see and add their branches' expenses one day at a time (today when no day is given), like the
+day's payments; only admins see longer spans, edit or remove.
  */
 export type expensesDestroyResponse204 = {
   data: void
@@ -662,6 +676,122 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Spent today in the caller's branches: a total and a count, for the receptionist's Home.
+ */
+export type expensesTodayRetrieveResponse200 = {
+  data: ExpensesToday
+  status: 200
+}
+    
+export type expensesTodayRetrieveResponseSuccess = (expensesTodayRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type expensesTodayRetrieveResponse = (expensesTodayRetrieveResponseSuccess)
+
+export const getExpensesTodayRetrieveUrl = (params?: ExpensesTodayRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/expenses/today/?${stringifiedParams}` : `/api/expenses/today/`
+}
+
+export const expensesTodayRetrieve = async (params?: ExpensesTodayRetrieveParams, options?: RequestInit): Promise<expensesTodayRetrieveResponse> => {
+  
+  return apiFetch<expensesTodayRetrieveResponse>(getExpensesTodayRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getExpensesTodayRetrieveQueryKey = (params?: ExpensesTodayRetrieveParams,) => {
+    return [
+    `/api/expenses/today/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getExpensesTodayRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError = unknown>(params?: ExpensesTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExpensesTodayRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof expensesTodayRetrieve>>> = ({ signal }) => expensesTodayRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExpensesTodayRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof expensesTodayRetrieve>>>
+export type ExpensesTodayRetrieveQueryError = unknown
+
+
+export function useExpensesTodayRetrieve<TData = Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError = unknown>(
+ params: undefined |  ExpensesTodayRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof expensesTodayRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof expensesTodayRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesTodayRetrieve<TData = Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError = unknown>(
+ params?: ExpensesTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof expensesTodayRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof expensesTodayRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesTodayRetrieve<TData = Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError = unknown>(
+ params?: ExpensesTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExpensesTodayRetrieve<TData = Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError = unknown>(
+ params?: ExpensesTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesTodayRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExpensesTodayRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * Totals by category for the same filters.
  */
 export type expensesTotalsRetrieveResponse200 = {

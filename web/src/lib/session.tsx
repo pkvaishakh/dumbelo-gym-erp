@@ -13,7 +13,7 @@ type Session = {
   me: Me;
   role: Role & { role: RoleName };
   gym: string;
-  /** Admin's chosen branch (null = all branches); for staff, their first branch. */
+  /** Admin's chosen branch (null = all branches). Always null for everyone else: they see all their branches. */
   branch: number | null;
   branchName: string;
   setBranch: (id: number | null) => void;
@@ -72,7 +72,8 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
     let b: number | null = null;
     try { b = Number(localStorage.getItem(BRANCH)) || null; } catch { /* ignore */ }
     const ids = pick.branches.map((x) => x.id);
-    setBranchState(pick.role === "admin" ? (b && ids.includes(b) ? b : null) : (ids[0] ?? null));
+    // Only admins pick a branch; everyone else sees all of their own branches (the API keeps them there).
+    setBranchState(pick.role === "admin" && b && ids.includes(b) ? b : null);
   }, [meQ.data]);
 
   const value = useMemo<Session | null>(() => {
@@ -80,7 +81,9 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
     if (!me || !gym) return null;
     const role = me.roles.find((r) => r.gym === gym);
     if (!role) return null;
-    const bName = branch ? role.branches.find((b) => b.id === branch)?.name ?? "" : "All branches";
+    const admin = role.role === "admin";
+    const bName = branch ? role.branches.find((b) => b.id === branch)?.name ?? ""
+      : admin ? "All branches" : role.branches.map((b) => b.name).join(", ");
     return {
       me,
       role: role as Session["role"],
@@ -88,6 +91,7 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
       branch,
       branchName: bName,
       setBranch: (id) => {
+        if (!admin) return;
         setBranchState(id);
         try { if (id) localStorage.setItem(BRANCH, String(id)); else localStorage.removeItem(BRANCH); } catch { /* ignore */ }
       },

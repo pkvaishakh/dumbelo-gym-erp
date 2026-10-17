@@ -1,10 +1,12 @@
 "use client";
 /* Small building blocks that render the Rackline design system's markup (src/styles/rackline.css). */
-import { AlertCircle, Check, ChevronRight, Plus, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, ChevronRight, Plus, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 
-import { initials, STATUS_LABEL } from "@/lib/format";
+import { parseISO, subDays } from "date-fns";
+
+import { initials, isoDate, STATUS_LABEL } from "@/lib/format";
 
 export function Icon({ as: C, size }: { as: LucideIcon; size?: "sm" | "xs" }) {
   return <C className={`rl-icon${size ? ` rl-icon--${size}` : ""}`} strokeWidth={1.75} aria-hidden="true" />;
@@ -143,6 +145,42 @@ export function Chips<T extends string>({ name, value, onChange, options, label,
   );
 }
 
+/** The last days up to today, one selected (design: DayStrip). With `pick`, the seventh tile is a calendar for
+ *  any earlier day; once one is picked, that tile shows it as the selected day. */
+export function DayStrip({ name, value, onChange, pick }: { name: string; value: string; onChange: (day: string) => void; pick?: boolean }) {
+  const now = new Date();
+  const today = isoDate(now);
+  const n = pick ? 6 : 7;
+  const days = Array.from({ length: n }, (_, i) => subDays(now, n - 1 - i));
+  const earlier = pick && value < isoDate(days[0]) ? parseISO(value) : null;
+  const long = (d: Date) => d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  return (
+    <div className="rl-daystrip" role="radiogroup" aria-label="Day">
+      {days.map((d) => {
+        const v = isoDate(d);
+        return (
+          <label className="rl-day" key={v}>
+            <input type="radio" name={name} value={v} checked={value === v} onChange={() => onChange(v)} aria-label={v === today ? `Today, ${long(d)}` : long(d)} />
+            <span><small>{v === today ? "Today" : d.toLocaleDateString("en-IN", { weekday: "short" })}</small><b>{d.getDate()}</b></span>
+          </label>
+        );
+      })}
+      {pick && (
+        <label className="rl-day">
+          <input type="date" max={today} value={value} aria-label={earlier ? `${long(earlier)}. Pick another day` : "Pick an earlier day"}
+            onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* the browser opens its own picker */ } }}
+            onChange={(e) => e.target.value && onChange(e.target.value)} />
+          <span style={earlier ? { background: "var(--ink)", color: "var(--on-ink)", boxShadow: "none" } : undefined}>
+            {earlier
+              ? <><small style={{ color: "var(--on-ink)", opacity: 0.78 }}>{earlier.toLocaleDateString("en-IN", { month: "short" })}</small><b>{earlier.getDate()}</b></>
+              : <><small>Earlier</small><Icon as={CalendarDays} size="sm" /></>}
+          </span>
+        </label>
+      )}
+    </div>
+  );
+}
+
 export function Seg<T extends string>({ value, onChange, options, label, block = true, onSurface }: {
   value: T; onChange: (v: T) => void; label: string; block?: boolean; onSurface?: boolean;
   options: { value: T; label: string }[];
@@ -193,7 +231,8 @@ export function Sheet({ open, onClose, title, children, closable = true }: {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && closable) closeRef.current(); };
+    // Escape closes only the top sheet: a sheet opened from inside this one (a check-in result) goes first.
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && closable && !ref.current?.querySelector(".rl-sheet.is-open")) closeRef.current(); };
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("keydown", onKey); prev?.focus?.(); };
   }, [open, closable]);
