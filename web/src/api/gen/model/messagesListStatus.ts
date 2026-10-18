@@ -11,6 +11,9 @@ export type MessagesListStatus = typeof MessagesListStatus[keyof typeof Messages
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MessagesListStatus = {
+  delivered: 'delivered',
   failed: 'failed',
+  queued: 'queued',
+  read: 'read',
   sent: 'sent',
 } as const;

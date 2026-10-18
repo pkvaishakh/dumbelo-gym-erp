@@ -14,6 +14,10 @@ export type MessagesListParams = {
 * `expiring_3` - Plan ends in 3 days
 * `expiring_0` - Plan ends today
 * `dues` - Payment due
+* `payment_received` - Payment received
+* `task_assigned` - Task assigned
+* `rackline_invoice_due` - Rackline invoice due
+* `rackline_payment_received` - Rackline payment received
  */
 kind?: MessagesListKind;
 /**
@@ -26,7 +30,10 @@ member?: number;
  */
 offset?: number;
 /**
- * * `sent` - Sent
+ * * `queued` - Sending
+* `sent` - Sent
+* `delivered` - Delivered
+* `read` - Read
 * `failed` - Failed
  */
 status?: MessagesListStatus;

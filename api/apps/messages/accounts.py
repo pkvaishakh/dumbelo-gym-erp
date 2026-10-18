@@ -90,14 +90,31 @@ def whatsapp_mode(gym: Gym) -> str:
     return getattr(getattr(gym, "billing", None), "whatsapp_mode", GymBilling.SHARED)
 
 
-def account_for(gym: Gym) -> WhatsAppAccount | None:
-    """The account a gym's messages go from, by its WhatsApp mode: the shared number, its own, or none when off.
-    Without its credentials: the sender asks for those itself."""
+def _sends_from(gym: Gym) -> dict | None:
+    """Which account a gym's messages go from, as a filter, by its WhatsApp mode; None when it's off."""
     mode = whatsapp_mode(gym)
     if mode == GymBilling.OFF:
         return None
-    qs = WhatsAppAccount.objects.defer(*WhatsAppAccount.SECRET_FIELDS)
-    return qs.filter(gym=gym if mode == GymBilling.OWN else None).first()
+    return {"gym": gym if mode == GymBilling.OWN else None}
+
+
+def account_for(gym: Gym) -> WhatsAppAccount | None:
+    """The account a gym's messages go from, by its WhatsApp mode: the shared number, its own, or none when off.
+    Without its credentials: the sender asks for those itself."""
+    where = _sends_from(gym)
+    if where is None:
+        return None
+    return WhatsAppAccount.objects.defer(*WhatsAppAccount.SECRET_FIELDS).filter(**where).first()
+
+
+def approved_templates(gym: Gym) -> list[WhatsAppTemplate]:
+    """The approved templates on the number a gym sends from, each with that account (without its credentials),
+    in one query. Empty when WhatsApp is off, or the number has none."""
+    where = _sends_from(gym)
+    if where is None:
+        return []
+    qs = WhatsAppTemplate.objects.filter(status=WhatsAppTemplate.APPROVED, **{f"account__{k}": v for k, v in where.items()})
+    return list(qs.select_related("account").defer(*[f"account__{f}" for f in WhatsAppAccount.SECRET_FIELDS]).order_by("kind", "language"))
 
 
 @transaction.atomic

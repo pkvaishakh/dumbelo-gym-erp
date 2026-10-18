@@ -102,6 +102,27 @@ def empty_outbox():
     FakeSender.outbox.clear()
 
 
+@pytest.fixture(autouse=True)
+def shared_number(request):
+    """Rackline's shared WhatsApp number with an approved template for each message (the demo's words), as a real
+    server has, for every test that uses the database. Messages go from it unless a test sets up a gym's own."""
+    db = next((f for f in ("transactional_db", "db") if f in request.fixturenames), None)
+    if db is None:
+        return None
+    request.getfixturevalue(db)
+    from apps.core.management.commands.seed_demo import DEMO_TEMPLATES
+    from apps.messages.models import WhatsAppAccount, WhatsAppTemplate
+
+    shared = WhatsAppAccount(gym=None, waba_id="100000000000009", phone_number_id="200000000000009", display_number="+91 80000 00009")
+    shared.set_credentials(access_token="EAAGshared-test-token-0000000000", app_secret="shared-test-app-secret-00")
+    shared.save()
+    WhatsAppTemplate.objects.bulk_create([
+        WhatsAppTemplate(account=shared, kind=kind, name=f"{kind}_v1", body=body, parameters=params, status=WhatsAppTemplate.APPROVED)
+        for kind, params, body in DEMO_TEMPLATES
+    ])
+    return shared
+
+
 @pytest.fixture
 def prices(db):
     return price_list()

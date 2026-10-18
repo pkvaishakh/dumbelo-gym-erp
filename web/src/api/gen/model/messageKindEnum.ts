@@ -11,6 +11,10 @@
 * `expiring_3` - Plan ends in 3 days
 * `expiring_0` - Plan ends today
 * `dues` - Payment due
+* `payment_received` - Payment received
+* `task_assigned` - Task assigned
+* `rackline_invoice_due` - Rackline invoice due
+* `rackline_payment_received` - Rackline payment received
  */
 export type MessageKindEnum = typeof MessageKindEnum[keyof typeof MessageKindEnum];
 
@@ -21,4 +25,8 @@ export const MessageKindEnum = {
   expiring_3: 'expiring_3',
   expiring_0: 'expiring_0',
   dues: 'dues',
+  payment_received: 'payment_received',
+  task_assigned: 'task_assigned',
+  rackline_invoice_due: 'rackline_invoice_due',
+  rackline_payment_received: 'rackline_payment_received',
 } as const;

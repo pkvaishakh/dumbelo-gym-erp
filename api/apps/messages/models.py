@@ -1,5 +1,7 @@
+import re
 import secrets
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Q, Value
 from django.db.models.functions import Coalesce
@@ -9,36 +11,7 @@ from apps.reminders.models import ReminderDue
 
 from .crypto import EncryptedTextField
 
-
-class Message(GymScoped):
-    """One reminder that went to a member, or the record of one that didn't.
-
-    A member hears from us at most once a day: that is what the unique constraint says, and it means a
-    member whose plan is ending *and* who owes money gets the more pressing of the two, and a provider
-    having a bad morning can't turn into a pile of retries. The text is kept as it was sent, so the desk
-    can see exactly what the member read.
-    """
-
-    SENT, FAILED = "sent", "failed"
-    STATUSES = [(SENT, "Sent"), (FAILED, "Failed")]
-
-    member = models.ForeignKey("members.Member", on_delete=models.CASCADE, related_name="messages")
-    kind = models.CharField(max_length=12, choices=ReminderDue.KINDS)
-    to = models.CharField(max_length=13, help_text="The number it was sent to, as it was that day")
-    text = models.TextField()
-    for_date = models.DateField(help_text="The day in the gym's time zone this reminder was for")
-    status = models.CharField(max_length=8, choices=STATUSES)
-    provider = models.CharField(max_length=20, help_text="Which sender handled it (see senders.py)")
-    provider_id = models.CharField(max_length=80, blank=True, help_text="The provider's own id for the message")
-    error = models.CharField(max_length=200, blank=True, help_text="Why it failed, in the provider's words")
-
-    class Meta:
-        ordering = ["-for_date", "-created_at"]
-        constraints = [models.UniqueConstraint(fields=["gym", "member", "for_date"], name="one_message_per_member_per_day")]
-        indexes = [models.Index(fields=["gym", "for_date"], name="message_gym_day")]
-
-    def __str__(self):
-        return f"{self.member} · {self.get_kind_display()} · {self.get_status_display()}"
+PLACEHOLDER = re.compile(r"\{\{\s*(\d+)\s*\}\}")  # {{1}}, {{2}}… in a template's text
 
 
 def _webhook_slug() -> str:
@@ -123,7 +96,7 @@ class WhatsAppTemplate(TimeStamped):
     #: The details each message can fill a template with, and what they are. The sender fills them by these names.
     PARAMETERS = {
         PLAN_ENDING: {"first_name": "Their first name", "plan": "The plan's name", "gym": "The gym's name",
-                      "end_date": "The day the plan ends", "days_left": "Days until then"},
+                      "end_date": "The day the plan ends", "days_left": "How soon: tomorrow, or in 7 days"},
         PLAN_ENDS_TODAY: {"first_name": "Their first name", "plan": "The plan's name", "gym": "The gym's name"},
         PAYMENT_DUE: {"first_name": "Their first name", "amount": "What they owe", "plan": "The plan's name", "gym": "The gym's name"},
         PAYMENT_RECEIVED: {"first_name": "Their first name", "amount": "What they paid", "plan": "The plan's name",
@@ -162,3 +135,75 @@ class WhatsAppTemplate(TimeStamped):
 
     def __str__(self):
         return f"{self.name} ({self.language})"
+
+    def fill(self, values: list[str]) -> str:
+        """The approved text with the values in place of {{1}}, {{2}}…: the words the person reads."""
+        return PLACEHOLDER.sub(lambda m: values[int(m[1]) - 1] if 0 < int(m[1]) <= len(values) else m[0], self.body)
+
+
+class Message(GymScoped):
+    """One WhatsApp message to a member or a staff member, from the moment it is queued to Meta's last word on it.
+
+    The row is written before anything is sent, under a key unique in its gym (`dedupe_key`), so the same message
+    can't go twice: a second run, a retry or a crash finds the row already there. A member's reminder for a day is
+    `member:<id>:reminder:<date>`, which is also what keeps them to one a day. The words are kept as the person read
+    them, filled in from the template, so the desk can see exactly what went.
+    """
+
+    #: What a message is about. Reminders keep their own kinds (the desk sees "Plan ends in 3 days", not just
+    #: "Plan ending soon"); every other kind is the template's.
+    KINDS = [*ReminderDue.KINDS, *[(k, label) for k, label in WhatsAppTemplate.KINDS if k not in {
+        WhatsAppTemplate.PLAN_ENDING, WhatsAppTemplate.PLAN_ENDS_TODAY, WhatsAppTemplate.PAYMENT_DUE}]]
+    #: The template each kind goes out on
+    TEMPLATE_KIND = {
+        ReminderDue.EXPIRING_7: WhatsAppTemplate.PLAN_ENDING, ReminderDue.EXPIRING_3: WhatsAppTemplate.PLAN_ENDING,
+        ReminderDue.EXPIRING_0: WhatsAppTemplate.PLAN_ENDS_TODAY, ReminderDue.DUES: WhatsAppTemplate.PAYMENT_DUE,
+        **{k: k for k, _ in WhatsAppTemplate.KINDS},
+    }
+
+    QUEUED, SENT, DELIVERED, READ, FAILED = "queued", "sent", "delivered", "read", "failed"
+    STATUSES = [(QUEUED, "Sending"), (SENT, "Sent"), (DELIVERED, "Delivered"), (READ, "Read"), (FAILED, "Failed")]
+
+    member = models.ForeignKey("members.Member", null=True, blank=True, on_delete=models.CASCADE, related_name="messages")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="+",
+                             help_text="A staff member it went to; empty when it went to a member")
+    kind = models.CharField(max_length=32, choices=KINDS)
+    dedupe_key = models.CharField(max_length=80, help_text="Unique in the gym: the same message is never sent twice")
+    # RESTRICT: accounts and templates are never deleted, but a gym's own number goes with the gym and its messages
+    account = models.ForeignKey(WhatsAppAccount, null=True, blank=True, on_delete=models.RESTRICT, related_name="messages",
+                                help_text="The number it went from; empty when there was none to send from")
+    template = models.ForeignKey(WhatsAppTemplate, null=True, blank=True, on_delete=models.RESTRICT, related_name="messages")
+    parameters = models.JSONField(default=list, help_text="What filled the template's {{1}}, {{2}}…, in order")
+    to = models.CharField(max_length=13, help_text="The number it was sent to, as it was that day")
+    text = models.TextField(help_text="The template's words, filled in")
+    for_date = models.DateField(help_text="The day in the gym's time zone it was for")
+    status = models.CharField(max_length=10, choices=STATUSES, default=QUEUED)
+    attempts = models.PositiveSmallIntegerField(default=0, help_text="Times it was handed to the provider")
+    next_retry_at = models.DateTimeField(null=True, blank=True, help_text="When a temporary failure is tried again")
+    provider = models.CharField(max_length=20, help_text="Which sender handled it (see senders.py)")
+    provider_id = models.CharField(max_length=128, blank=True, help_text="The provider's own id for the message")
+    error_code = models.CharField(max_length=16, blank=True, help_text="Meta's error code, when it gave one")
+    error = models.CharField(max_length=200, blank=True, help_text="Why it failed, in the provider's words")
+    # Shared-number messages are billed per delivered message, at the gym's rate for the template's category
+    billable = models.BooleanField(default=False, help_text="Sent from Rackline's shared number, so billed to the gym")
+    rate_paise = models.PositiveIntegerField(default=0, help_text="What it costs the gym once delivered")
+
+    class Meta:
+        ordering = ["-for_date", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["gym", "dedupe_key"], name="one_message_per_key"),
+            models.CheckConstraint(condition=Q(member__isnull=False, user__isnull=True) | Q(member__isnull=True, user__isnull=False),
+                                   name="message_to_a_member_or_a_user"),
+        ]
+        indexes = [
+            models.Index(fields=["gym", "for_date"], name="message_gym_day"),
+            models.Index(fields=["status", "next_retry_at"], name="message_retry_due"),
+        ]
+
+    def __str__(self):
+        return f"{self.member or self.user} · {self.get_kind_display()} · {self.get_status_display()}"
+
+    @staticmethod
+    def reminder_key(member_id: int, for_date) -> str:
+        """One reminder a member a day: the key every reminder for that day shares."""
+        return f"member:{member_id}:reminder:{for_date.isoformat()}"

@@ -2291,11 +2291,19 @@ paths:
           - expiring_0
           - expiring_3
           - expiring_7
+          - payment_received
+          - rackline_invoice_due
+          - rackline_payment_received
+          - task_assigned
         description: |-
           * `expiring_7` - Plan ends in 7 days
           * `expiring_3` - Plan ends in 3 days
           * `expiring_0` - Plan ends today
           * `dues` - Payment due
+          * `payment_received` - Payment received
+          * `task_assigned` - Task assigned
+          * `rackline_invoice_due` - Rackline invoice due
+          * `rackline_payment_received` - Rackline payment received
       - name: limit
         required: false
         in: query
@@ -2317,10 +2325,16 @@ paths:
         schema:
           type: string
           enum:
+          - delivered
           - failed
+          - queued
+          - read
           - sent
         description: |-
+          * `queued` - Sending
           * `sent` - Sent
+          * `delivered` - Delivered
+          * `read` - Read
           * `failed` - Failed
       tags:
       - messages
@@ -9392,7 +9406,7 @@ components:
       - renewals
     Message:
       type: object
-      description: 'A reminder as the desk sees it: when it went, what it said, and
+      description: 'A message as the desk sees it: when it went, what it said, and
         whether it arrived.'
       properties:
         id:
@@ -9400,36 +9414,47 @@ components:
           readOnly: true
         member:
           type: integer
+          readOnly: true
+          nullable: true
         member_name:
           type: string
           readOnly: true
+          nullable: true
         kind:
-          $ref: '#/components/schemas/MessageKindEnum'
+          allOf:
+          - $ref: '#/components/schemas/MessageKindEnum'
+          readOnly: true
         kind_label:
           type: string
           readOnly: true
         to:
           type: string
+          readOnly: true
           description: The number it was sent to, as it was that day
-          maxLength: 13
         text:
           type: string
+          readOnly: true
+          description: The template's words, filled in
         for_date:
           type: string
           format: date
-          description: The day in the gym's time zone this reminder was for
+          readOnly: true
+          description: The day in the gym's time zone it was for
         status:
-          $ref: '#/components/schemas/MessageStatusEnum'
+          allOf:
+          - $ref: '#/components/schemas/MessageStatusEnum'
+          readOnly: true
         error:
           type: string
+          readOnly: true
           description: Why it failed, in the provider's words
-          maxLength: 200
         created_at:
           type: string
           format: date-time
           readOnly: true
       required:
       - created_at
+      - error
       - for_date
       - id
       - kind
@@ -9462,19 +9487,33 @@ components:
       - expiring_3
       - expiring_0
       - dues
+      - payment_received
+      - task_assigned
+      - rackline_invoice_due
+      - rackline_payment_received
       type: string
       description: |-
         * `expiring_7` - Plan ends in 7 days
         * `expiring_3` - Plan ends in 3 days
         * `expiring_0` - Plan ends today
         * `dues` - Payment due
+        * `payment_received` - Payment received
+        * `task_assigned` - Task assigned
+        * `rackline_invoice_due` - Rackline invoice due
+        * `rackline_payment_received` - Rackline payment received
     MessageStatusEnum:
       enum:
+      - queued
       - sent
+      - delivered
+      - read
       - failed
       type: string
       description: |-
+        * `queued` - Sending
         * `sent` - Sent
+        * `delivered` - Delivered
+        * `read` - Read
         * `failed` - Failed
     MethodEnum:
       enum:
