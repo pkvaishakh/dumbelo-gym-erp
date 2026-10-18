@@ -30,6 +30,39 @@ class MessageSerializer(serializers.ModelSerializer):
         return message.get_kind_display()
 
 
+class ConsoleMessageSerializer(serializers.ModelSerializer):
+    """A message in the Console's WhatsApp log: which gym, number and template, and how it went. Never who it went
+    to or what it said (a member's name, what they owe): only the last 4 digits of the number."""
+
+    gym_name = serializers.CharField(source="gym.name", read_only=True)
+    kind_label = serializers.CharField(source="get_kind_display", read_only=True)
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    recipient = serializers.SerializerMethodField()
+    to_last4 = serializers.SerializerMethodField()
+    account_number = serializers.CharField(source="account.display_number", read_only=True, allow_null=True, default=None)
+    is_shared = serializers.SerializerMethodField()
+    template_name = serializers.CharField(source="template.name", read_only=True, allow_null=True, default=None)
+    template_language = serializers.CharField(source="template.language", read_only=True, allow_null=True, default=None)
+
+    class Meta:
+        model = Message
+        fields = ["id", "gym", "gym_name", "kind", "kind_label", "recipient", "to_last4", "account", "account_number", "is_shared",
+                  "template", "template_name", "template_language", "for_date", "status", "status_label", "attempts",
+                  "next_retry_at", "error_code", "error", "provider_id", "billable", "rate_paise", "created_at", "updated_at",
+                  "delivered_at", "read_at"]
+        read_only_fields = fields
+
+    def get_recipient(self, message) -> Literal["member", "staff"]:
+        return "member" if message.member_id else "staff"
+
+    def get_to_last4(self, message) -> str:
+        return message.to[-4:]
+
+    def get_is_shared(self, message) -> bool:
+        """Sent from Rackline's shared number (an account with no gym)."""
+        return message.account is not None and message.account.gym_id is None
+
+
 # ---- When messages go out, and their switches ----
 
 class RuleSerializer(serializers.Serializer):

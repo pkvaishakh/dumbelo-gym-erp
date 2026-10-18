@@ -150,6 +150,7 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api",  # set, not detected: detection uses os.path and breaks on Windows (tags become "api")
     # Several models have a `kind` or `status`; name the payroll and dues ones so the web's types read clearly.
     "ENUM_NAME_OVERRIDES": {
+        "MessageStatusEnum": "apps.messages.models.Message.STATUSES",
         "StateEnum": "apps.expenses.serializers.ExpenseDueSerializer.STATES",  # its name before other states came
         "ServerCheckEnum": "apps.platform.server.CHECKS",
         "ServerStateEnum": "apps.platform.server.STATES",

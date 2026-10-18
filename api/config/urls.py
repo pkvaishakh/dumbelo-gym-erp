@@ -15,7 +15,7 @@ from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, Mon
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import (
-    AutomationView, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
+    AutomationView, ConsoleMessageViewSet, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
     WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView,
 )
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
@@ -57,6 +57,7 @@ router.register("platform/invoice-payments", ConsoleInvoicePaymentViewSet, basen
 router.register("platform/charges", ChargeViewSet, basename="platform-charge")
 router.register("platform/whatsapp-accounts", WhatsAppAccountViewSet, basename="platform-whatsapp-account")
 router.register("platform/whatsapp-templates", WhatsAppTemplateViewSet, basename="platform-whatsapp-template")
+router.register("platform/messages", ConsoleMessageViewSet, basename="platform-message")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

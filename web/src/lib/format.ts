@@ -229,3 +229,15 @@ export function took(seconds: number) {
   const m = Math.floor(all / 60), s = all % 60;
   return s ? `${m} min ${s} s` : `${m} min`;
 }
+
+/** A WhatsApp message's state as a badge, in the Console's log. */
+export const MESSAGE_STATUS: Record<string, { label: string; badge: string }> = {
+  queued: { label: "Sending", badge: "expiring" },
+  sent: { label: "Sent", badge: "frozen" },
+  delivered: { label: "Delivered", badge: "active" },
+  read: { label: "Read", badge: "active" },
+  failed: { label: "Failed", badge: "expired" },
+};
+
+/** "18 Oct 2026, 9:05 AM" on this device's clock. */
+export const dayTime = (iso: string) => format(parseISO(iso), "d MMM yyyy, h:mm a");

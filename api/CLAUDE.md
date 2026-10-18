@@ -51,7 +51,8 @@ apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender po
                      month, counted from the rows, for invoices); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
                      no sign-in: the signature is the check); views/gym.py
                      (/api/messages/, /api/gym/whatsapp/, /api/gym/messages/[<kind>/]: Pause and Resume), views/console.py
-                     (/api/platform/whatsapp-accounts/, /api/platform/whatsapp-templates/) and views/automation.py
+                     (/api/platform/whatsapp-accounts/, /api/platform/whatsapp-templates/, /api/platform/messages/: the log across
+                     gyms, no names or words, the number's last 4 digits only) and views/automation.py
                      (/api/platform/automation/, /api/platform/gyms/<id>/messages/[<kind>/]). Querysets that show an account defer SECRET_FIELDS.
                      App label "gym_messages": see apps.py
 apps/reports/        views/summary.py (SummaryView: admin Home, including expense dues; writes due dates); one read-only

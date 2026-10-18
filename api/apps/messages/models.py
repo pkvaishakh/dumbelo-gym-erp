@@ -196,6 +196,7 @@ class Message(GymScoped):
             models.Index(fields=["account", "provider_id"], name="message_account_meta_id"),  # the webhook's lookup
             models.Index(fields=["gym", "delivered_at"], condition=Q(billable=True), name="message_billable_delivered"),
             models.Index(fields=["status", "updated_at"], name="message_status_changed"),  # Server: failed today
+            models.Index(fields=["-created_at", "-id"], name="message_latest"),  # the Console's log, newest first
         ]
 
     def __str__(self):
