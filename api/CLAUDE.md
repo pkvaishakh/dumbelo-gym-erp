@@ -12,7 +12,7 @@ apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMi
                      jobs.py (run_job: every scheduled job's work runs inside it, so its run is kept with its counts or
                      error and the history pruned; queue: Run Now's run), views.py (/api/health/: the load balancer's,
                      says no more than "database ok"), middleware.py (lets the load balancer's check through),
-                     management/commands/seed_demo.py
+                     management/commands/seed_demo.py, verify_counts.py (a gym's rows, for the restore drill: docs/operations.md)
 apps/accounts/       User (email for staff, +91 phone for members), login/refresh/me
 apps/gyms/           Gym, Branch, BranchSession (named opening hours), GymRole (one role per user per gym,
                      branches M2M, is_owner), SupportAccess

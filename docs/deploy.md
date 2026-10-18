@@ -40,15 +40,16 @@ export ECR=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com/rackline-api
 
 One `db.t4g.micro`, 20 GB gp3, PostgreSQL 16, **not** publicly accessible, in the VPC the API will run in.
 Private subnets if the account has them; in a plain default VPC, `--no-publicly-accessible` and the security
-group below keep it off the internet anyway. Backups and the restore drill are session 8's job
-(`docs/operations.md`); take the 14-day retention and encryption at rest now.
+group below keep it off the internet anyway. Backups and the monthly restore drill are in `docs/operations.md`;
+the 14-day retention, encryption at rest and deletion protection are set here, at the start.
 
 ```bash
 aws rds create-db-instance \
   --db-instance-identifier rackline-db --db-instance-class db.t4g.micro \
   --engine postgres --engine-version 16 --allocated-storage 20 --storage-type gp3 --storage-encrypted \
   --master-username rackline --manage-master-user-password \
-  --db-name rackline --backup-retention-period 14 --no-publicly-accessible
+  --db-name rackline --backup-retention-period 14 --preferred-backup-window 20:30-21:00 --deletion-protection \
+  --no-publicly-accessible
 ```
 
 `--manage-master-user-password` keeps the password in Secrets Manager instead of your shell history. Read it
@@ -142,7 +143,8 @@ saved Meta's id, or a call that broke on a bug since fixed): `python manage.py r
 1. Make a new key and set `FIELD_ENCRYPTION_KEY=<new>,<old>` on the API, the worker and beat. Deploy.
 2. Run `python manage.py rotate_credentials` once (a one-off task, like the migration in step 5). It writes every
    credential again with the new key, or changes nothing if one can't be read.
-3. Set `FIELD_ENCRYPTION_KEY=<new>` and deploy again. The old key can go.
+3. Set `FIELD_ENCRYPTION_KEY=<new>` and deploy again. Keep the old key in its own secret for 14 more days: the
+   backups from before the rotation are encrypted with it (`docs/operations.md`, Backups).
 
 ## 4. The image (ECR)
 
@@ -314,7 +316,7 @@ aws apprunner update-service --service-arn <arn> --source-configuration \
 
 Then put it back on `latest` (the same command with `:latest`) before the next deploy, or re-run the deploy
 workflow from the good commit instead of all this. A migration is **not** undone by either: check what the bad
-commit migrated before you roll back, and if data moved, restore instead (`docs/operations.md`, session 8).
+commit migrated before you roll back, and if data moved, restore instead (`docs/operations.md`, Restoring for real).
 
 ## What this costs, roughly
 

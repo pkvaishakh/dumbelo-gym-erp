@@ -38,7 +38,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] WhatsApp renewal and dues reminders (session 5)
 - [x] CI for API, web and e2e (session 6)
 - [x] Deploy setup: API + Postgres on AWS Mumbai, web on Vercel (session 7)
-- [ ] Backups, restore drill, onboarding a real gym (session 8)
+- [x] Backups, restore drill, onboarding a real gym (session 8)
 
 ## Rackline billing and WhatsApp
 - [x] Rackline admins, the Console, gyms and their admin accounts, suspend and activate (session 9)
