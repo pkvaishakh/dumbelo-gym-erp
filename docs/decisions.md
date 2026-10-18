@@ -3,7 +3,8 @@
 What was decided, so code and screens stay consistent. Change this file when a decision changes.
 
 ## Product
-- SaaS for many gyms in India. Billing per branch per month. Web app / PWA only (no native apps yet).
+- SaaS for many gyms in India. Billed monthly: a base fee plus a fee per branch (see Rackline billing). Web app /
+  PWA only (no native apps yet).
 - MVP in about 3 months with 2–3 developers; pilot at the current client from week 9.
 - One sign-in for every role; the account decides where you land. Staff sign in with email + password;
   members with their phone number + a password the front desk sets.
@@ -22,6 +23,11 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks.
 - Member: their own membership, visits, and self check-in.
 - Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).
+- Rackline admins (`User.is_superuser`) run the business side: gyms, their admin accounts, prices, Rackline
+  invoices and payments, WhatsApp accounts and templates. They use the same sign-in and the same app, landing on
+  the Console (`/console`, mobile first, the design system's screens). They never see inside a gym (members,
+  payments, check-ins) except through a support window like anyone else on Rackline's team. Their changes are
+  audited.
 - Staff change their own name, email, mobile number and password (More). A member's details are changed by
   the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and not for
   someone who also signs in to another gym (one login covers every gym); for them, this gym can't change their
@@ -135,17 +141,55 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Admins assign tasks to trainers and receptionists with a due date (and optional time); staff start them,
   post updates and mark them done; admins see each step and can reopen or delete.
 
+## Rackline billing (Rackline admins set it; a gym's admins see it)
+- One price list, kept by Rackline admins: a monthly base fee, a monthly fee per branch, a one-time WhatsApp setup
+  fee, a one-time attendance machine setup fee (per device), and the rate per delivered message on Rackline's
+  shared WhatsApp number (by Meta's message category). All in paise.
+- Each gym has its Rackline plan (`GymBilling`): the prices copied from the price list when it was set (a new
+  price list never reprices a gym until a Rackline admin moves it), a branch quota, a billing day and its WhatsApp
+  mode. The monthly charge is the base fee plus the per-branch fee times the **quota**, not the branches in use,
+  so the bill is predictable. It is charged in advance for the month ahead.
+- A gym opens branches up to its quota. Opening or reactivating one past it is refused ("Your plan has room for 2
+  branches. Ask for another one to open this branch."). An admin asks for more from the app (Add Branch to My
+  Plan); a Rackline admin approves it, the quota goes up at once, and the rest of the current month is charged
+  **pro rata from the day it is approved** (per-branch fee × days left ÷ days in the billing month, rounded to
+  the rupee) on the next invoice. A quota is never lowered below the branches in use.
+- Invoices are written monthly on the billing day: the plan for the month ahead, pro-rata branches, one-time setup
+  fees, and the previous month's shared WhatsApp usage (delivered billable messages × the rate kept on each
+  message). Numbers run in one series per financial year (`RL/2026-27/0001`). No GST yet: every line carries tax
+  fields set to zero, so turning GST on later changes no old invoice.
+- Payments to Rackline are recorded by Rackline admins (no payment gateway): part payments allowed, never more than
+  the invoice owes, voided with a reason, never deleted. Each payment has a receipt that prints like the salary
+  slip. Invoices are voided with a reason, never deleted. Everything here is audited.
+- No automatic suspension during the pilot. The owner is reminded before an invoice is due and after it is late;
+  a Rackline admin suspends a gym by hand (with a reason) and reactivates it. While a gym is suspended its staff
+  and members can't use the app, but its admins can still sign in and see their Rackline plan, invoices and
+  receipts. Suspending stops every message the gym would send.
+
 ## Messages
-- WhatsApp renewal and dues reminders, from Rackline's number first, the gym's own number later. The keys belong
-  to the server (`WHATSAPP_PROVIDER` and its two keys), not to a gym.
-- The daily 6 AM job writes who needs a nudge (`ReminderDue`) and then sends it. A member gets **one message a
-  day** at most: a plan ending today comes before money owed, which comes before the 3- and 7-day warnings.
-- Nobody is messaged twice for the same day, with no number, after asking us to stop (the opt-out on their
-  profile), or while the gym has reminders off (More → Settings). Turning the gym's switch off stops the
-  messages, not the list, so the desk still sees who to chase.
-- Every send is kept as a `Message` row with the exact words, so the desk can see what a member read, and a send
-  that failed is kept the same way with the provider's reason. One member's failure never stops the morning.
-- SMS and email are not in the MVP, and nothing is sent when a payment is recorded (no automatic receipts yet).
+- Every WhatsApp message is an approved Meta template, filled with the message's details in order; the words as
+  the person read them are kept on the `Message` row so the desk can see them.
+- A gym sends from Rackline's shared number (usage billed monthly), from its own Meta WhatsApp Business account
+  (it pays Meta itself; Rackline charges the setup only), or not at all. Rackline admins set up accounts, phone
+  numbers, credentials and templates; a gym's admins see the number and whether it works, never the credentials.
+  Credentials are encrypted in the database (`FIELD_ENCRYPTION_KEY`), write-only, and never in a response, a log
+  or the audit log (it says only that they changed).
+- Messages: plan ending in 7 and 3 days, plan ends today, payment due (to members); payment received, the member's
+  receipt (**off by default** for each gym); task assigned (to the trainer or receptionist, when an admin assigns
+  it); Rackline invoice due and Rackline payment received (to the gym's owner, controlled by Rackline admins).
+- Each gym switches each of its messages on or off (pause and resume) and sets when scheduled ones go out (default
+  6 AM, gym time) and how many days ahead. Pausing stops the messages, not the list, so the desk still sees who to
+  chase. `reminders_on` is replaced by these switches.
+- The daily job writes who needs a nudge (`ReminderDue`) and then sends it. A member gets **one reminder a day** at
+  most: a plan ending today comes before money owed, which comes before the 3- and 7-day warnings.
+- Nothing is sent twice: every message has a key unique in its gym (a member's reminder for a day, a task's
+  assignment, a payment's receipt), and its row is written before it is sent. Nothing goes to someone with no
+  number or who asked us to stop (the opt-out on their profile; replying STOP sets it too).
+- Delivery follows Meta's webhook: sent, delivered, read or failed, never going back. A failure keeps Meta's code
+  and reason. Temporary failures (rate limits, Meta busy) are retried up to 3 times with growing waits; others are
+  not. One failure never stops the rest. Shared-number usage is counted from delivered billable messages, so a
+  repeated webhook can't count one twice.
+- SMS and email are not in the MVP.
 
 ## Stack and hosting
 - Backend: Django 5 + DRF + Postgres, JWT (simplejwt), drf-spectacular for OpenAPI. Redis/Celery for jobs (later).
