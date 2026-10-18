@@ -234,3 +234,42 @@ test("trainer: no cash and bank in More", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Your work" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Cash and bank/ })).toHaveCount(0);
 });
+
+test("admin: reports by category, 30 days, a custom range over 3 months, and downloads", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" }).click();
+  await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
+  for (const name of ["Revenue", "Expenses", "Members", "Attendance", "Tasks"]) await expect(page.getByRole("main").getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
+
+  await page.getByRole("main").getByRole("link", { name: /^Cash and bank/ }).click();
+  await expect(page).toHaveURL(/\/reports\/money/);
+  await expect(page.getByRole("heading", { name: "Total funds" })).toBeVisible();
+  await page.getByRole("button", { name: "30 days", exact: true }).click();
+  await expect(page).toHaveURL(/period=30d/);
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+
+  // Four months back is more than 3: the API's words, under From, before anything is asked for.
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  const back = new Date();
+  back.setMonth(back.getMonth() - 4);
+  await page.getByLabel("From", { exact: true }).fill(back.toISOString().slice(0, 10));
+  await page.getByRole("button", { name: "Show Report" }).click();
+  await expect(page.getByText("Pick a range of 3 months or less")).toBeVisible();
+
+  await page.getByRole("button", { name: "30 days", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download CSV" }).click()]);
+  expect(file.suggestedFilename()).toMatch(/^Cash and bank \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}\.csv$/);
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await page.getByRole("link", { name: "Print or PDF" }).click();
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print Report" })).toBeVisible();
+});
+
+test("receptionist: no Reports", async ({ page }) => {
+  await signIn(page, "arjun@rackline.demo");
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" })).toHaveCount(0);
+  await page.goto("/reports");
+  await expect(page.getByText("Reports are for admins")).toBeVisible();
+});
