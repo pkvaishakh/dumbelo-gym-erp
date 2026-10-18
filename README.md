@@ -86,6 +86,7 @@ cd api; python manage.py shell
 | Neha Sharma | neha@rackline.demo | Trainer · Indiranagar |
 | Neeraj, Alex, Imran | neeraj@ / alex@ / imran@rackline.demo | Trainers |
 | Aarav Reddy | 9800000001 | Member (first 10 members have logins) |
+| Rackline Admin | rackline@rackline.demo | Rackline admin: the Console at `/console` (no role in the gym) |
 
 `python manage.py seed_demo --reset` rebuilds the demo gym. It also sends yesterday's and today's reminders
 through the fake sender, so the Reminders card on a member's profile has something in it.
