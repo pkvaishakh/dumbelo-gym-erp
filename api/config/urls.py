@@ -15,11 +15,11 @@ from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, Mon
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import (
-    AutomationView, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
+    AutomationView, ConsoleMessageViewSet, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
     WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView,
 )
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
-from apps.platform.views import GymAdminViewSet, GymViewSet
+from apps.platform.views import GymAdminViewSet, GymViewSet, JobRunNowView, ServerStatusView
 from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
 from apps.tasks.views import TaskViewSet
 
@@ -57,6 +57,7 @@ router.register("platform/invoice-payments", ConsoleInvoicePaymentViewSet, basen
 router.register("platform/charges", ChargeViewSet, basename="platform-charge")
 router.register("platform/whatsapp-accounts", WhatsAppAccountViewSet, basename="platform-whatsapp-account")
 router.register("platform/whatsapp-templates", WhatsAppTemplateViewSet, basename="platform-whatsapp-template")
+router.register("platform/messages", ConsoleMessageViewSet, basename="platform-message")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -89,6 +90,8 @@ urlpatterns = [
     path("api/platform/gyms/<int:gym_id>/messages/", GymMessageTimesView.as_view(), name="platform-gym-messages"),
     path("api/platform/gyms/<int:gym_id>/messages/<slug:kind>/", GymMessageTimeView.as_view(), name="platform-gym-message"),
     path("api/platform/automation/", AutomationView.as_view(), name="platform-automation"),
+    path("api/platform/status/", ServerStatusView.as_view(), name="platform-status"),
+    path("api/platform/jobs/<slug:job>/run/", JobRunNowView.as_view(), name="platform-job-run"),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),

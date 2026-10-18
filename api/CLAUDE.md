@@ -7,8 +7,11 @@ config/              settings (django-environ, .env), env.py (what a server must
                      PRODUCTION=true), urls (router + a few APIViews)
 apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMixin, suspended gyms: gym_suspended and
                      `open_when_suspended`), rackline.py (IsRacklineAdmin, RacklineViewMixin), errors.py (RuleBroken,
-                     error shape), clock.py (gym time zone, days, months), money.py, models.py (GymScoped base), queries.py (count_of, sum_of: a per-row COUNT or SUM subquery),
-                     views.py (/api/health/), middleware.py (lets the load balancer's check through),
+                     error shape), clock.py (gym time zone, days, months), money.py, models.py (GymScoped base; JobRun:
+                     each run of a scheduled job), queries.py (count_of, sum_of: a per-row COUNT or SUM subquery),
+                     jobs.py (run_job: every scheduled job's work runs inside it, so its run is kept with its counts or
+                     error and the history pruned; queue: Run Now's run), views.py (/api/health/: the load balancer's,
+                     says no more than "database ok"), middleware.py (lets the load balancer's check through),
                      management/commands/seed_demo.py
 apps/accounts/       User (email for staff, +91 phone for members), login/refresh/me
 apps/gyms/           Gym, Branch, BranchSession (named opening hours), GymRole (one role per user per gym,
@@ -48,7 +51,8 @@ apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender po
                      month, counted from the rows, for invoices); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
                      no sign-in: the signature is the check); views/gym.py
                      (/api/messages/, /api/gym/whatsapp/, /api/gym/messages/[<kind>/]: Pause and Resume), views/console.py
-                     (/api/platform/whatsapp-accounts/, /api/platform/whatsapp-templates/) and views/automation.py
+                     (/api/platform/whatsapp-accounts/, /api/platform/whatsapp-templates/, /api/platform/messages/: the log across
+                     gyms, no names or words, the number's last 4 digits only) and views/automation.py
                      (/api/platform/automation/, /api/platform/gyms/<id>/messages/[<kind>/]). Querysets that show an account defer SECRET_FIELDS.
                      App label "gym_messages": see apps.py
 apps/reports/        views/summary.py (SummaryView: admin Home, including expense dues; writes due dates); one read-only
@@ -57,8 +61,10 @@ apps/reports/        views/summary.py (SummaryView: admin Home, including expens
                      calendar months, never after the gym's today; Period: the querysets, `compare` with the days before
                      in one query, `daily`) and serializers.py (typed response shapes)
 apps/platform/       Rackline's side under /api/platform/ (no X-Gym, Rackline admins only): services.py (create_gym, suspend,
-                     activate, add_admin, reset_admin_password, deactivate_admin, make_owner), views.py (gyms, a gym's admins),
-                     management/commands/create_gym.py (the same service)
+                     activate, add_admin, reset_admin_password, deactivate_admin, make_owner), server.py (the Server screen:
+                     each check with a time limit, so down shows as down and never a 500; JOBS: each job's schedule, its
+                     counts in words and its task if Run Now may start it; run_now), views.py (gyms, a gym's admins,
+                     /api/platform/status/, /api/platform/jobs/<job>/run/), management/commands/create_gym.py (the same service)
 apps/billing/        A gym's Rackline plan: PriceList (never edited), GymBilling (prices copied from a list, branch_quota,
                      billing_day, whatsapp_mode, paid_until), BranchRequest (asked | approved | declined, with the pro-rata
                      charge); services.py (open_plan, change_plan, move_to_current_prices, make_room_for_branch: call it in

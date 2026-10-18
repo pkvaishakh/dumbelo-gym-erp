@@ -86,7 +86,9 @@ jobs:
           IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
         run: |
           tag=$(git rev-parse --short HEAD)
-          docker build -t "$IMAGE:$tag" -t "$IMAGE:latest" .
+          # The commit and the time go into the image, for the Console's Server screen (APP_VERSION, DEPLOYED_AT)
+          docker build --build-arg APP_VERSION="$tag" --build-arg DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t "$IMAGE:$tag" -t "$IMAGE:latest" .
           docker push "$IMAGE:$tag"
           docker push "$IMAGE:latest"
           echo "ref=$IMAGE:$tag" >> "$GITHUB_OUTPUT"

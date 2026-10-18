@@ -1,5 +1,5 @@
 "use client";
-import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, FileText, Mail, MessageCircle, Pencil, UserRound } from "lucide-react";
+import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, FileText, Mail, MessageCircle, Pencil, ScrollText, UserRound } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
@@ -76,6 +76,7 @@ export default function GymScreen() {
             {/* Its own number, or the way to add one. Which number it sends from is on its Rackline plan. */}
             <MenuRow icon={MessageCircle} title="WhatsApp" href={whatsapp ? `/console/whatsapp/${whatsapp.id}` : `/console/whatsapp/new?gym=${g.id}`}
               value={whatsapp ? `${whatsapp.display_number} • ${WHATSAPP_STATUS[whatsapp.status]?.label ?? whatsapp.status}` : "Add Own Number"} />
+            <MenuRow icon={ScrollText} title="WhatsApp log" value="What it sent" href={`/console/messages?gym=${g.id}`} />
           </ul>
         </Section>
         <GymMessages gymId={g.id} />

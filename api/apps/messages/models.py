@@ -195,6 +195,8 @@ class Message(GymScoped):
             models.Index(fields=["status", "next_retry_at"], name="message_retry_due"),
             models.Index(fields=["account", "provider_id"], name="message_account_meta_id"),  # the webhook's lookup
             models.Index(fields=["gym", "delivered_at"], condition=Q(billable=True), name="message_billable_delivered"),
+            models.Index(fields=["status", "updated_at"], name="message_status_changed"),  # Server: failed today
+            models.Index(fields=["-created_at", "-id"], name="message_latest"),  # the Console's log, newest first
         ]
 
     def __str__(self):
@@ -232,7 +234,10 @@ class WebhookEvent(TimeStamped):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [models.Index(fields=["created_at"], name="webhook_event_created")]  # replaying calls since a time
+        indexes = [
+            models.Index(fields=["created_at"], name="webhook_event_created"),  # replaying calls since a time
+            models.Index(fields=["account", "-created_at"], name="webhook_event_account_latest"),  # Server: Meta's last call
+        ]
 
     def __str__(self):
         return f"{self.account} · {self.created_at:%Y-%m-%d %H:%M}"

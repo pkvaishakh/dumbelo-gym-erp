@@ -48,7 +48,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Sending through Meta's Cloud API with templates, no duplicates, retries (session 13)
 - [x] Meta webhook: delivery status, STOP replies, shared-number usage (session 14)
 - [x] Message switches; automation times set by Rackline admins; payment received, task assigned, Rackline invoice messages (session 15)
-- [ ] Server status in the Console: health, background jobs, messages and webhook, Run Now (session 16)
+- [x] Server status in the Console: health, background jobs, messages and webhook, Run Now (session 16)
 - [ ] Message log, usage screens, and end-to-end flows for all of it (session 17)
 
 ## Not in the MVP
@@ -313,8 +313,8 @@ the job runs, and is audited; every job writes its run; the status keeps a query
 
 ## Session 17: Message log, usage and end-to-end
 - `/api/messages/` gains filters (status, kind, recipient, from/to dates) and a Retry action for a failed message
-  (admins; same dedupe key, so never twice). Console: usage per gym per month on the shared number, and a message
-  log across gyms (recipient numbers partly hidden).
+  (admins; same dedupe key, so never twice). Console: usage per gym per month on the shared number. (The Console's
+  message log across gyms is in: `/api/platform/messages/`, Console → More → WhatsApp log.)
 - Gym admin: More → Messages, the log with Load More and filters, and this month's usage on the shared number.
 - `e2e/flows.spec.ts`: Rackline admin creates a gym, sets its quota, approves a branch request, records a payment;
   a gym admin hits the branch limit, sees the invoice and receipt; a suspended gym's desk sees the paused screen;

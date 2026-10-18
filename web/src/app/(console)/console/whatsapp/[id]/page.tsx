@@ -1,5 +1,5 @@
 "use client";
-import { AlertCircle, Building2, Clock, FileText, Hash, KeyRound, Link2, Pencil, ShieldCheck } from "lucide-react";
+import { AlertCircle, Building2, Clock, FileText, Hash, KeyRound, Link2, Pencil, ScrollText, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { WhatsAppTemplate } from "@/api/gen/model";
 import { usePlatformWhatsappAccountsRetrieve, usePlatformWhatsappTemplatesListInfinite } from "@/api/gen/platform/platform";
 import { DetailBar } from "@/components/shell";
-import { AddButton, Details, Empty, ErrorText, Icon, LoadMore, Section, SkeletonRows } from "@/components/ui";
+import { AddButton, Details, Empty, ErrorText, Icon, LoadMore, MenuRow, Section, SkeletonRows } from "@/components/ui";
 import { ACCOUNTS, accountTitle, Badge, CredentialsSheet, EditAccountSheet, TemplateSheet } from "@/features/console/whatsapp";
 import { ago, day } from "@/lib/format";
 import { paged, pages, useAction } from "@/lib/hooks";
@@ -65,6 +65,11 @@ export default function WhatsAppAccountScreen() {
             <button className="rl-button rl-button--accent rl-button--block" type="button" disabled={test.busy} onClick={runTest}>{test.busy ? "Asking Meta…" : "Test Connection"}</button>
             <ErrorText>{test.error?.message}</ErrorText>
           </div>
+        </Section>
+        <Section label="WhatsApp log">
+          <ul className="rl-card rl-remind">
+            <MenuRow icon={ScrollText} title="WhatsApp log" value="What this number sent" href={`/console/messages?account=${account.id}`} />
+          </ul>
         </Section>
         <Section title="Details">
           <Details rows={[

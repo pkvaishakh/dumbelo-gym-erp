@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { branchesOf, countDifference, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, trend, until } from "./format";
+import { branchesOf, countDifference, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, took, trend, until } from "./format";
 import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
@@ -193,5 +193,15 @@ describe("Rackline invoices", () => {
   });
   it("has a badge for every state", () => {
     expect(Object.keys(INVOICE_STATUS).sort()).toEqual(["open", "overdue", "paid", "void"]);
+  });
+});
+
+describe("how long a job took", () => {
+  it("says it in words", () => {
+    expect(took(0.4)).toBe("under a second");
+    expect(took(1)).toBe("1 second");
+    expect(took(12.4)).toBe("12 seconds");
+    expect(took(60)).toBe("1 min");
+    expect(took(185.2)).toBe("3 min 5 s");
   });
 });

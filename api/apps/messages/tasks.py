@@ -1,17 +1,38 @@
 """The scheduled side of messages, and the messages queued when something happens. The rules live in services.py,
 automation.py (when, and whether) and notify.py (receipts, tasks and Rackline's own)."""
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from celery import shared_task
+from django.utils import timezone
 
+from apps.core.jobs import run_job
+from apps.core.models import JobRun
 from apps.reminders import services as reminders
 
 from . import notify, services
 from .automation import reminder_runs
+from .models import WebhookEvent
+from .webhook import replay
+
+#: How far back Run Now's webhook replay looks for calls that couldn't be handled.
+REPLAY_DAYS = 7
+
+
+def reminder_tick(now: datetime | None = None) -> dict[str, int]:
+    """One tick of the reminders job: the lists and sends of the gyms whose hour it is, then the owners' invoice
+    reminders. Says how many reminders were listed, sent, not sent and skipped, and how many owners were reminded."""
+    counts = {"listed": 0, "sent": 0, "failed": 0, "skipped": 0, "owner_reminders": 0}
+    for run in reminder_runs(now):
+        counts["listed"] += reminders.queue_for(run.gym, run.day, run.days_ahead)
+        if run.send:
+            for k, n in services.send_due(run.gym, run.day, run.send).items():
+                counts[k] += n
+    counts["owner_reminders"] = notify.invoice_reminders(now)
+    return counts
 
 
 @shared_task
-def send_reminders(at: str | None = None):
+def send_reminders(at: str | None = None, run_id: int | None = None):
     """Give every gym whose own clock has reached one of its reminder hours its reminder list, send the reminders
     whose hour it is, and remind owners about their Rackline invoices.
 
@@ -19,15 +40,12 @@ def send_reminders(at: str | None = None):
     database on every tick (`automation.py`), so a change applies on the next one. Everything here is safe to
     repeat, so the later ticks inside the same local hour find the list written and the messages sent and do
     nothing. `at` is an ISO timestamp, so a morning the worker missed can be run again by hand; beat passes
-    nothing. Returns how many messages went out, for the worker's log.
+    nothing; Run Now passes the run it queued. Every run is kept (`apps.core.jobs`). Returns how many messages went
+    out, for the worker's log.
     """
     now = datetime.fromisoformat(at) if at else None
-    sent = 0
-    for run in reminder_runs(now):
-        reminders.queue_for(run.gym, run.day, run.days_ahead)
-        if run.send:
-            sent += services.send_due(run.gym, run.day, run.send)["sent"]
-    return sent + notify.invoice_reminders(now)
+    counts = run_job(JobRun.REMINDERS, lambda: reminder_tick(now), run_id=run_id, by_hand=at is not None)
+    return counts.get("sent", 0) + counts.get("owner_reminders", 0)
 
 
 @shared_task
@@ -37,7 +55,18 @@ def retry_messages(at: str | None = None):
     Beat runs it every minute. Each message is taken by one run only, so overlapping runs can't send one twice.
     `at` is an ISO timestamp for running it by hand; beat passes nothing. Returns how many went out.
     """
-    return services.send_retries(datetime.fromisoformat(at) if at else None)["sent"]
+    now = datetime.fromisoformat(at) if at else None
+    return run_job(JobRun.RETRIES, lambda: services.send_retries(now), by_hand=at is not None).get("sent", 0)
+
+
+@shared_task
+def replay_webhook_calls(run_id: int | None = None):
+    """Handle again Meta's calls of the last REPLAY_DAYS that couldn't be handled: Run Now on the Console's Server
+    screen, once the cause is fixed. Safe to repeat (`webhook.process`). `manage.py replay_webhook_events` picks
+    other calls by time or id. Returns how many went through."""
+    since = timezone.now() - timedelta(days=REPLAY_DAYS)
+    events = WebhookEvent.objects.filter(created_at__gte=since).exclude(error="")
+    return run_job(JobRun.WEBHOOK_REPLAY, lambda: replay(events), run_id=run_id).get("handled", 0)
 
 
 @shared_task

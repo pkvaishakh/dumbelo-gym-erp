@@ -206,3 +206,38 @@ export const invoiceState = (inv: { status: string; overdue: boolean }) => (inv.
 
 /** How a gym paid Rackline. */
 export const RACKLINE_PAY_METHOD: Record<string, string> = { bank: "Bank transfer", upi: "UPI", cheque: "Cheque", card: "Card", cash: "Cash" };
+
+/** The Console's Server screen: a check's state, and a job run's. */
+export const SERVER_STATE: Record<string, { label: string; badge: string }> = {
+  up: { label: "Up", badge: "active" },
+  down: { label: "Down", badge: "expired" },
+  off: { label: "Not used here", badge: "frozen" },
+  unknown: { label: "Can't tell", badge: "expiring" },
+};
+export const RUN_STATE: Record<string, { label: string; badge: string }> = {
+  queued: { label: "Waiting", badge: "frozen" },
+  running: { label: "Running", badge: "expiring" },
+  done: { label: "Done", badge: "active" },
+  failed: { label: "Failed", badge: "expired" },
+};
+
+/** How long a job run took: "under a second", "12 seconds", "3 min 5 s". */
+export function took(seconds: number) {
+  if (seconds < 1) return "under a second";
+  const all = Math.round(seconds);
+  if (all < 60) return plural(all, "second");
+  const m = Math.floor(all / 60), s = all % 60;
+  return s ? `${m} min ${s} s` : `${m} min`;
+}
+
+/** A WhatsApp message's state as a badge, in the Console's log. */
+export const MESSAGE_STATUS: Record<string, { label: string; badge: string }> = {
+  queued: { label: "Sending", badge: "expiring" },
+  sent: { label: "Sent", badge: "frozen" },
+  delivered: { label: "Delivered", badge: "active" },
+  read: { label: "Read", badge: "active" },
+  failed: { label: "Failed", badge: "expired" },
+};
+
+/** "18 Oct 2026, 9:05 AM" on this device's clock. */
+export const dayTime = (iso: string) => format(parseISO(iso), "d MMM yyyy, h:mm a");

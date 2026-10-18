@@ -1,23 +1,28 @@
-"""The Console's WhatsApp: accounts (Rackline's shared number and gyms' own) and their templates.
+"""The Console's WhatsApp: accounts (Rackline's shared number and gyms' own), their templates, and the log of every
+message sent.
 
 Rackline admins only (`RacklineViewMixin`), no X-Gym. Never deleted. Credentials go in and never come out, and
 the audit log says only which ones changed.
 """
-from django.db.models import OuterRef
-from drf_spectacular.utils import extend_schema
+import re
+
+from django.db.models import OuterRef, Q
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.audit.models import record
+from apps.core import clock
 from apps.core.queries import count_of
 from apps.core.rackline import RacklineViewMixin
 
 from .. import accounts
 from ..accounts import WHERE
-from ..models import WhatsAppAccount, WhatsAppTemplate
+from ..models import Message, WhatsAppAccount, WhatsAppTemplate
 from ..serializers import (
-    CredentialsSerializer, MessageKindSerializer, WhatsAppAccountChangeSerializer, WhatsAppAccountCreateSerializer,
+    ConsoleMessageSerializer, CredentialsSerializer, MessageKindSerializer, WhatsAppAccountChangeSerializer, WhatsAppAccountCreateSerializer,
     WhatsAppAccountSerializer, WhatsAppTemplateInputSerializer, WhatsAppTemplateSerializer, message_kinds,
 )
 
@@ -138,3 +143,48 @@ class WhatsAppTemplateViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.R
     def kinds(self, request):
         """The messages Rackline sends and the details each can fill a template with. A fixed list of seven."""
         return Response(MessageKindSerializer(message_kinds(), many=True).data)
+
+
+_LOG_FILTERS = [
+    OpenApiParameter("q", str, description="The number it went to (4 digits or more), Meta's message id, or the error, 2 characters or more"),
+    OpenApiParameter("from", str, description="Sent on or after this day (India time), YYYY-MM-DD"),
+    OpenApiParameter("to", str, description="Sent on or before this day (India time), YYYY-MM-DD"),
+]
+
+
+@extend_schema(tags=["platform"])
+@extend_schema_view(list=extend_schema(parameters=_LOG_FILTERS))
+class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
+    template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+    a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits)."""
+
+    serializer_class = ConsoleMessageSerializer
+    filterset_fields = ["gym", "account", "template", "kind", "status"]
+
+    def get_queryset(self):
+        qs = (Message.objects.select_related("gym", "account", "template")
+              .defer("text", "parameters", *(f"account__{f}" for f in WhatsAppAccount.SECRET_FIELDS))
+              .order_by("-created_at", "-id"))
+        p = self.request.query_params
+        first = clock.parse_date(p.get("from"), None, field="from")
+        last = clock.parse_date(p.get("to"), None, field="to")
+        if first and last and first > last:
+            raise ValidationError({"from": ["Pick a start date on or before the end date"]})
+        if first:  # days on Rackline's clock (no gym: India time)
+            qs = qs.filter(created_at__gte=clock.day_bounds(None, first)[0])
+        if last:
+            qs = qs.filter(created_at__lt=clock.day_bounds(None, last)[1])
+        return _search(qs, p.get("q", ""))
+
+
+def _search(qs, text: str):
+    """Digits find the number it went to by its end, or Meta's error code; anything else Meta's message id, error
+    code or error words."""
+    text = text.strip()
+    if len(text) < 2:
+        return qs
+    digits = re.sub(r"\D", "", text)
+    if len(digits) >= 4 and not re.search(r"[A-Za-z]", text):
+        return qs.filter(Q(to__endswith=digits[-10:]) | Q(error_code=digits))
+    return qs.filter(Q(provider_id__icontains=text) | Q(error_code__iexact=text) | Q(error__icontains=text))

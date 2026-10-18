@@ -4540,6 +4540,128 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConsoleInvoice'
           description: ''
+  /api/platform/jobs/{job}/run/:
+    post:
+      operationId: platform_jobs_run_create
+      description: |-
+        Run Now: queue one run of reminders, invoices or the webhook replay on the worker. They are safe to
+        repeat; refused while that job is waiting or running. Audited.
+      parameters:
+      - in: path
+        name: job
+        schema:
+          type: string
+          enum:
+          - invoices
+          - reminders
+          - webhook_replay
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRun'
+          description: ''
+  /api/platform/messages/:
+    get:
+      operationId: platform_messages_list
+      description: |-
+        Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
+        template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+        a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits).
+      parameters:
+      - in: query
+        name: account
+        schema:
+          type: integer
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: Sent on or after this day (India time), YYYY-MM-DD
+      - in: query
+        name: gym
+        schema:
+          type: integer
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - payment_due
+          - payment_received
+          - plan_ending
+          - plan_ends_today
+          - rackline_invoice_due
+          - rackline_payment_received
+          - task_assigned
+        description: |-
+          * `plan_ending` - Plan ending soon
+          * `plan_ends_today` - Plan ends today
+          * `payment_due` - Payment due
+          * `payment_received` - Payment received
+          * `task_assigned` - Task assigned
+          * `rackline_invoice_due` - Rackline invoice due
+          * `rackline_payment_received` - Rackline payment received
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: The number it went to (4 digits or more), Meta's message id,
+          or the error, 2 characters or more
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - delivered
+          - failed
+          - queued
+          - read
+          - sent
+        description: |-
+          * `queued` - Sending
+          * `sent` - Sent
+          * `delivered` - Delivered
+          * `read` - Read
+          * `failed` - Failed
+      - in: query
+        name: template
+        schema:
+          type: integer
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Sent on or before this day (India time), YYYY-MM-DD
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConsoleMessageList'
+          description: ''
   /api/platform/prices/:
     get:
       operationId: platform_prices_list
@@ -4595,6 +4717,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PriceList'
+          description: ''
+  /api/platform/status/:
+    get:
+      operationId: platform_status_retrieve
+      description: |-
+        Console → Server: the version running, whether the database, Redis, the worker and beat answer, each job's
+        last run, messages waiting or failed, and Meta's webhook calls. Something down shows as down, never as a 500.
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerStatus'
           description: ''
   /api/platform/whatsapp-accounts/:
     get:
@@ -7303,6 +7442,28 @@ components:
       required:
       - gym
       - kind
+    Check:
+      type: object
+      properties:
+        key:
+          $ref: '#/components/schemas/ServerCheckEnum'
+        label:
+          type: string
+        state:
+          $ref: '#/components/schemas/ServerStateEnum'
+        detail:
+          type: string
+        at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Beat's last tick
+      required:
+      - at
+      - detail
+      - key
+      - label
+      - state
     CheckIn:
       type: object
       properties:
@@ -7728,6 +7889,151 @@ components:
       - subtotal_paise
       - tax_paise
       - total_paise
+    ConsoleMessage:
+      type: object
+      description: |-
+        A message in the Console's WhatsApp log: which gym, number and template, and how it went. Never who it went
+        to or what it said (a member's name, what they owe): only the last 4 digits of the number.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        gym:
+          type: integer
+          readOnly: true
+        gym_name:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/MessageKindEnum'
+          readOnly: true
+        kind_label:
+          type: string
+          readOnly: true
+        recipient:
+          allOf:
+          - $ref: '#/components/schemas/RecipientEnum'
+          readOnly: true
+        to_last4:
+          type: string
+          readOnly: true
+        account:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: The number it went from; empty when there was none to send
+            from
+        account_number:
+          type: string
+          readOnly: true
+          nullable: true
+        is_shared:
+          type: boolean
+          description: Sent from Rackline's shared number (an account with no gym).
+          readOnly: true
+        template:
+          type: integer
+          readOnly: true
+          nullable: true
+        template_name:
+          type: string
+          readOnly: true
+          nullable: true
+        template_language:
+          type: string
+          readOnly: true
+          nullable: true
+        for_date:
+          type: string
+          format: date
+          readOnly: true
+          description: The day in the gym's time zone it was for
+        status:
+          allOf:
+          - $ref: '#/components/schemas/MessageStatusEnum'
+          readOnly: true
+        status_label:
+          type: string
+          readOnly: true
+        attempts:
+          type: integer
+          readOnly: true
+          description: Times it was handed to the provider
+        next_retry_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When a temporary failure is tried again
+        error_code:
+          type: string
+          readOnly: true
+          description: Meta's error code, when it gave one
+        error:
+          type: string
+          readOnly: true
+          description: Why it failed, in the provider's words
+        provider_id:
+          type: string
+          readOnly: true
+          description: The provider's own id for the message
+        billable:
+          type: boolean
+          readOnly: true
+          description: Sent from Rackline's shared number, so billed to the gym
+        rate_paise:
+          type: integer
+          readOnly: true
+          description: What it costs the gym once delivered
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When Meta says it reached their phone
+        read_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When Meta says they opened it
+      required:
+      - account
+      - account_number
+      - attempts
+      - billable
+      - created_at
+      - delivered_at
+      - error
+      - error_code
+      - for_date
+      - gym
+      - gym_name
+      - id
+      - is_shared
+      - kind
+      - kind_label
+      - next_retry_at
+      - provider_id
+      - rate_paise
+      - read_at
+      - recipient
+      - status
+      - status_label
+      - template
+      - template_language
+      - template_name
+      - to_last4
+      - updated_at
     ConsolePlan:
       type: object
       description: |-
@@ -9243,6 +9549,150 @@ components:
           maxLength: 200
       required:
       - reason
+    JobCount:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required:
+      - count
+      - label
+    JobEnum:
+      enum:
+      - reminders
+      - invoices
+      - retries
+      - webhook_replay
+      type: string
+      description: |-
+        * `reminders` - Reminders
+        * `invoices` - Rackline invoices
+        * `retries` - Message retries
+        * `webhook_replay` - Webhook replay
+    JobRun:
+      type: object
+      description: 'One run of a job: who started it, how long it took and what it
+        did, in words.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        job:
+          allOf:
+          - $ref: '#/components/schemas/JobEnum'
+          readOnly: true
+        trigger:
+          allOf:
+          - $ref: '#/components/schemas/JobTriggerEnum'
+          readOnly: true
+        trigger_label:
+          type: string
+          readOnly: true
+        by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When it was started or queued
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When the worker began it
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/JobRunStateEnum'
+          readOnly: true
+        seconds:
+          type: number
+          format: double
+          nullable: true
+          description: How long it took, once it has finished.
+          readOnly: true
+        did:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCount'
+          readOnly: true
+        error:
+          type: string
+          readOnly: true
+          description: Why it stopped, if it broke
+      required:
+      - by_name
+      - created_at
+      - did
+      - error
+      - finished_at
+      - id
+      - job
+      - seconds
+      - started_at
+      - state
+      - trigger
+      - trigger_label
+    JobRunStateEnum:
+      enum:
+      - queued
+      - running
+      - done
+      - failed
+      type: string
+      description: |-
+        * `queued` - Waiting for the worker
+        * `running` - Running
+        * `done` - Done
+        * `failed` - Failed
+    JobStatus:
+      type: object
+      properties:
+        job:
+          $ref: '#/components/schemas/JobEnum'
+        label:
+          type: string
+        schedule:
+          type: string
+        can_run:
+          type: boolean
+          description: Run Now can start it
+        current:
+          allOf:
+          - $ref: '#/components/schemas/JobRun'
+          nullable: true
+          description: Its run waiting or under way
+        last_run:
+          allOf:
+          - $ref: '#/components/schemas/JobRun'
+          nullable: true
+          description: Its last finished run
+      required:
+      - can_run
+      - current
+      - job
+      - label
+      - last_run
+      - schedule
+    JobTriggerEnum:
+      enum:
+      - beat
+      - run_now
+      - by_hand
+      type: string
+      description: |-
+        * `beat` - On schedule
+        * `run_now` - Run Now
+        * `by_hand` - By hand
     LineRequest:
       type: object
       properties:
@@ -9638,6 +10088,16 @@ components:
       - status
       - text
       - to
+    MessageCounts:
+      type: object
+      properties:
+        waiting_retry:
+          type: integer
+        failed_today:
+          type: integer
+      required:
+      - failed_today
+      - waiting_retry
     MessageKind:
       type: object
       description: A message Rackline sends, and the details a template for it can
@@ -10012,6 +10472,29 @@ components:
           minLength: 1
       required:
       - text
+    NumberCall:
+      type: object
+      properties:
+        id:
+          type: integer
+        display_number:
+          type: string
+        gym_name:
+          type: string
+          nullable: true
+        is_shared:
+          type: boolean
+        last_call_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Meta's last call to this number's webhook
+      required:
+      - display_number
+      - gym_name
+      - id
+      - is_shared
+      - last_call_at
     Offer:
       type: object
       properties:
@@ -10302,6 +10785,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ConsoleInvoiceRow'
+    PaginatedConsoleMessageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleMessage'
     PaginatedDeviceList:
       type: object
       required:
@@ -12075,6 +12581,11 @@ components:
         * `cheque` - Cheque
         * `card` - Card
         * `cash` - Cash
+    RecipientEnum:
+      enum:
+      - member
+      - staff
+      type: string
     ReconcileRequest:
       type: object
       properties:
@@ -13076,6 +13587,68 @@ components:
       - pay_type
       - rate_paise
       - staff
+    ServerCheckEnum:
+      enum:
+      - database
+      - redis
+      - worker
+      - beat
+      type: string
+      description: |-
+        * `database` - Database
+        * `redis` - Redis
+        * `worker` - Worker
+        * `beat` - Beat
+    ServerStateEnum:
+      enum:
+      - up
+      - down
+      - 'off'
+      - unknown
+      type: string
+      description: |-
+        * `up` - Up
+        * `down` - Down
+        * `off` - Not used here
+        * `unknown` - Can't tell
+    ServerStatus:
+      type: object
+      properties:
+        version:
+          type: string
+        deployed_at:
+          type: string
+          format: date-time
+          nullable: true
+        checked_at:
+          type: string
+          format: date-time
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Check'
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobStatus'
+          nullable: true
+          description: Null while the database can't be read
+        messages:
+          allOf:
+          - $ref: '#/components/schemas/MessageCounts'
+          nullable: true
+        webhook:
+          allOf:
+          - $ref: '#/components/schemas/WebhookStatus'
+          nullable: true
+      required:
+      - checked_at
+      - checks
+      - deployed_at
+      - jobs
+      - messages
+      - version
+      - webhook
     Session:
       type: object
       properties:
@@ -13754,6 +14327,22 @@ components:
           maxLength: 200
       required:
       - reason
+    WebhookStatus:
+      type: object
+      properties:
+        failed_days:
+          type: integer
+        failed:
+          type: integer
+          description: Calls in the last `failed_days` days that couldn't be handled
+        numbers:
+          type: array
+          items:
+            $ref: '#/components/schemas/NumberCall'
+      required:
+      - failed
+      - failed_days
+      - numbers
     WhatsAppAccount:
       type: object
       description: An account as Rackline admins see it. `template_count` comes from

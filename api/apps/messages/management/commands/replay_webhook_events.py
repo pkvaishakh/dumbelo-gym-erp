@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from apps.core.jobs import run_job
+from apps.core.models import JobRun
 from apps.messages.models import WebhookEvent
 from apps.messages.webhook import replay
 
@@ -43,6 +45,6 @@ class Command(BaseCommand):
             events = events.filter(pk__in=ids)
         if failed:
             events = events.exclude(error="")
-        counts = replay(events)
+        counts = run_job(JobRun.WEBHOOK_REPLAY, lambda: replay(events), by_hand=True)  # kept as a run, for Server
         n = counts["handled"] + counts["failed"]
         self.stdout.write(f"{n} call{'s' if n != 1 else ''} run again: {counts['handled']} handled, {counts['failed']} still failing.")

@@ -8,7 +8,7 @@ from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.billing.tasks import write_due
+from apps.billing.tasks import write_invoices
 
 
 class Command(BaseCommand):
@@ -19,8 +19,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, day="", **kw):
         try:
-            on = date.fromisoformat(day) if day else None
+            date.fromisoformat(day) if day else None
         except ValueError:
             raise CommandError("Give --day as YYYY-MM-DD")
-        n = write_due(on)
+        n = write_invoices(day or None, by_hand=True)  # in this process, kept as a run by hand
         self.stdout.write(f"{n} invoice{'s' if n != 1 else ''} written.")
