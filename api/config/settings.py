@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "apps.tasks",
     "apps.expenses",
     "apps.payroll",
+    "apps.finance",
     "apps.audit",
     "apps.reports",
     "apps.reminders",
@@ -151,6 +152,8 @@ SPECTACULAR_SETTINGS = {
         "PayslipLineKindEnum": "apps.payroll.models.PayslipLine.KINDS",
         "PayslipStatusEnum": "apps.payroll.models.Payslip.STATUSES",
         "ExpenseDueStatusEnum": "apps.expenses.models.ExpenseDue.STATUSES",
+        "AccountKindEnum": "apps.finance.models.Account.KINDS",
+        "MoneyMoveKindEnum": "apps.finance.models.MoneyMove.KINDS",
     },
 }
 # ---- Background jobs (see config/celery.py) ----

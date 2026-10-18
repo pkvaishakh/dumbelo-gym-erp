@@ -118,6 +118,7 @@ through the fake sender, so the Reminders card on a member's profile has somethi
 | Check-in | `/api/checkins/?date=&branch=&kind=member\|trainer\|receptionist&session=Morning`, `/api/checkins/summary/`, `/api/checkins/qr/`, `/api/devices/punch/` |
 | Tasks | `/api/tasks/`, `.../start/`, `.../updates/`, `.../done/`, `.../reopen/` |
 | Expenses | `/api/expenses/?month=2026-10`, `/api/expenses/totals/` |
+| Cash and bank | `/api/accounts/` (+ `.../deactivate/`, `.../activate/`, `.../statement/?month=`), `/api/accounts/overview/`, `/api/accounts/branch/`, `/api/money-moves/?account=`, `.../void/` |
 | Home | `/api/reports/summary/?date=&branch=` |
 
 ### Check-in rules

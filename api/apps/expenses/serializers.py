@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core import clock
+from apps.finance.models import Account
 from apps.gyms.models import Branch
 from apps.members.serializers import GymPK
 
@@ -43,7 +44,15 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     def create(self, data):
         req = self.context["request"]
-        return Expense.objects.create(gym=req.gym, created_by=req.gym_role, **data)
+        on = data.get("spent_on") or clock.today(req.gym)
+        return Expense.objects.create(gym=req.gym, created_by=req.gym_role, account=Account.objects.for_money(data["branch"].id, data["method"], on=on), **data)
+
+    def update(self, e, data):
+        branch, method, on = data.get("branch", e.branch), data.get("method", e.method), data.get("spent_on", e.spent_on)
+        # Paid another way, by another branch, or on another day: it comes out of that account (or none, before it was added).
+        if branch != e.branch or method != e.method or on != e.spent_on:
+            data["account"] = Account.objects.for_money(branch.id, method, on=on)
+        return super().update(e, data)
 
 
 class RecurringExpenseSerializer(serializers.ModelSerializer):

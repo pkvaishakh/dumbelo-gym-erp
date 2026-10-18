@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay, parseISO, subMonths } from "date-fns";
 
 /** ₹3,05,340 — Indian grouping, no paise unless there are some. */
 export function rupees(paise: number | null | undefined) {
@@ -100,6 +100,14 @@ export function trend(now: number, before: number, days: number): { dir: "up" | 
 /** "October 2026" from "2026-10-01" or "2026-10". */
 export const monthLabel = (iso: string) => format(parseISO(iso.length === 7 ? `${iso}-01` : iso), "MMMM yyyy");
 
+/** This month and the `n - 1` before it, newest first, as month chips: "This month", "Sep 2026". */
+export function recentMonths(n = 6, now = new Date()) {
+  return Array.from({ length: n }, (_, i) => {
+    const m = subMonths(now, i);
+    return { value: format(m, "yyyy-MM"), label: i === 0 ? "This month" : format(m, "MMM yyyy") };
+  });
+}
+
 export const EXPENSE_CATEGORY: Record<string, string> = {
   rent: "Rent", salaries: "Salaries", utilities: "Utilities", equipment: "Equipment", maintenance: "Maintenance", supplies: "Supplies", marketing: "Marketing", other: "Other",
 };
@@ -113,3 +121,14 @@ export const PAY_TYPE_SHORT: Record<string, string> = { fixed: "Fixed", attendan
 /** What a salary's rate is per, for "₹800 a day". */
 export const RATE_PER: Record<string, string> = { fixed: "a month", attendance: "a month", hourly: "an hour", daily: "a day" };
 export const LINE_KIND: Record<string, string> = { allowance: "Allowance", incentive: "Incentive", referral: "Referral bonus", deduction: "Deduction" };
+
+/** What a money move did, in the words on its row: "Cash to bank", "Deposit". */
+export function moveLabel(m: { kind: string; from_kind?: string | null; to_kind?: string | null }) {
+  if (m.kind === "deposit") return "Deposit";
+  if (m.kind === "withdrawal") return "Withdrawal";
+  if (m.from_kind === "cash") return m.to_kind === "cash" ? "Cash between branches" : "Cash to bank";
+  return m.to_kind === "cash" ? "Bank to cash" : "Bank to bank";
+}
+
+/** "•• 5678": enough of an account number to tell two accounts apart on a list. */
+export const lastDigits = (n: string | null | undefined) => (n ? `•• ${n.slice(-4)}` : "");

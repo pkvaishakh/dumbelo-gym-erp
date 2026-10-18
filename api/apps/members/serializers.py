@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import normalize_phone
 from apps.core import clock
+from apps.finance.models import Account
 from apps.gyms.models import Branch, GymRole
 
 from . import services
@@ -328,6 +329,11 @@ class PaymentCorrectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = ["amount_paise", "method", "note", "reason"]
+
+    def update(self, p, data):
+        if "method" in data and data["method"] != p.method:  # cash corrected to UPI leaves the drawer for the bank
+            data["account"] = Account.objects.for_money(p.branch_id, data["method"], on=clock.local(self.context["request"].gym, p.taken_at).date())
+        return super().update(p, data)
 
 
 class VoidSerializer(serializers.Serializer):

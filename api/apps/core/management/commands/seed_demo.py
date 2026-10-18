@@ -17,6 +17,8 @@ from apps.attendance.services import check_in
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.expenses.models import Expense, ExpenseDue, RecurringExpense
+from apps.finance import services as money
+from apps.finance.models import Account, MoneyMove
 from apps.expenses.services import pay_due, sync_dues
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Offer, Plan
@@ -87,6 +89,7 @@ class Command(BaseCommand):
             r.branches.set([branches[w] for w in where])
             staff[key] = r
         meera = staff["meera"]
+        accounts = self._accounts(gym, branches, meera, today)  # before any money is taken, so every payment lands in one
         trainers_at = {b: [r for r in staff.values() if r.role == GymRole.TRAINER and branches[b] in r.branches.all()] for b in branches}
 
         plans = [Plan.objects.create(gym=gym, name=n, months=m, price_paise=p * 100, includes="Gym floor, lockers" + (", diet plan" if m >= 6 else "")) for n, m, p in PLANS]
@@ -180,7 +183,9 @@ class Command(BaseCommand):
 
         self._bills(gym, branches, meera, today, rnd)
         self._payroll(gym, staff, branches, meera, today)
-        Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today, created_by=meera)
+        Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today,
+                               created_by=meera, account=Account.objects.for_money(branches["Whitefield"].id, "card", on=today))
+        self._moves(gym, accounts, meera, today)
 
         # Yesterday's and today's reminders, sent by the fake sender, so the Reminders card has something in it.
         for day in (today - timedelta(days=1), today):
@@ -192,6 +197,38 @@ class Command(BaseCommand):
             f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
             f"Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
         ))
+
+    def _accounts(self, gym, branches, meera, today):
+        """Cash in hand at every branch; one HDFC account shared by Indiranagar and Koramangala, its own account for
+        each of the other two, and the owner's reserve, which no branch uses."""
+        since = today - timedelta(days=420)  # before the oldest payment the demo writes
+        new = lambda **kw: Account.objects.create(gym=gym, opened_on=since, created_by=meera, **kw)  # noqa: E731
+        out = {f"{name} cash": new(kind=Account.CASH, branch=b, opening_balance_paise=10000 * 100) for name, b in branches.items()}
+        for name, bank, number, ifsc, opening, uses in (
+            ("HDFC current", "HDFC Bank", "50200012345678", "HDFC0001234", 900000, ["Indiranagar", "Koramangala"]),
+            ("ICICI current", "ICICI Bank", "000405012345", "ICIC0000004", 400000, ["HSR Layout"]),
+            ("Axis savings", "Axis Bank", "917010012340911", "UTIB0000123", 300000, ["Whitefield"]),
+            ("Owner's reserve", "Kotak Mahindra Bank", "4612343307", "KKBK0000431", 300000, []),
+        ):
+            out[name] = new(kind=Account.BANK, name=name, bank_name=bank, account_number=number, ifsc=ifsc, opening_balance_paise=opening * 100)
+            money.set_branches(out[name], [branches[u] for u in uses])
+        return out
+
+    def _moves(self, gym, accounts, meera, today):
+        """Each branch banks its cash but a float, the owner adds funds from the reserve and draws from HDFC."""
+        for name, a in accounts.items():
+            if a.kind == Account.CASH and (spare := money.balance_of(a) - 5000 * 100) > 0:
+                to = Account.objects.for_money(a.branch_id, "bank", on=today)
+                money.move(gym, kind=MoneyMove.TRANSFER, from_account=a, to_account=to, amount_paise=spare, moved_on=today - timedelta(days=1), by=meera,
+                           note="Banked the week's cash")
+        money.move(gym, kind=MoneyMove.TRANSFER, from_account=accounts["Owner's reserve"], to_account=accounts["Axis savings"], amount_paise=60000 * 100,
+                   moved_on=today - timedelta(days=5), by=meera, note="For Whitefield's new equipment")
+        # A share of what HDFC holds, not a fixed sum: what it holds depends on the bills and salaries due this month.
+        if (drawings := money.balance_of(accounts["HDFC current"]) // 10 // 100_000 * 100_000) > 0:
+            money.move(gym, kind=MoneyMove.WITHDRAWAL, from_account=accounts["HDFC current"], amount_paise=drawings, moved_on=today - timedelta(days=3), by=meera,
+                       note="Owner's drawings")
+        money.move(gym, kind=MoneyMove.DEPOSIT, to_account=accounts["Owner's reserve"], amount_paise=1250 * 100, moved_on=today - timedelta(days=2), by=meera,
+                   note="Interest")
 
     def _bills(self, gym, branches, meera, today, rnd):
         """Rent and electricity as recurring expenses since two months ago: paid, except this month's rent at
@@ -258,6 +295,8 @@ class Command(BaseCommand):
         RecurringExpense.objects.filter(gym=gym).delete()
         Expense.objects.filter(gym=gym).delete()
         Payment.objects.filter(gym=gym).delete()
+        MoneyMove.objects.filter(gym=gym).delete()
+        Account.objects.filter(gym=gym).delete()  # the branches they serve go with them
         Subscription.objects.filter(member__gym=gym).delete()
         Member.objects.filter(gym=gym).delete()
         Offer.objects.filter(gym=gym).delete()

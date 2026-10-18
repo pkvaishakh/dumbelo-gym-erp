@@ -27,7 +27,7 @@ class BranchViewSet(GymViewMixin, viewsets.ModelViewSet):
         return qs if ids is None else qs.filter(id__in=ids)
 
     def perform_destroy(self, branch):
-        if branch.members.exists() or branch.checkins.exists():
+        if branch.members.exists() or branch.checkins.exists() or branch.cash_accounts.exists():
             raise ValidationError("This branch has members or history. Mark it inactive instead.")
         branch.delete()
 

@@ -53,6 +53,29 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Home's "Expense dues" counts bills inside their reminder days and approved salaries not paid in full.
 - Referral bonuses are entered on the payslip by hand: members don't record who referred them yet.
 
+## Cash and bank (admins only)
+- The gym's money sits in accounts: each branch's cash in hand (one per branch, set up by counting the drawer) and
+  bank accounts. A branch uses one bank account; several branches can share one, and an account no branch uses (the
+  owner's reserve) is still the gym's money. Admins change which account a branch uses from the account or the branch.
+- Every payment and expense keeps the account it hit, chosen when it is recorded from its branch and method: cash
+  goes to the branch's cash, UPI, card and bank transfer to the branch's bank account. Moving a branch to another
+  account changes where new money goes, never where old money went. Money at a branch whose cash or bank account
+  isn't set up is in no balance, and so is money dated before the account was added (its opening balance already
+  counts it). Correcting a payment's or an expense's method, branch or date moves it to that account.
+- A balance is the opening balance (what it held the day it was added) plus payments in, less expenses out, plus
+  money moved in, less money moved out. Voided payments and moves don't count.
+- Money moves are deposits (from outside, like the owner adding funds), withdrawals (the owner's drawings, bank
+  charges) and transfers between two of the gym's accounts (cash banked, cash drawn, one branch's cash to another).
+  They are never income or spending, so reports and expense totals leave them out. Money leaving an account can't
+  be more than it holds (checked under a lock), and a move can't be dated before an account was added; a wrong move
+  is voided with a reason, and voiding can't leave the account it filled below zero or touch a deactivated one. Payments and expenses are never refused for a low balance: the desk's work goes on.
+- Totals count each account once, however many branches share it. A branch shows its bank account's whole balance,
+  with the branches it shares it with; a shared balance isn't split between branches.
+- Accounts are never deleted. One is deactivated only when it holds nothing; its branches are left with no bank
+  account until given another. Deactivated accounts stay in the totals: a payment voided later still moves them.
+- Each account has a monthly statement (payments, expenses and moves, oldest first, with the balance after each)
+  to check against the bank's statement or the counted drawer.
+
 ## Attendance
 - Check-in sources: front desk, a fixed wall QR per branch (members/staff scan it), and turnstile/biometric
   (ZKTeco/eSSL pushing punches to `/api/devices/punch/`).

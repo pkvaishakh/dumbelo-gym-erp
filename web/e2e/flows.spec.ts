@@ -140,3 +140,40 @@ test("admin: work out payroll, approve and pay a salary, then pay a bill from Du
   await page.getByRole("dialog").getByRole("button", { name: /^Pay ₹/ }).click();
   await expect(page.getByRole("heading", { name: /₹[\d,]+ paid/ })).toBeVisible();
 });
+
+test("admin: cash and bank, a shared account, and banking a branch's cash", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/more");
+  await page.getByRole("link", { name: /Cash and bank/ }).click();
+  await expect(page.getByText("Total funds")).toBeVisible();
+  // HDFC is shared by two branches: each says so, and the totals count it once.
+  await expect(page.getByRole("button", { name: /Indiranagar.*HDFC current.*shared with Koramangala/ })).toBeVisible();
+  await page.getByRole("button", { name: /^Koramangala/ }).click();
+  await expect(page.getByRole("dialog", { name: "Koramangala" }).getByText("Also used by Indiranagar")).toBeVisible();
+  await page.getByRole("dialog", { name: "Koramangala" }).getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("link", { name: "Move Money" }).click();
+  // Each option reads "Indiranagar cash • ₹5,000": pick by the account's name, whatever it holds.
+  for (const [field, name] of [["From", "Indiranagar cash"], ["To", "HDFC current"]]) {
+    const select = page.getByRole("combobox", { name: field, exact: true });
+    await select.selectOption((await select.locator("option", { hasText: name }).getAttribute("value"))!);
+  }
+  await page.getByLabel("Amount in rupees").fill("1000");
+  await page.getByRole("button", { name: "Move ₹1,000" }).click();
+  await expect(page.getByText("₹1,000 moved")).toBeVisible();
+  await expect(page.getByText("It isn't counted as income or spending.")).toBeVisible();
+  await page.getByRole("link", { name: "Done" }).click();
+  await expect(page.getByRole("button", { name: /Cash to bank.*Indiranagar cash to HDFC current/ }).first()).toBeVisible();
+  // HDFC's statement lists the banked cash with the balance after it.
+  await page.getByRole("link", { name: /^HDFC current/ }).click();
+  await page.getByRole("link", { name: "Statement" }).click();
+  await expect(page.getByRole("heading", { name: "Statement" })).toBeVisible();
+  await expect(page.getByText("From Indiranagar cash").first()).toBeVisible();
+});
+
+test("trainer: no cash and bank in More", async ({ page }) => {
+  await signIn(page, "neha@rackline.demo");
+  await page.goto("/more");
+  await expect(page.getByRole("heading", { name: "Your work" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Cash and bank/ })).toHaveCount(0);
+});

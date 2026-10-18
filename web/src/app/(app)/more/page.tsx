@@ -1,9 +1,10 @@
 "use client";
 import {
-  Banknote, Building2, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Banknote, Building2, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
+import { useAccountsOverviewRetrieve } from "@/api/gen/accounts/accounts";
 import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
 import { PageBar } from "@/components/shell";
 import { Details, Icon, MenuRow, Section } from "@/components/ui";
@@ -21,6 +22,7 @@ export default function MorePage() {
   const summary = useGet<Summary>("/api/reports/summary/", undefined, r === "admin");
   const col = useGet<Collection>("/api/payments/collection/", undefined, r === "admin" || desk);
   const spent = useExpensesTodayRetrieve(undefined, { query: { enabled: desk } }).data?.data;
+  const funds = useAccountsOverviewRetrieve({ query: { enabled: r === "admin" } }).data?.data.totals;
   const [sheet, setSheet] = useState<"details" | "password" | null>(null);
   const staff = r !== "member"; // a member's details are changed by the desk
   return (
@@ -37,6 +39,7 @@ export default function MorePage() {
               <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={summary.data ? `${rupees(summary.data.expenses_month_paise)} this month` : undefined} />
               <MenuRow icon={CalendarClock} title="Dues" href="/expenses/dues" value={summary.data ? (summary.data.expense_dues.count ? `${rupees(summary.data.expense_dues.total_paise)} to pay` : "All paid") : undefined} />
               <MenuRow icon={Banknote} title="Payroll" href="/payroll" />
+              <MenuRow icon={Landmark} title="Cash and bank" href="/money" value={funds ? rupees(funds.total_paise) : undefined} />
               <MenuRow icon={Wallet} title="Payments" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />
