@@ -20,6 +20,7 @@ PRODUCTION_ENV = {
     "ALLOWED_HOSTS": "api.rackline.in",
     "DATABASE_URL": "postgres://rackline:secret@db.ap-south-1.rds.amazonaws.com:5432/rackline",
     "CACHE_URL": "redis://cache.ap-south-1.cache.amazonaws.com:6379/1",
+    "FIELD_ENCRYPTION_KEY": "cHJvZHVjdGlvbi10ZXN0LWtleS0wMDAwMDAwMDAwMDA=",
 }
 
 
@@ -70,7 +71,7 @@ def test_health_answers_the_load_balancer_asking_by_ip(db, settings):
 # ---- Settings a server must be given ----
 
 def test_production_lists_every_setting_it_was_not_given():
-    assert missing_in_production(fake_env(SECRET_KEY="x", CACHE_URL=" ")) == ["ALLOWED_HOSTS", "DATABASE_URL", "CACHE_URL"]
+    assert missing_in_production(fake_env(SECRET_KEY="x", CACHE_URL=" ")) == ["ALLOWED_HOSTS", "DATABASE_URL", "CACHE_URL", "FIELD_ENCRYPTION_KEY"]
     assert missing_in_production(fake_env(**PRODUCTION_ENV)) == []
 
 
@@ -81,6 +82,13 @@ def test_production_refuses_to_start_without_them():
 
         assert r.returncode != 0, r.stdout
         assert name in r.stderr and "docs/deploy.md" in r.stderr
+
+
+def test_a_bad_encryption_key_refuses_to_start_without_saying_it():
+    r = manage("check", **PRODUCTION_ENV | {"FIELD_ENCRYPTION_KEY": f"{PRODUCTION_ENV['FIELD_ENCRYPTION_KEY']},not-a-real-key-123"})
+
+    assert r.returncode != 0, r.stdout
+    assert "key 2 isn't a Fernet key" in r.stderr and "not-a-real-key-123" not in r.stderr
 
 
 def test_check_deploy_is_clean_with_production_settings():

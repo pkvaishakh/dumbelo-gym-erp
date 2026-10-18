@@ -6,7 +6,7 @@ import environ
 from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 
-from config.env import missing_in_production
+from config.env import DEV_ENCRYPTION_KEY, bad_encryption_keys, missing_in_production
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
@@ -164,6 +164,12 @@ SPECTACULAR_SETTINGS = {
         "InvoiceStatusEnum": "apps.billing.models.Invoice.STATUS",
         "InvoiceLineKindEnum": "apps.billing.models.InvoiceLine.KINDS",
         "RacklinePayMethodEnum": "apps.billing.models.InvoicePayment.METHODS",
+        "WhatsappAccountStatusEnum": "apps.messages.models.WhatsAppAccount.STATUS",
+        "WhatsappTemplateStatusEnum": "apps.messages.models.WhatsAppTemplate.STATUS",
+        "WhatsappCategoryEnum": "apps.messages.models.WhatsAppTemplate.CATEGORIES",
+        "CategoryEnum": "apps.expenses.models.Expense.CATEGORIES",  # named, now that templates have categories too
+        "MessageKindEnum": "apps.messages.models.WhatsAppTemplate.KINDS",
+        "GymWhatsappStatusEnum": "apps.messages.serializers.GymWhatsAppSerializer.STATES",
         "MethodEnum": "apps.members.models.Payment.METHODS",  # named, now that Rackline payments have methods of their own
     },
 }
@@ -191,12 +197,22 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# ---- Reminders to members (see apps/messages/senders.py) ----
+# ---- Credentials kept in the database (see apps/messages/crypto.py) ----
+# Comma-separated Fernet keys, newest first: values are written with the first and read with any of them, so a
+# key is rotated by putting a new one first (docs/deploy.md). A laptop gets a fixed dev-only key.
+FIELD_ENCRYPTION_KEY = env.list("FIELD_ENCRYPTION_KEY", default=[]) or ([] if PRODUCTION else [DEV_ENCRYPTION_KEY])
+if bad := bad_encryption_keys(FIELD_ENCRYPTION_KEY):
+    raise ImproperlyConfigured(
+        f"FIELD_ENCRYPTION_KEY: key {', '.join(map(str, bad))} isn't a Fernet key. Make one with "
+        "`python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"` (docs/deploy.md)"
+    )
+
+# ---- WhatsApp (see apps/messages/senders.py) ----
 # `fake` sends nothing and keeps what it would have sent, so a laptop and the tests need no WhatsApp account.
-# A server that really sends sets WHATSAPP_PROVIDER=whatsapp_cloud and the two keys below.
+# A server that really sends sets WHATSAPP_PROVIDER=whatsapp_cloud. The numbers and their keys are WhatsApp
+# accounts in the database (the Console's WhatsApp screen), not settings: Rackline's shared number is one of them.
 WHATSAPP_PROVIDER = env("WHATSAPP_PROVIDER", default="fake")
-WHATSAPP_TOKEN = env("WHATSAPP_TOKEN", default="")
-WHATSAPP_PHONE_ID = env("WHATSAPP_PHONE_ID", default="")
+WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", default="v23.0")  # Meta's Graph API version, in every call's path
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_HEADERS = ["authorization", "content-type", "x-gym", "x-device-token"]

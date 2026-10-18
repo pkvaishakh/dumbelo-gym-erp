@@ -1,16 +1,50 @@
 "use client";
-import { useGymSettingsRetrieve } from "@/api/gen/gym/gym";
+import { Activity, MessageCircle, Phone } from "lucide-react";
+
+import { useGymSettingsRetrieve, useGymWhatsappRetrieve } from "@/api/gen/gym/gym";
+import type { GymWhatsApp } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
-import { ErrorText, Section, Setting, SkeletonRows } from "@/components/ui";
+import { Details, ErrorText, Section, Setting, SkeletonRows } from "@/components/ui";
+import { ago, WHATSAPP_STATUS } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
 const SETTINGS = "/api/gym/settings/";
 
-/** The gym's own rules, for admins. One switch so far: whether members are sent their reminders. */
+// The gym's own words for its WhatsApp mode (the Console's are in WHATSAPP_MODE).
+const SENDS_FROM: Record<string, { label: string; note: string }> = {
+  shared: { label: "Rackline's number", note: "Messages go from Rackline's WhatsApp number, billed on your Rackline plan by the message." },
+  own: { label: "Your own number", note: "Messages go from your own WhatsApp Business account, and Meta bills you for them." },
+  off: { label: "Not sending", note: "No WhatsApp messages go out. Ask Rackline to turn them on." },
+};
+
+/** How the gym's messages go out: set up by Rackline, so only shown here. Never a credential. */
+function WhatsAppCard({ wa }: { wa: GymWhatsApp }) {
+  const from = SENDS_FROM[wa.mode] ?? { label: wa.mode, note: "" };
+  const status = WHATSAPP_STATUS[wa.status] ?? { label: wa.status, badge: "frozen" };
+  return (
+    <>
+      <Details rows={[
+        { icon: MessageCircle, label: "Sends from", value: from.label },
+        ...(wa.mode !== "off" ? [{ icon: Phone, label: "Number", value: wa.number ? `${wa.number}${wa.verified_name ? ` • ${wa.verified_name}` : ""}` : "Not set up yet" }] : []),
+        {
+          icon: Activity, label: wa.checked_at ? `Status, checked ${ago(wa.checked_at)}` : "Status",
+          value: <span className={`rl-status rl-status--${status.badge}`}>{status.label}</span>,
+        },
+      ]} />
+      <p className="rl-row__meta">
+        {from.note} {wa.status === "failing" || wa.status === "not_set_up" ? "Until it works, the desk still sees who to chase on the reminders list. " : ""}
+        Rackline sets this up: to change it, contact Rackline.
+      </p>
+    </>
+  );
+}
+
+/** The gym's own rules, for admins: whether members are sent their reminders, and how WhatsApp is set up. */
 export default function SettingsPage() {
   const { role } = useSession();
   const q = useGymSettingsRetrieve();
+  const wa = useGymWhatsappRetrieve().data?.data;
   const a = useAction();
   const gym = q.data?.data;
 
@@ -48,6 +82,9 @@ export default function SettingsPage() {
           money — one message a day at most. The switch takes effect at once, at every branch. To stop messaging one
           member, turn their reminders off on their profile.
         </p>
+        <Section title="WhatsApp">
+          {wa ? <WhatsAppCard wa={wa} /> : <SkeletonRows n={2} />}
+        </Section>
       </main>
     </div>
   );

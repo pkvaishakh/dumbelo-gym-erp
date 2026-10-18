@@ -28,7 +28,7 @@ from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Offer, Plan, Refund
 from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
-from apps.messages.models import Message
+from apps.messages.models import Message, WhatsAppAccount, WhatsAppTemplate
 from apps.messages.services import send_due
 from apps.payroll import services as payroll
 from apps.payroll.models import Payslip, PayslipLine, SalaryItem, SalaryPayment, SalaryRule
@@ -53,6 +53,16 @@ STAFF = [
     ("Alex Fernandes", "alex", GymRole.TRAINER, ["HSR Layout", "Whitefield"], "Morning", "Mobility, yoga"),
     ("Imran Khan", "imran", GymRole.TRAINER, ["Whitefield"], "Evening", "CrossFit, conditioning"),
 ]
+# The words of each message as a WhatsApp template, with the details that fill it (WhatsAppTemplate.PARAMETERS).
+DEMO_TEMPLATES = [
+    ("plan_ending", ["first_name", "plan", "gym", "end_date"], "Hi {{1}}, your {{2}} at {{3}} ends on {{4}}. Renew it at the front desk to keep checking in."),
+    ("plan_ends_today", ["first_name", "plan", "gym"], "Hi {{1}}, your {{2}} at {{3}} ends today. Renew it at the front desk to keep checking in."),
+    ("payment_due", ["first_name", "amount", "plan", "gym"], "Hi {{1}}, {{2}} is still to pay on your {{3}} at {{4}}. You can pay it at the front desk the next time you come in."),
+    ("payment_received", ["first_name", "amount", "gym", "paid_on"], "Hi {{1}}, thank you: {{3}} received {{2}} from you on {{4}}."),
+    ("task_assigned", ["first_name", "task", "gym", "due_date"], "Hi {{1}}, you have a new task at {{3}}: {{2}}, due {{4}}."),
+    ("rackline_invoice_due", ["first_name", "invoice_number", "gym", "amount", "due_date"], "Hi {{1}}, Rackline invoice {{2}} for {{3}} has {{4}} to pay by {{5}}."),
+    ("rackline_payment_received", ["first_name", "amount", "gym", "receipt_number"], "Hi {{1}}, Rackline received {{2}} from {{3}}. Your receipt is {{4}}."),
+]
 PLANS = [("Monthly", 1, 1500), ("Quarterly", 3, 4500), ("Premium 6 months", 6, 9000), ("Annual", 12, 15000)]
 FIRST = "Aarav Vivaan Aditya Diya Ananya Ishaan Kabir Riya Saanvi Arnav Kiara Myra Reyansh Anika Vihaan Tara Dev Nisha Rohan Pooja Karan Sneha Rahul Meghna Siddharth Lakshmi Varun Zoya Nikhil Priya".split()
 LAST = "Reddy Menon Gupta Shetty Pillai Das Joshi Patel Bose Hegde Kapoor Naidu".split()
@@ -71,6 +81,7 @@ class Command(BaseCommand):
         rnd = random.Random(7)
         self._rackline_admin()
         self._prices()
+        self._whatsapp()
         old = Gym.objects.filter(slug="rackline-fitness").first()
         if old and not reset:
             self.stdout.write("The demo gym already exists. Run with --reset to rebuild it.")
@@ -219,6 +230,18 @@ class Command(BaseCommand):
                 whatsapp_setup_paise=2000 * 100, machine_setup_paise=1500 * 100, utility_message_paise=15,
                 marketing_message_paise=90, authentication_message_paise=15, note="Launch prices",
             )
+
+    def _whatsapp(self):
+        """Rackline's shared number with a template for each message, kept across --reset like the prices. Its
+        credentials are made up, so Test Connection says Meta turned them down: that's the demo working."""
+        if WhatsAppAccount.objects.filter(gym=None).exists():
+            return
+        shared = WhatsAppAccount(gym=None, waba_id="100000000000001", phone_number_id="200000000000001", display_number="+91 80000 12345")
+        shared.set_credentials(access_token="demo-not-a-real-meta-token-0000", app_secret="demo-not-a-real-app-secret")
+        shared.save()
+        T = WhatsAppTemplate
+        WhatsAppTemplate.objects.bulk_create([T(account=shared, kind=kind, name=f"{kind}_v1", body=body, parameters=params, status=T.APPROVED)
+                                              for kind, params, body in DEMO_TEMPLATES])
 
     def _rackline_invoices(self, gym, today):
         """Three months of Rackline invoices: the first two paid by bank transfer, this month's half paid, and the

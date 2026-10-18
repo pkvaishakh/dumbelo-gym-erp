@@ -14,7 +14,7 @@ from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpe
 from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, MoneyMoveViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
-from apps.messages.views import MessageViewSet
+from apps.messages.views import GymWhatsAppView, MessageViewSet, WhatsAppAccountViewSet, WhatsAppTemplateViewSet
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
 from apps.platform.views import GymAdminViewSet, GymViewSet
 from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
@@ -52,6 +52,8 @@ router.register("platform/branch-requests", ConsoleBranchRequestViewSet, basenam
 router.register("platform/invoices", ConsoleInvoiceViewSet, basename="platform-invoice")
 router.register("platform/invoice-payments", ConsoleInvoicePaymentViewSet, basename="platform-invoice-payment")
 router.register("platform/charges", ChargeViewSet, basename="platform-charge")
+router.register("platform/whatsapp-accounts", WhatsAppAccountViewSet, basename="platform-whatsapp-account")
+router.register("platform/whatsapp-templates", WhatsAppTemplateViewSet, basename="platform-whatsapp-template")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -72,6 +74,7 @@ urlpatterns = [
     path("api/reports/attendance/", AttendanceView.as_view(), name="report-attendance"),
     path("api/reports/tasks/", TasksView.as_view(), name="report-tasks"),
     path("api/gym/settings/", GymSettingsView.as_view(), name="gym-settings"),
+    path("api/gym/whatsapp/", GymWhatsAppView.as_view(), name="gym-whatsapp"),
     path("api/cash/", CashView.as_view(), name="cash"),
     path("api/billing/plan/", RacklinePlanView.as_view(), name="rackline-plan"),
     path("api/platform/gyms/<int:gym_id>/plan/", GymPlanView.as_view(), name="platform-gym-plan"),

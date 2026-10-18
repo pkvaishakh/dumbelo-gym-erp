@@ -14,9 +14,12 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               More); gyms list, a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests,
                               price lists and Add Price List, a gym's invoices (gyms/[id]/invoices: pending charges, Add
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
-                              print pages. Its parts are in src/features/console/ (requests: RequestRow, RequestSheet;
-                              plan-sheets: EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
-                              AddChargeSheet, ChargeSheet)
+                              print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
+                              `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates).
+                              Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
+                              EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
+                              AddChargeSheet, ChargeSheet; whatsapp: WhereFields, SecretField, EditAccountSheet,
+                              CredentialsSheet, TemplateSheet)
 src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,

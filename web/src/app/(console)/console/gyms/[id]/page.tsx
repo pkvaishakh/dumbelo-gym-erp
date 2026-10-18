@@ -1,15 +1,15 @@
 "use client";
-import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, FileText, Mail, Pencil, UserRound } from "lucide-react";
+import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, FileText, Mail, MessageCircle, Pencil, UserRound } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { usePlatformGymsPlanRetrieve, usePlatformGymsRetrieve } from "@/api/gen/platform/platform";
+import { usePlatformGymsPlanRetrieve, usePlatformGymsRetrieve, usePlatformWhatsappAccountsList } from "@/api/gen/platform/platform";
 import { DetailBar } from "@/components/shell";
 import { Details, Empty, Icon, MenuRow, Photo, Section, SkeletonRows, Status } from "@/components/ui";
 import { AdminsSection } from "@/features/console/admins";
 import { EditGymSheet, StatusSheet } from "@/features/console/gym-sheets";
 import { GymStatus } from "@/features/console/parts";
-import { branchesOf, day, GYM_STATUS, plural, rupees } from "@/lib/format";
+import { branchesOf, day, GYM_STATUS, plural, rupees, WHATSAPP_STATUS } from "@/lib/format";
 
 /** One gym, as Rackline sees it: status, branches and admins. Never what is inside it (members, money, visits). */
 export default function GymScreen() {
@@ -17,6 +17,7 @@ export default function GymScreen() {
   const q = usePlatformGymsRetrieve(Number(id));
   const g = q.data?.data;
   const plan = usePlatformGymsPlanRetrieve(Number(id)).data?.data;
+  const whatsapp = usePlatformWhatsappAccountsList({ gym: Number(id) }).data?.data.results[0]; // at most one a gym
   const [editing, setEditing] = useState(false);
   const [change, setChange] = useState<"suspend" | "activate" | null>(null);
   if (q.isError) {
@@ -70,6 +71,9 @@ export default function GymScreen() {
               value={plan ? branchesOf(plan.branches_in_use, plan.branch_quota) : undefined} />
             <MenuRow icon={FileText} title="Invoices and payments" href={`/console/gyms/${g.id}/invoices`}
               value={g.owed_paise ? `${rupees(g.owed_paise)} owed` : "Nothing owed"} />
+            {/* Its own number, or the way to add one. Which number it sends from is on its Rackline plan. */}
+            <MenuRow icon={MessageCircle} title="WhatsApp" href={whatsapp ? `/console/whatsapp/${whatsapp.id}` : `/console/whatsapp/new?gym=${g.id}`}
+              value={whatsapp ? `${whatsapp.display_number} • ${WHATSAPP_STATUS[whatsapp.status]?.label ?? whatsapp.status}` : "Add Own Number"} />
           </ul>
         </Section>
         <AdminsSection gymId={g.id} />
