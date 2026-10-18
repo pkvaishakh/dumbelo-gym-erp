@@ -30,6 +30,12 @@ What was decided, so code and screens stay consistent. Change this file when a d
   the Console (`/console`, mobile first, the design system's screens). They never see inside a gym (members,
   payments, check-ins) except through a support window like anyone else on Rackline's team. Their changes are
   audited.
+- The Console opens on Home: gyms by status and new this month, what gyms owe Rackline and how much of it is
+  overdue, the shared number's messages and amount this month, branch requests waiting, WhatsApp messages delivered,
+  failed and waiting today, and whatever on the server is down or whose job's last run failed, with a Needs attention
+  card built from these. One summary (`/api/platform/summary/`) in a fixed number of queries; days and months are
+  Rackline's (India). It shows counts and Rackline's own money only. Its tabs are Home, Gyms, Server and More; Prices,
+  Branch requests, WhatsApp, WhatsApp log and Automation are in More.
 - Staff change their own name, email, mobile number and password (More). A member's details are changed by
   the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and not for
   someone who also signs in to another gym (one login covers every gym); for them, this gym can't change their

@@ -24,18 +24,18 @@ export default function GymScreen() {
   const [change, setChange] = useState<"suspend" | "activate" | null>(null);
   if (q.isError) {
     return (
-      <div className="rl-app rl-root"><DetailBar title="Gym" back="/console" /><main className="rl-app__main">
+      <div className="rl-app rl-root"><DetailBar title="Gym" back="/console/gyms" /><main className="rl-app__main">
         <Empty icon={AlertCircle} title="Can't open this gym" text={q.error instanceof Error ? q.error.message : "Check your connection and try again."}>
           <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => q.refetch()}>Try Again</button>
         </Empty>
       </main></div>
     );
   }
-  if (!g) return <div className="rl-app rl-root"><DetailBar title="Gym" back="/console" /><main className="rl-app__main"><SkeletonRows n={4} /></main></div>;
+  if (!g) return <div className="rl-app rl-root"><DetailBar title="Gym" back="/console/gyms" /><main className="rl-app__main"><SkeletonRows n={4} /></main></div>;
   const suspended = g.status === "suspended";
   return (
     <div className="rl-app rl-root">
-      <DetailBar title="Gym" back="/console" action={<button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="Edit gym" aria-haspopup="dialog" onClick={() => setEditing(true)}><Icon as={Pencil} /></button>} />
+      <DetailBar title="Gym" back="/console/gyms" action={<button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="Edit gym" aria-haspopup="dialog" onClick={() => setEditing(true)}><Icon as={Pencil} /></button>} />
       <main className="rl-app__main">
         <div className="rl-identity">
           <Photo name={g.name} size="xl" />

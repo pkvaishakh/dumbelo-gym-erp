@@ -3825,6 +3825,16 @@ paths:
         schema:
           type: integer
       - in: query
+        name: owes
+        schema:
+          type: string
+          enum:
+          - any
+          - overdue
+        description: |-
+          * `any` - Owes Rackline anything
+          * `overdue` - Has an invoice past its due day
+      - in: query
         name: q
         schema:
           type: string
@@ -4734,6 +4744,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerStatus'
+          description: ''
+  /api/platform/summary/:
+    get:
+      operationId: platform_summary_retrieve
+      description: |-
+        Console → Home: gyms by status, what they owe Rackline, branch requests waiting, today's WhatsApp messages
+        and the shared number's month, and what on the server is down or failed. A fixed number of queries.
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformSummary'
           description: ''
   /api/platform/whatsapp-accounts/:
     get:
@@ -8788,6 +8815,23 @@ components:
       required:
       - count
       - spent_paise
+    FailedJob:
+      type: object
+      properties:
+        job:
+          $ref: '#/components/schemas/JobEnum'
+        label:
+          type: string
+        finished_at:
+          type: string
+          format: date-time
+        error:
+          type: string
+      required:
+      - error
+      - finished_at
+      - job
+      - label
     FreezeRequest:
       type: object
       properties:
@@ -8886,6 +8930,23 @@ components:
       - id
       - member_count
       - name
+    GymCounts:
+      type: object
+      properties:
+        active:
+          type: integer
+        trial:
+          type: integer
+        suspended:
+          type: integer
+        new_this_month:
+          type: integer
+          description: Gyms added since the 1st, whatever their status now
+      required:
+      - active
+      - new_this_month
+      - suspended
+      - trial
     GymCreateRequest:
       type: object
       description: 'New Gym: the gym, its first branch and its owner admin (a new
@@ -10647,6 +10708,27 @@ components:
       - before
       - total
       - value
+    Owed:
+      type: object
+      properties:
+        owed_paise:
+          type: integer
+          description: What every gym owes Rackline on its open invoices
+        gyms_owing:
+          type: integer
+        overdue_paise:
+          type: integer
+          description: The part of it on invoices past their due day
+        overdue_invoices:
+          type: integer
+        gyms_overdue:
+          type: integer
+      required:
+      - gyms_overdue
+      - gyms_owing
+      - overdue_invoices
+      - overdue_paise
+      - owed_paise
     PaginatedBranchAskList:
       type: object
       required:
@@ -12410,6 +12492,31 @@ components:
       required:
       - name
       - price_paise
+    PlatformSummary:
+      type: object
+      description: 'Console → Home. Counts and Rackline''s own money only: nothing
+        from inside a gym.'
+      properties:
+        checked_at:
+          type: string
+          format: date-time
+        gyms:
+          $ref: '#/components/schemas/GymCounts'
+        money:
+          $ref: '#/components/schemas/Owed'
+        branch_requests:
+          $ref: '#/components/schemas/Waiting'
+        whatsapp:
+          $ref: '#/components/schemas/WhatsAppDay'
+        server:
+          $ref: '#/components/schemas/ServerAttention'
+      required:
+      - branch_requests
+      - checked_at
+      - gyms
+      - money
+      - server
+      - whatsapp
     PriceList:
       type: object
       description: A price list. `is_current` is the one in force today; `gym_count`
@@ -13587,6 +13694,22 @@ components:
       - pay_type
       - rate_paise
       - staff
+    ServerAttention:
+      type: object
+      properties:
+        down:
+          type: array
+          items:
+            $ref: '#/components/schemas/Check'
+          description: Checks that are down, in the Server screen's order
+        failed_jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/FailedJob'
+          description: Jobs whose last run failed
+      required:
+      - down
+      - failed_jobs
     ServerCheckEnum:
       enum:
       - database
@@ -14327,6 +14450,13 @@ components:
           maxLength: 200
       required:
       - reason
+    Waiting:
+      type: object
+      properties:
+        waiting:
+          type: integer
+      required:
+      - waiting
     WebhookStatus:
       type: object
       properties:
@@ -14473,6 +14603,28 @@ components:
       - display_number
       - phone_number_id
       - waba_id
+    WhatsAppDay:
+      type: object
+      properties:
+        delivered_today:
+          type: integer
+          description: On every number
+        failed_today:
+          type: integer
+        waiting_retry:
+          type: integer
+        shared_messages:
+          type: integer
+          description: Billable messages on the shared number delivered this month
+        shared_paise:
+          type: integer
+          description: What those come to, at the rate kept on each
+      required:
+      - delivered_today
+      - failed_today
+      - shared_messages
+      - shared_paise
+      - waiting_retry
     WhatsAppTemplate:
       type: object
       properties:

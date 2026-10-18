@@ -1,14 +1,23 @@
 "use client";
-/* The Console's Server screen: a job's runs in words, and its sheet with Run Now. */
-import { CalendarClock, Clock, ListChecks, UserRound } from "lucide-react";
+/* The Console's Server screen (and Home's server card): checks and runs as badges, a job's runs in words, and its
+   sheet with Run Now. */
+import { CalendarClock, Clock, Cpu, Database, Layers, ListChecks, Timer, UserRound, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 
 import type { JobRun, JobStatus } from "@/api/gen/model";
 import { Details, ErrorText, Sheet } from "@/components/ui";
-import { ago, RUN_STATE, took } from "@/lib/format";
+import { ago, RUN_STATE, SERVER_STATE, took } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 
 export const STATUS = "/api/platform/status/";
+
+export const CHECK_ICON: Record<string, LucideIcon> = { database: Database, redis: Layers, worker: Cpu, beat: Timer };
+
+/** A check's state: Up, Down, Not used here, Can't tell. */
+export function StateBadge({ state }: { state: string }) {
+  const s = SERVER_STATE[state] ?? { label: state, badge: "frozen" };
+  return <span className={`rl-status rl-status--${s.badge}`}>{s.label}</span>;
+}
 
 export function RunBadge({ state }: { state: string }) {
   const s = RUN_STATE[state] ?? { label: state, badge: "frozen" };

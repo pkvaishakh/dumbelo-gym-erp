@@ -61,9 +61,12 @@ apps/reports/        views/summary.py (SummaryView: admin Home, including expens
                      calendar months, never after the gym's today; Period: the querysets, `compare` with the days before
                      in one query, `daily`) and serializers.py (typed response shapes)
 apps/platform/       Rackline's side under /api/platform/ (no X-Gym, Rackline admins only): services.py (create_gym, suspend,
-                     activate, add_admin, reset_admin_password, deactivate_admin, make_owner), server.py (the Server screen:
-                     each check with a time limit, so down shows as down and never a 500; JOBS: each job's schedule, its
-                     counts in words and its task if Run Now may start it; run_now), views.py (gyms, a gym's admins,
+                     activate, add_admin, reset_admin_password, deactivate_admin, make_owner), queries.py (gyms(): the gyms
+                     with their counts, owner and owed_paise, for the list, a gym and Home; GymFilter: ?status=, ?owes=any|overdue),
+                     server.py (the Server screen: each check with a time limit, so down shows as down and never a 500;
+                     health: the four checks; JOBS: each job's schedule, its counts in words and its task if Run Now may start
+                     it; failed_jobs; run_now), summary.py (Console Home: one aggregate over gyms(), branch requests, messages
+                     and server.py's parts, a fixed number of queries), views.py (gyms, a gym's admins, /api/platform/summary/,
                      /api/platform/status/, /api/platform/jobs/<job>/run/), management/commands/create_gym.py (the same service)
 apps/billing/        A gym's Rackline plan: PriceList (never edited), GymBilling (prices copied from a list, branch_quota,
                      billing_day, whatsapp_mode, paid_until), BranchRequest (asked | approved | declined, with the pro-rata
@@ -75,7 +78,7 @@ apps/billing/        A gym's Rackline plan: PriceList (never edited), GymBilling
                      Invoices: Invoice (open | paid | void, tax fields at zero), InvoiceLine (no invoice yet = pending),
                      InvoicePayment (receipt, voided with a reason), NumberSeries (RL/2026-27/0001 under a lock);
                      invoicing.py (write_invoice, gyms_billed_on, whatsapp_usage_lines: last month's shared-number messages,
-                     add_charge, remove_charge, record_payment, void_payment, void_invoice, owed_by_gym); tasks.py
+                     add_charge, remove_charge, record_payment, void_payment, void_invoice, owed_by_gym, overdue_by_gym, overdue_invoices); tasks.py
                      (write_invoices: beat, hourly; `manage.py write_invoices --day` for a missed day); views/gym.py
                      (/api/billing/invoices/, open when suspended) and views/invoices.py (/api/platform/invoices/,
                      /api/platform/invoice-payments/, /api/platform/charges/)

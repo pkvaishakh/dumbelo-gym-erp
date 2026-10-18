@@ -1,7 +1,7 @@
 "use client";
 /* App frame: headers, bottom navigation per role, the create sheet and the branch switcher. */
 import {
-  ArrowLeft, BadgeIndianRupee, BarChart3, Building2, CalendarCheck, ChevronDown, ClipboardCheck, ClipboardList, Home, LayoutGrid, ListChecks,
+  ArrowLeft, BarChart3, Building2, CalendarCheck, ChevronDown, ClipboardCheck, ClipboardList, Home, LayoutGrid, ListChecks,
   Plus, QrCode, Receipt, Repeat, Server, Ticket, UserPlus, Users, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -54,12 +54,12 @@ export function BranchChip({ value, onPick }: BranchPick) {
   );
 }
 
-/** The home header: logo and avatar. */
-export function HomeBar() {
+/** The home header: logo and avatar. The Console's logo goes to its own Home. */
+export function HomeBar({ home = "/home" }: { home?: string }) {
   return (
     <>
       <header className="rl-appbar"><div className="rl-appbar__in">
-        <Link className="rl-logo" href="/home" aria-label="Rackline home"><Mark /></Link>
+        <Link className="rl-logo" href={home} aria-label="Rackline home"><Mark /></Link>
         <div className="rl-appbar__spacer" />
         <Avatar />
       </div></header>
@@ -194,17 +194,22 @@ export function TabBar() {
 }
 
 const CONSOLE_TABS: Tab[] = [
-  { href: "/console", label: "Gyms", icon: Building2 },
+  { href: "/console", label: "Home", icon: Home },
+  { href: "/console/gyms", label: "Gyms", icon: Building2 },
   { href: "/console/server", label: "Server", icon: Server },
-  { href: "/console/prices", label: "Prices", icon: BadgeIndianRupee },
   { href: "/console/more", label: "More", icon: LayoutGrid },
 ];
+/** Screens reached from a tab that aren't under its address: a gym's invoices from Gyms, the rest from More. */
+const CONSOLE_UNDER: Record<string, RegExp> = {
+  "/console/gyms": /^\/console\/invoices(\/|$)/,
+  "/console/more": /^\/console\/(prices|requests|whatsapp|messages|automation)(\/|$)/,
+};
 
 /** The Console's bottom navigation, for Rackline admins. */
 export function ConsoleTabBar() {
   const path = usePathname();
   if (/\/(new|edit)(\/|$)/.test(path)) return null;
-  const current = (href: string) => (href === "/console" ? path === "/console" || path.startsWith("/console/gyms") : path.startsWith(href));
+  const current = (href: string) => (href === "/console" ? path === "/console" : path === href || path.startsWith(href + "/") || !!CONSOLE_UNDER[href]?.test(path));
   return (
     <div className="rl-root">
       {/* The grid is built for five; the Console has fewer tabs, so they share the width evenly. */}

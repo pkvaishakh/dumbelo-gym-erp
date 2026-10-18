@@ -1,5 +1,5 @@
 "use client";
-import { Building2, Clock, Inbox, KeyRound, LogOut, Mail, MessageCircle, Pencil, ScrollText, UserRound } from "lucide-react";
+import { BadgeIndianRupee, Building2, Clock, Inbox, KeyRound, LogOut, Mail, MessageCircle, Pencil, ScrollText, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { PageBar } from "@/components/shell";
@@ -9,7 +9,7 @@ import { gymSlug } from "@/lib/api";
 import { phone } from "@/lib/format";
 import { useWho } from "@/lib/session";
 
-/** Branch requests, Rackline's WhatsApp numbers, log and automation times, the Rackline admin's own account, and the gyms
+/** Prices, branch requests, Rackline's WhatsApp numbers, log and automation times, the Rackline admin's own account, and the gyms
  *  they also work at (opening one leaves the Console). */
 export default function ConsoleMore() {
   const { me, signOut } = useWho();
@@ -28,6 +28,7 @@ export default function ConsoleMore() {
         )}
         <Section title="Rackline">
           <ul className="rl-card rl-remind">
+            <MenuRow icon={BadgeIndianRupee} title="Prices" value="What gyms pay Rackline" href="/console/prices" />
             <MenuRow icon={Inbox} title="Branch requests" value="Gyms asking for more" href="/console/requests" />
             <MenuRow icon={MessageCircle} title="WhatsApp" value="Numbers and templates" href="/console/whatsapp" />
             <MenuRow icon={ScrollText} title="WhatsApp log" value="Every message sent" href="/console/messages" />

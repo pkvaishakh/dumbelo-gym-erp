@@ -27,7 +27,7 @@ export default function PricesPage() {
   const current = rows.find((p) => p.is_current);
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Prices" sub={current ? `Current since ${day(current.active_from)}` : "What gyms pay Rackline"} action={<AddButton href="/console/prices/new" label="Add Price List" />} />
+      <PageBar title="Prices" back="/console/more" sub={current ? `Current since ${day(current.active_from)}` : "What gyms pay Rackline"} action={<AddButton href="/console/prices/new" label="Add Price List" />} />
       <main className="rl-app__main">
         <Section label="Price lists">
           {list.isLoading ? <SkeletonRows n={3} /> : list.isError ? (

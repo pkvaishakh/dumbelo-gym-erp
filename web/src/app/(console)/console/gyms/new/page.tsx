@@ -81,7 +81,7 @@ export default function NewGymPage() {
         </form>
       </main>
       <ActionBar label="Create Gym" busy={a.busy} busyLabel="Creating…" onClick={save} />
-      <Sheet open={!!made} onClose={() => router.push("/console")} closable={false}>
+      <Sheet open={!!made} onClose={() => router.push("/console/gyms")} closable={false}>
         {made && (
           <>
             <Confirm title={`${made.name} is ready`} text={made.owner_new_login
@@ -89,7 +89,7 @@ export default function NewGymPage() {
               : `${made.owner_name} already signs in to Rackline, so they'll find ${made.name} with their other gyms. It's on trial until you activate it.`} />
             <div className="rl-sheet__actions">
               <button className="rl-button rl-button--block" type="button" onClick={() => router.push(`/console/gyms/${made.id}`)}>Open Gym</button>
-              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => router.push("/console")}>Done</button>
+              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => router.push("/console/gyms")}>Done</button>
             </div>
           </>
         )}

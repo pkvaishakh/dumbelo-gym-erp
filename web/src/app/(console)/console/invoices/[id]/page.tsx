@@ -20,7 +20,7 @@ export default function ConsoleInvoiceScreen() {
   const [sheet, setSheet] = useState<"pay" | "void" | null>(null);
   const [open, setOpen] = useState<ConsoleInvoicePayment | null>(null);
   const [voiding, setVoiding] = useState<ConsoleInvoicePayment | null>(null);
-  const back = inv ? `/console/gyms/${inv.gym}/invoices` : "/console";
+  const back = inv ? `/console/gyms/${inv.gym}/invoices` : "/console/gyms";
   const bar = (
     <DetailBar title={inv ? `${inv.gym_name}: invoice` : "Invoice"} back={back}
       action={inv && <Link className="rl-iconbtn rl-iconbtn--plain" href={`/console/invoices/${id}/print`} aria-label="Print Invoice"><Icon as={Printer} /></Link>} />

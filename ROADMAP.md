@@ -49,6 +49,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Meta webhook: delivery status, STOP replies, shared-number usage (session 14)
 - [x] Message switches; automation times set by Rackline admins; payment received, task assigned, Rackline invoice messages (session 15)
 - [x] Server status in the Console: health, background jobs, messages and webhook, Run Now (session 16)
+- [x] Console Home: gyms, what they owe, branch requests, WhatsApp today and the server at a glance
 - [ ] Message log, usage screens, and end-to-end flows for all of it (session 17)
 
 ## Not in the MVP

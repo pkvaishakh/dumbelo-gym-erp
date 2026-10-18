@@ -67,6 +67,7 @@ import type {
   PlatformInvoicesListParams,
   PlatformMessagesListParams,
   PlatformPricesListParams,
+  PlatformSummary,
   PlatformWhatsappAccountsListParams,
   PlatformWhatsappTemplatesListParams,
   PriceList,
@@ -3894,6 +3895,116 @@ export function usePlatformStatusRetrieve<TData = Awaited<ReturnType<typeof plat
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getPlatformStatusRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Console → Home: gyms by status, what they owe Rackline, branch requests waiting, today's WhatsApp messages
+and the shared number's month, and what on the server is down or failed. A fixed number of queries.
+ */
+export type platformSummaryRetrieveResponse200 = {
+  data: PlatformSummary
+  status: 200
+}
+    
+export type platformSummaryRetrieveResponseSuccess = (platformSummaryRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformSummaryRetrieveResponse = (platformSummaryRetrieveResponseSuccess)
+
+export const getPlatformSummaryRetrieveUrl = () => {
+
+
+  
+
+  return `/api/platform/summary/`
+}
+
+export const platformSummaryRetrieve = async ( options?: RequestInit): Promise<platformSummaryRetrieveResponse> => {
+  
+  return apiFetch<platformSummaryRetrieveResponse>(getPlatformSummaryRetrieveUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformSummaryRetrieveQueryKey = () => {
+    return [
+    `/api/platform/summary/`
+    ] as const;
+    }
+
+    
+export const getPlatformSummaryRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformSummaryRetrieveQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformSummaryRetrieve>>> = ({ signal }) => platformSummaryRetrieve({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformSummaryRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformSummaryRetrieve>>>
+export type PlatformSummaryRetrieveQueryError = unknown
+
+
+export function usePlatformSummaryRetrieve<TData = Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformSummaryRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformSummaryRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformSummaryRetrieve<TData = Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformSummaryRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformSummaryRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformSummaryRetrieve<TData = Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformSummaryRetrieve<TData = Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformSummaryRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformSummaryRetrieveQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

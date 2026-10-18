@@ -5,6 +5,7 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { PlatformGymsListOwes } from './platformGymsListOwes';
 import type { PlatformGymsListStatus } from './platformGymsListStatus';
 
 export type PlatformGymsListParams = {
@@ -16,6 +17,11 @@ limit?: number;
  * The initial index from which to return the results.
  */
 offset?: number;
+/**
+ * * `any` - Owes Rackline anything
+* `overdue` - Has an invoice past its due day
+ */
+owes?: PlatformGymsListOwes;
 /**
  * Name or short name, 2 characters or more
  */

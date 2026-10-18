@@ -19,7 +19,7 @@ from apps.messages.views import (
     WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView,
 )
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
-from apps.platform.views import GymAdminViewSet, GymViewSet, JobRunNowView, ServerStatusView
+from apps.platform.views import GymAdminViewSet, GymViewSet, JobRunNowView, PlatformSummaryView, ServerStatusView
 from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
 from apps.tasks.views import TaskViewSet
 
@@ -90,6 +90,7 @@ urlpatterns = [
     path("api/platform/gyms/<int:gym_id>/messages/", GymMessageTimesView.as_view(), name="platform-gym-messages"),
     path("api/platform/gyms/<int:gym_id>/messages/<slug:kind>/", GymMessageTimeView.as_view(), name="platform-gym-message"),
     path("api/platform/automation/", AutomationView.as_view(), name="platform-automation"),
+    path("api/platform/summary/", PlatformSummaryView.as_view(), name="platform-summary"),
     path("api/platform/status/", ServerStatusView.as_view(), name="platform-status"),
     path("api/platform/jobs/<slug:job>/run/", JobRunNowView.as_view(), name="platform-job-run"),
     path("api/", include(router.urls)),
