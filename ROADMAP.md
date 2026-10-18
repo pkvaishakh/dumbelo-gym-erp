@@ -42,7 +42,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 
 ## Rackline billing and WhatsApp
 - [x] Rackline admins, the Console, gyms and their admin accounts, suspend and activate (session 9)
-- [ ] Price list, each gym's Rackline plan, branch quota and buying more branches (session 10)
+- [x] Price list, each gym's Rackline plan, branch quota and buying more branches (session 10)
 - [ ] Rackline invoices, payments, receipts and what each gym owes (session 11)
 - [ ] WhatsApp accounts and templates, credentials encrypted (session 12)
 - [ ] Sending through Meta's Cloud API with templates, no duplicates, retries (session 13)

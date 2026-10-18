@@ -10,8 +10,12 @@ src/app/login                 shared sign-in
 src/app/(app)/layout.tsx      SessionProvider (who, which gym, which branch) + bottom TabBar
 src/app/(app)/<route>         one folder per screen; task screens are /…/new or /…/edit (no tab bar there).
                               A suspended gym shows features/paused everywhere but More (admins only)
-src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar; gyms list, a gym,
-                              New Gym, More. Its parts are in src/features/console/
+src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Gyms, Requests, Prices,
+                              More); gyms list, a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests,
+                              price lists and Add Price List. Its parts are in src/features/console/ (requests:
+                              RequestRow, RequestSheet; plan-sheets: EditPlanSheet, MovePricesSheet)
+src/app/(app)/rackline-plan   the gym admin's Rackline plan and Add Branch to My Plan; open with More while the gym is
+                              paused
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
                               Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
@@ -20,7 +24,8 @@ src/features/                 bigger parts shared by routes: homes, checkin (des
                               (MemberPicker, PlanPicker, ActionBar, METHODS), staff-form, branch-form, members-ui,
                               money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, rateText),
                               recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), account-form, drawer (CountRow,
-                              CountSheet), refunds (RefundSheet, RefundRows)
+                              CountSheet), refunds (RefundSheet, RefundRows), rackline-plan (PlanCard, BranchRoom,
+                              PlanPrices, AskStatus, proRataText: a gym's Rackline plan, for the gym and the Console)
                               reports/ (range: useReportRange + ReportControls, period and branch in the URL; screen:
                               ReportScreen, ReportPrint, Download; parts: Lead, Trend, SeriesChart, BarList; one file per
                               category; categories: the registry)

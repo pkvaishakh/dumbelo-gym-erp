@@ -6,7 +6,7 @@ Every demo login uses the password `rackline-demo`:
   rackline@rackline.demo (a Rackline admin: the Console at /console, no role in the gym)
 """
 import random
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -15,6 +15,8 @@ from django.db import transaction
 
 from apps.attendance.models import CheckIn, Device
 from apps.attendance.services import check_in
+from apps.billing.models import PriceList
+from apps.billing.services import open_plan
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.expenses.models import Expense, ExpenseDue, RecurringExpense
@@ -67,6 +69,7 @@ class Command(BaseCommand):
     def handle(self, *args, reset=False, members=60, **kw):
         rnd = random.Random(7)
         self._rackline_admin()
+        self._prices()
         old = Gym.objects.filter(slug="rackline-fitness").first()
         if old and not reset:
             self.stdout.write("The demo gym already exists. Run with --reset to rebuild it.")
@@ -83,6 +86,7 @@ class Command(BaseCommand):
             BranchSession.objects.bulk_create([BranchSession(branch=b, name=n, starts=time(s), ends=time(e)) for n, s, e in sessions])
             Device.objects.create(branch=b, name="Front turnstile", serial=f"DEMO-{i + 1:03d}")
             branches[name] = b
+        open_plan(gym, quota=len(BRANCHES) + 1, billing_day=1)  # room for one more, so Add Branch works in the demo
 
         staff = {}
         for i, (name, key, role, where, shift, spec) in enumerate(STAFF):
@@ -204,6 +208,15 @@ class Command(BaseCommand):
         """Rackline's own login for the Console. Kept across --reset: it belongs to no gym."""
         if not User.objects.filter(email="rackline@rackline.demo").exists():
             User.objects.create_superuser(email="rackline@rackline.demo", password=PASSWORD, name="Rackline Admin")
+
+    def _prices(self):
+        """Rackline's prices, kept across --reset like the Rackline admin: they belong to no gym."""
+        if not PriceList.objects.exists():
+            PriceList.objects.create(
+                active_from=clock.add_months(date.today(), -6).replace(day=1), base_paise=999 * 100, per_branch_paise=3100 * 100,
+                whatsapp_setup_paise=2000 * 100, machine_setup_paise=1500 * 100, utility_message_paise=15,
+                marketing_message_paise=90, authentication_message_paise=15, note="Launch prices",
+            )
 
     def _accounts(self, gym, branches, meera, today):
         """Cash in hand at every branch; one HDFC account shared by Indiranagar and Koramangala, its own account for

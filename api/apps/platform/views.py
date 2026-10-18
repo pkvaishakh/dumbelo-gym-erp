@@ -4,8 +4,7 @@ Rackline admins only (`RacklineViewMixin`), with no X-Gym: these views work acro
 inside a gym (members' details, payments, check-ins): only counts, branches and admin accounts. Every change is
 audited against the gym it belongs to.
 """
-from django.db.models import Count, F, Func, IntegerField, OuterRef, Prefetch, Q, Subquery, Value
-from django.db.models.functions import Coalesce
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
@@ -13,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.audit.models import record
+from apps.core.queries import count_of
 from apps.core.rackline import RacklineViewMixin
 from apps.gyms.models import Branch, Gym, GymRole
 from apps.gyms.serializers import StaffPasswordSerializer
@@ -25,19 +25,12 @@ from .serializers import (
 )
 
 
-def _count(qs):
-    """How many rows of `qs` (filtered on OuterRef) belong to each outer row, as one subquery. COUNT as a plain
-    function, so Django adds no GROUP BY and the subquery always answers one row."""
-    counted = qs.order_by().annotate(n=Func(F("pk"), function="COUNT")).values("n")
-    return Coalesce(Subquery(counted, output_field=IntegerField()), Value(0))
-
-
 def gyms():
     """Gyms with their counts and owner, a fixed number of queries whatever the page size."""
     owner = GymRole.objects.filter(gym=OuterRef("pk"), is_owner=True).select_related("user")
     return Gym.objects.annotate(
-        branch_count=_count(Branch.objects.filter(gym=OuterRef("pk"), is_active=True)),
-        member_count=_count(Member.objects.filter(gym=OuterRef("pk"), is_archived=False)),
+        branch_count=count_of(Branch.objects.filter(gym=OuterRef("pk"), is_active=True)),
+        member_count=count_of(Member.objects.filter(gym=OuterRef("pk"), is_archived=False)),
         owner_name=Subquery(owner.values("user__name")[:1]),
         owner_email=Subquery(owner.values("user__email")[:1]),
     )
@@ -151,7 +144,7 @@ class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateMod
     def get_queryset(self):
         others = GymRole.objects.filter(user=OuterRef("user"), is_active=True).exclude(gym=OuterRef("gym"))
         return (GymRole.objects.filter(gym=self.gym, role=GymRole.ADMIN).select_related("user")
-                .annotate(other_gyms=_count(others)).order_by("-is_owner", "-is_active", "user__name"))
+                .annotate(other_gyms=count_of(others)).order_by("-is_owner", "-is_active", "user__name"))
 
     def _row(self, role):
         return GymAdminSerializer(self.get_queryset().get(pk=role.pk)).data

@@ -452,6 +452,101 @@ paths:
               schema:
                 $ref: '#/components/schemas/Refresh'
           description: ''
+  /api/billing/branch-requests/:
+    get:
+      operationId: billing_branch_requests_list
+      description: 'Add Branch to My Plan: the gym''s admins ask Rackline for room
+        for more branches. Rackline approves or declines.'
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBranchAskList'
+          description: ''
+    post:
+      operationId: billing_branch_requests_create
+      description: 'Add Branch to My Plan: the gym''s admins ask Rackline for room
+        for more branches. Rackline approves or declines.'
+      tags:
+      - billing
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BranchAskCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BranchAskCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BranchAskCreateRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchAsk'
+          description: ''
+  /api/billing/branch-requests/{id}/:
+    get:
+      operationId: billing_branch_requests_retrieve
+      description: 'Add Branch to My Plan: the gym''s admins ask Rackline for room
+        for more branches. Rackline approves or declines.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch request.
+        required: true
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchAsk'
+          description: ''
+  /api/billing/plan/:
+    get:
+      operationId: billing_plan_retrieve
+      description: |-
+        What the gym pays Rackline and for how many branches. Open while the gym is suspended: its admins can still
+        see their plan.
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymPlan'
+          description: ''
   /api/branches/:
     get:
       operationId: branches_list
@@ -3350,6 +3445,132 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/platform/branch-requests/:
+    get:
+      operationId: platform_branch_requests_list
+      description: Every gym's requests for more branches, to Approve or Decline.
+        Filter with `?status=asked` or `?gym=`.
+      parameters:
+      - in: query
+        name: gym
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - approved
+          - asked
+          - declined
+        description: |-
+          * `asked` - Asked
+          * `approved` - Approved
+          * `declined` - Declined
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConsoleBranchAskList'
+          description: ''
+  /api/platform/branch-requests/{id}/:
+    get:
+      operationId: platform_branch_requests_retrieve
+      description: Every gym's requests for more branches, to Approve or Decline.
+        Filter with `?status=asked` or `?gym=`.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch request.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleBranchAsk'
+          description: ''
+  /api/platform/branch-requests/{id}/approve/:
+    post:
+      operationId: platform_branch_requests_approve_create
+      description: The gym's quota goes up now; the rest of this billing month is
+        charged on its next invoice.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch request.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleBranchAsk'
+          description: ''
+  /api/platform/branch-requests/{id}/decline/:
+    post:
+      operationId: platform_branch_requests_decline_create
+      description: Every gym's requests for more branches, to Approve or Decline.
+        Filter with `?status=asked` or `?gym=`.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this branch request.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclineRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeclineRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeclineRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleBranchAsk'
+          description: ''
   /api/platform/gyms/:
     get:
       operationId: platform_gyms_list
@@ -3607,6 +3828,85 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/platform/gyms/{gym_id}/plan/:
+    get:
+      operationId: platform_gyms_plan_retrieve
+      description: 'A gym''s Rackline plan: its prices, branch quota, billing day
+        and WhatsApp mode.'
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolePlan'
+          description: ''
+    patch:
+      operationId: platform_gyms_plan_partial_update
+      description: Set the quota (never below the branches open), the billing day
+        or the WhatsApp mode.
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlanChangeRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolePlan'
+          description: ''
+  /api/platform/gyms/{gym_id}/plan/current-prices/:
+    post:
+      operationId: platform_gyms_plan_current_prices_create
+      description: 'Move to Current Prices: the gym''s next invoice uses today''s
+        price list.'
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsolePlan'
+          description: ''
   /api/platform/gyms/{id}/:
     get:
       operationId: platform_gyms_retrieve
@@ -3731,6 +4031,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GymDetail'
+          description: ''
+  /api/platform/prices/:
+    get:
+      operationId: platform_prices_list
+      description: 'Rackline''s price lists, newest first. Added, never edited: gyms
+        move to new prices one by one.'
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPriceListList'
+          description: ''
+    post:
+      operationId: platform_prices_create
+      description: 'Rackline''s price lists, newest first. Added, never edited: gyms
+        move to new prices one by one.'
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceListCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PriceListCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceListCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceList'
           description: ''
   /api/recurring-expenses/:
     get:
@@ -5735,6 +6091,105 @@ components:
       required:
       - account
       - branch
+    BranchAsk:
+      type: object
+      description: A request for more branches, as the gym's admins see it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        count:
+          type: integer
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+          description: What the admin told Rackline, e.g. where it opens
+        status:
+          allOf:
+          - $ref: '#/components/schemas/BranchAskStatusEnum'
+          readOnly: true
+        asked_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        decline_reason:
+          type: string
+          readOnly: true
+        charged_from:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: The gym's day it was approved
+        charged_to:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Last day of that billing month
+        days_charged:
+          type: integer
+          readOnly: true
+          nullable: true
+        period_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Days in that billing month
+        rate_paise:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: The per-branch fee it was worked out at
+        pro_rata_paise:
+          type: integer
+          readOnly: true
+          nullable: true
+      required:
+      - asked_by_name
+      - charged_from
+      - charged_to
+      - count
+      - created_at
+      - days_charged
+      - decided_at
+      - decline_reason
+      - id
+      - note
+      - period_days
+      - pro_rata_paise
+      - rate_paise
+      - status
+    BranchAskCreateRequest:
+      type: object
+      properties:
+        count:
+          type: integer
+          maximum: 5
+          minimum: 1
+        note:
+          type: string
+          default: ''
+          maxLength: 200
+    BranchAskStatusEnum:
+      enum:
+      - asked
+      - approved
+      - declined
+      type: string
+      description: |-
+        * `asked` - Asked
+        * `approved` - Approved
+        * `declined` - Declined
     BranchCash:
       type: object
       description: 'A branch''s cash in hand, as the desk sees it: what it holds now
@@ -5920,6 +6375,196 @@ components:
         * `admin` - admin
         * `receptionist` - receptionist
         * `trainer` - trainer
+    ConsoleBranchAsk:
+      type: object
+      description: 'A request in the Console: whose it is, who decided it and the
+        gym''s plan right now. All from the queryset.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        count:
+          type: integer
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+          description: What the admin told Rackline, e.g. where it opens
+        status:
+          allOf:
+          - $ref: '#/components/schemas/BranchAskStatusEnum'
+          readOnly: true
+        asked_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        decline_reason:
+          type: string
+          readOnly: true
+        charged_from:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: The gym's day it was approved
+        charged_to:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Last day of that billing month
+        days_charged:
+          type: integer
+          readOnly: true
+          nullable: true
+        period_days:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Days in that billing month
+        rate_paise:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: The per-branch fee it was worked out at
+        pro_rata_paise:
+          type: integer
+          readOnly: true
+          nullable: true
+        gym:
+          type: integer
+          readOnly: true
+        gym_name:
+          type: string
+          readOnly: true
+        decided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        branch_quota:
+          type: integer
+          readOnly: true
+        per_branch_paise:
+          type: integer
+          readOnly: true
+        branches_in_use:
+          type: integer
+          readOnly: true
+      required:
+      - asked_by_name
+      - branch_quota
+      - branches_in_use
+      - charged_from
+      - charged_to
+      - count
+      - created_at
+      - days_charged
+      - decided_at
+      - decided_by_name
+      - decline_reason
+      - gym
+      - gym_name
+      - id
+      - note
+      - per_branch_paise
+      - period_days
+      - pro_rata_paise
+      - rate_paise
+      - status
+    ConsolePlan:
+      type: object
+      description: |-
+        A gym's Rackline plan as both its admins and the Console see it. `branches_in_use` and `current_prices`
+        are filled in by the view (one query each).
+      properties:
+        base_paise:
+          type: integer
+          readOnly: true
+          description: Monthly base fee
+        per_branch_paise:
+          type: integer
+          readOnly: true
+          description: Monthly fee for each branch the plan has room for
+        whatsapp_setup_paise:
+          type: integer
+          readOnly: true
+          description: One time, for setting up WhatsApp
+        machine_setup_paise:
+          type: integer
+          readOnly: true
+          description: One time, for each attendance machine
+        utility_message_paise:
+          type: integer
+          readOnly: true
+          description: Reminders and receipts (Meta's utility category)
+        marketing_message_paise:
+          type: integer
+          readOnly: true
+          description: Offers and news (Meta's marketing category)
+        authentication_message_paise:
+          type: integer
+          readOnly: true
+          description: Sign-in codes (Meta's authentication category)
+        monthly_paise:
+          type: integer
+          readOnly: true
+          description: Base fee + per-branch fee × quota, billed in advance
+        branch_quota:
+          type: integer
+          readOnly: true
+          description: Branches it can have open at once
+        branches_in_use:
+          type: integer
+          readOnly: true
+          description: Active branches
+        billing_day:
+          type: integer
+          readOnly: true
+          description: Day of the month its invoice is written, for the month ahead
+        whatsapp_mode:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappModeEnum'
+          readOnly: true
+        paid_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Last day its paid invoices cover
+        price_list:
+          allOf:
+          - $ref: '#/components/schemas/PriceListRef'
+          readOnly: true
+        current_prices:
+          allOf:
+          - $ref: '#/components/schemas/PriceListRef'
+          readOnly: true
+          nullable: true
+          description: Today's price list, when the gym isn't on it
+      required:
+      - authentication_message_paise
+      - base_paise
+      - billing_day
+      - branch_quota
+      - branches_in_use
+      - current_prices
+      - machine_setup_paise
+      - marketing_message_paise
+      - monthly_paise
+      - paid_until
+      - per_branch_paise
+      - price_list
+      - utility_message_paise
+      - whatsapp_mode
+      - whatsapp_setup_paise
     CurrentPlan:
       type: object
       properties:
@@ -5965,6 +6610,16 @@ components:
           minimum: 0
       required:
       - days_present
+    DeclineRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Shown to the gym's admins
+          maxLength: 200
+      required:
+      - reason
     Device:
       type: object
       description: 'A device as the Devices screen shows it. Never the token: that
@@ -6781,6 +7436,90 @@ components:
       - status_changed_at
       - status_reason
       - timezone
+    GymPlan:
+      type: object
+      description: 'The gym''s own view: its plan and its latest request for more
+        branches (open, or how it was answered).'
+      properties:
+        base_paise:
+          type: integer
+          readOnly: true
+          description: Monthly base fee
+        per_branch_paise:
+          type: integer
+          readOnly: true
+          description: Monthly fee for each branch the plan has room for
+        whatsapp_setup_paise:
+          type: integer
+          readOnly: true
+          description: One time, for setting up WhatsApp
+        machine_setup_paise:
+          type: integer
+          readOnly: true
+          description: One time, for each attendance machine
+        utility_message_paise:
+          type: integer
+          readOnly: true
+          description: Reminders and receipts (Meta's utility category)
+        marketing_message_paise:
+          type: integer
+          readOnly: true
+          description: Offers and news (Meta's marketing category)
+        authentication_message_paise:
+          type: integer
+          readOnly: true
+          description: Sign-in codes (Meta's authentication category)
+        monthly_paise:
+          type: integer
+          readOnly: true
+          description: Base fee + per-branch fee × quota, billed in advance
+        branch_quota:
+          type: integer
+          readOnly: true
+          description: Branches it can have open at once
+        branches_in_use:
+          type: integer
+          readOnly: true
+          description: Active branches
+        billing_day:
+          type: integer
+          readOnly: true
+          description: Day of the month its invoice is written, for the month ahead
+        whatsapp_mode:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappModeEnum'
+          readOnly: true
+        paid_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Last day its paid invoices cover
+        price_list:
+          allOf:
+          - $ref: '#/components/schemas/PriceListRef'
+          readOnly: true
+        last_request:
+          allOf:
+          - $ref: '#/components/schemas/BranchAsk'
+          readOnly: true
+          nullable: true
+      required:
+      - authentication_message_paise
+      - base_paise
+      - billing_day
+      - branch_quota
+      - branches_in_use
+      - last_request
+      - machine_setup_paise
+      - marketing_message_paise
+      - monthly_paise
+      - paid_until
+      - per_branch_paise
+      - price_list
+      - utility_message_paise
+      - whatsapp_mode
+      - whatsapp_setup_paise
     GymRow:
       type: object
       description: A gym in the Console's list. The counts and the owner come from
@@ -7749,6 +8488,29 @@ components:
       - before
       - total
       - value
+    PaginatedBranchAskList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchAsk'
     PaginatedBranchList:
       type: object
       required:
@@ -7795,6 +8557,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CheckIn'
+    PaginatedConsoleBranchAskList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleBranchAsk'
     PaginatedDeviceList:
       type: object
       required:
@@ -8071,6 +8856,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Plan'
+    PaginatedPriceListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceList'
     PaginatedRecurringExpenseList:
       type: object
       required:
@@ -8472,6 +9280,20 @@ components:
           type: string
           writeOnly: true
           minLength: 1
+    PatchedPlanChangeRequest:
+      type: object
+      properties:
+        branch_quota:
+          type: integer
+          maximum: 200
+          minimum: 1
+        billing_day:
+          type: integer
+          maximum: 28
+          minimum: 1
+          description: 1 to 28, so every month has one
+        whatsapp_mode:
+          $ref: '#/components/schemas/WhatsappModeEnum'
     PatchedPlanRequest:
       type: object
       properties:
@@ -9192,6 +10014,141 @@ components:
       required:
       - name
       - price_paise
+    PriceList:
+      type: object
+      description: A price list. `is_current` is the one in force today; `gym_count`
+        how many gyms' plans were copied from it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        active_from:
+          type: string
+          format: date
+          readOnly: true
+        base_paise:
+          type: integer
+          readOnly: true
+          description: Monthly base fee
+        per_branch_paise:
+          type: integer
+          readOnly: true
+          description: Monthly fee for each branch the plan has room for
+        whatsapp_setup_paise:
+          type: integer
+          readOnly: true
+          description: One time, for setting up WhatsApp
+        machine_setup_paise:
+          type: integer
+          readOnly: true
+          description: One time, for each attendance machine
+        utility_message_paise:
+          type: integer
+          readOnly: true
+          description: Reminders and receipts (Meta's utility category)
+        marketing_message_paise:
+          type: integer
+          readOnly: true
+          description: Offers and news (Meta's marketing category)
+        authentication_message_paise:
+          type: integer
+          readOnly: true
+          description: Sign-in codes (Meta's authentication category)
+        note:
+          type: string
+          readOnly: true
+        is_current:
+          type: boolean
+          readOnly: true
+        gym_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - active_from
+      - authentication_message_paise
+      - base_paise
+      - created_at
+      - gym_count
+      - id
+      - is_current
+      - machine_setup_paise
+      - marketing_message_paise
+      - note
+      - per_branch_paise
+      - utility_message_paise
+      - whatsapp_setup_paise
+    PriceListCreateRequest:
+      type: object
+      description: 'Add Price List: every price in paise. Lists are never edited,
+        so a mistake is a new list from another day.'
+      properties:
+        active_from:
+          type: string
+          format: date
+        base_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: Monthly base fee
+        per_branch_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: Monthly fee for each branch the plan has room for
+        whatsapp_setup_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: One time, for setting up WhatsApp
+        machine_setup_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: One time, for each attendance machine
+        utility_message_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: Reminders and receipts (Meta's utility category)
+        marketing_message_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: Offers and news (Meta's marketing category)
+        authentication_message_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 0
+          description: Sign-in codes (Meta's authentication category)
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - active_from
+      - authentication_message_paise
+      - base_paise
+      - machine_setup_paise
+      - marketing_message_paise
+      - per_branch_paise
+      - utility_message_paise
+      - whatsapp_setup_paise
+    PriceListRef:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        active_from:
+          type: string
+          format: date
+          readOnly: true
+      required:
+      - active_from
+      - id
     PunchRequest:
       type: object
       properties:
@@ -10818,6 +11775,16 @@ components:
           maxLength: 200
       required:
       - reason
+    WhatsappModeEnum:
+      enum:
+      - shared
+      - own
+      - 'off'
+      type: string
+      description: |-
+        * `shared` - Rackline's number
+        * `own` - The gym's own number
+        * `off` - Off
   securitySchemes:
     jwtAuth:
       type: http

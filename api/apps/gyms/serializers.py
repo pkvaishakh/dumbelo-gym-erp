@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import normalize_phone
 from apps.accounts.services import check_login_is_this_gyms
+from apps.billing.services import make_room_for_branch
 from apps.core.errors import RuleBroken
 
 from .models import Branch, BranchSession, Gym, GymRole, SupportAccess
@@ -65,13 +66,18 @@ class BranchSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, data):
         sessions = data.pop("sessions")
-        branch = Branch.objects.create(gym=self.context["request"].gym, **data)
+        gym = self.context["request"].gym
+        if data.get("is_active", True):
+            make_room_for_branch(gym)
+        branch = Branch.objects.create(gym=gym, **data)
         BranchSession.objects.bulk_create([BranchSession(branch=branch, **s) for s in sessions])
         return branch
 
     @transaction.atomic
     def update(self, branch, data):
         sessions = data.pop("sessions", None)
+        if data.get("is_active") and not branch.is_active:  # reopening takes a place in the plan again
+            make_room_for_branch(branch.gym, branch)
         for k, v in data.items():
             setattr(branch, k, v)
         branch.save()

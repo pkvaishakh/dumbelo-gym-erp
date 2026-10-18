@@ -1,6 +1,6 @@
 "use client";
 import {
-  Banknote, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -34,7 +34,12 @@ export default function MorePage() {
     <div className="rl-app rl-root">
       <PageBar title="More" sub={`${me.name} • ${label}`} />
       <main className="rl-app__main">
-        {r === "admin" && paused && <Section title="Your gym"><PausedNotice /></Section>}
+        {r === "admin" && paused && (
+          <Section title="Your gym">
+            <PausedNotice />
+            <ul className="rl-card rl-remind" style={{ marginTop: "var(--space-3)" }}><MenuRow icon={BadgeIndianRupee} title="Rackline plan" href="/rackline-plan" /></ul>
+          </Section>
+        )}
         {admin && (
           <Section title="Your gym">
             <ul className="rl-card rl-remind">
@@ -51,6 +56,7 @@ export default function MorePage() {
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
               <MenuRow icon={SlidersHorizontal} title="Settings" href="/settings" />
+              <MenuRow icon={BadgeIndianRupee} title="Rackline plan" href="/rackline-plan" />
               <MenuRow icon={LifeBuoy} title="Support access" href="/support" />
             </ul>
           </Section>

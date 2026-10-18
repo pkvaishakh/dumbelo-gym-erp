@@ -1,7 +1,7 @@
 "use client";
 /* App frame: headers, bottom navigation per role, the create sheet and the branch switcher. */
 import {
-  ArrowLeft, BarChart3, Building2, CalendarCheck, ChevronDown, ClipboardCheck, ClipboardList, Home, LayoutGrid, ListChecks,
+  ArrowLeft, BadgeIndianRupee, BarChart3, Building2, CalendarCheck, ChevronDown, ClipboardCheck, ClipboardList, Home, Inbox, LayoutGrid, ListChecks,
   Plus, QrCode, Receipt, Repeat, Ticket, UserPlus, Users, Wallet, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -195,6 +195,8 @@ export function TabBar() {
 
 const CONSOLE_TABS: Tab[] = [
   { href: "/console", label: "Gyms", icon: Building2 },
+  { href: "/console/requests", label: "Requests", icon: Inbox },
+  { href: "/console/prices", label: "Prices", icon: BadgeIndianRupee },
   { href: "/console/more", label: "More", icon: LayoutGrid },
 ];
 

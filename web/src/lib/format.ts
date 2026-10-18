@@ -4,7 +4,7 @@ import { differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay,
 export function rupees(paise: number | null | undefined) {
   const p = paise ?? 0;
   const r = p / 100;
-  return "₹" + r.toLocaleString("en-IN", { maximumFractionDigits: p % 100 ? 2 : 0 });
+  return "₹" + r.toLocaleString("en-IN", { minimumFractionDigits: p % 100 ? 2 : 0, maximumFractionDigits: p % 100 ? 2 : 0 });
 }
 
 export function toPaise(rupeesText: string | number) {
@@ -153,4 +153,26 @@ export const GYM_STATUS: Record<string, { label: string; badge: string }> = {
   active: { label: "Active", badge: "active" },
   trial: { label: "Trial", badge: "frozen" },
   suspended: { label: "Suspended", badge: "expired" },
+};
+
+/** "1st", "22nd": the day of the month a gym's Rackline invoice is written. */
+export function ordinal(n: number) {
+  const tens = n % 100;
+  const end = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${end}`;
+}
+
+/** "2 of 3 branches": how much of a gym's Rackline plan is in use. */
+export const branchesOf = (inUse: number, quota: number) => `${inUse} of ${plural(quota, "branch", "branches")}`;
+
+export const WHATSAPP_MODE: Record<string, { label: string; note: string }> = {
+  shared: { label: "Rackline's number", note: "Messages go from Rackline's WhatsApp number, billed by the message" },
+  own: { label: "The gym's own number", note: "Messages go from the gym's own WhatsApp account; it pays Meta itself" },
+  off: { label: "Off", note: "No WhatsApp messages are sent" },
+};
+
+export const BRANCH_ASK_STATUS: Record<string, { label: string; badge: string }> = {
+  asked: { label: "Waiting", badge: "frozen" },
+  approved: { label: "Approved", badge: "active" },
+  declined: { label: "Declined", badge: "expired" },
 };
