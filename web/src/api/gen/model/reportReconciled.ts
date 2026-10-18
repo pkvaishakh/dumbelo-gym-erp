@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ReportsPeriodRetrieveParams = {
-branch?: number;
-from?: string;
-to?: string;
-};
+export interface ReportReconciled {
+  up_to: string;
+  bank_balance_paise: number;
+  by_name: string;
+}

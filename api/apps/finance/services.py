@@ -38,6 +38,27 @@ def with_balance(qs):
                 - F("moved_out_paise"))
 
 
+def with_period(qs, gym, first: date, last: date):
+    """Each account's balance before `first`, what came in and went out from `first` to `last` (the gym's days) and its
+    balance after `last`, in the same query: `with_balance` cut at the period's two ends, with the same rules. In is
+    payments and money moved in; out is expenses, refunds and money moved out."""
+    lo, hi = clock.day_bounds(gym, first)[0], clock.day_bounds(gym, last)[1]
+    return qs.annotate(
+        opening_paise=F("opening_balance_paise")
+        + _total(Payment, "account", voided=False, taken_at__lt=lo) - _total(Refund, "account", voided=False, refunded_at__lt=lo)
+        - _total(Expense, "account", spent_on__lt=first)
+        + _total(MoneyMove, "to_account", voided=False, moved_on__lt=first) - _total(MoneyMove, "from_account", voided=False, moved_on__lt=first),
+        collected_paise=_total(Payment, "account", voided=False, taken_at__gte=lo, taken_at__lt=hi),
+        refunded_paise=_total(Refund, "account", voided=False, refunded_at__gte=lo, refunded_at__lt=hi),
+        spent_paise=_total(Expense, "account", spent_on__range=(first, last)),
+        moved_in_paise=_total(MoneyMove, "to_account", voided=False, moved_on__range=(first, last)),
+        moved_out_paise=_total(MoneyMove, "from_account", voided=False, moved_on__range=(first, last)),
+    ).annotate(
+        in_paise=F("collected_paise") + F("moved_in_paise"),
+        out_paise=F("spent_paise") + F("refunded_paise") + F("moved_out_paise"),
+    ).annotate(closing_paise=F("opening_paise") + F("in_paise") - F("out_paise"))
+
+
 def listed(gym):
     """The gym's accounts as every screen shows them: balance, branch, and the branches a bank account serves."""
     return with_balance(Account.objects.filter(gym=gym)).select_related("branch").prefetch_related(

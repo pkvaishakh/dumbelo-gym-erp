@@ -108,10 +108,10 @@ def test_reports_count_refunds_as_less_revenue(w):
     before = c.get("/api/reports/summary/").json()["revenue"]["today_paise"]
     give(c, sub, 500_00, method="upi")
     assert c.get("/api/reports/summary/").json()["revenue"]["today_paise"] == before - 500_00
-    p = c.get("/api/reports/period/").json()
+    p = c.get("/api/reports/revenue/").json()
     assert p["totals"]["refunds_paise"] == 500_00
     assert p["series"][-1]["revenue_paise"] == before - 500_00
-    assert {r["name"]: r["paise"] for r in p["revenue_by_plan"]}["Monthly"] == before - 500_00
+    assert {r["label"]: r["paise"] for r in p["by_plan"]}["Monthly"] == before - 500_00
 
 
 def test_only_admins_give_refunds_and_the_desk_sees_its_own_branches(w):

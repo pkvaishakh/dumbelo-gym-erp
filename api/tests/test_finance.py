@@ -180,12 +180,13 @@ def test_deposit_withdraw_and_transfer_update_both_balances(w):
 def test_transfers_are_never_income_or_spending(w):
     hdfc, drawer = bank(w, branches=[w.a]), cash(w, w.a, opening=20_000_00)
     c = w.client(w.admin)
-    before = (c.get("/api/reports/summary/").json(), c.get("/api/reports/period/").json()["totals"])
+    reports = lambda: (c.get("/api/reports/revenue/").json()["totals"]["revenue_paise"], c.get("/api/reports/expenses/").json()["totals"]["spent_paise"])  # noqa: E731
+    before = (c.get("/api/reports/summary/").json(), reports())
     c.post(MOVES, {"kind": "transfer", "from_account": drawer.id, "to_account": hdfc.id, "amount_paise": 15_000_00}, format="json")
     c.post(MOVES, {"kind": "deposit", "to_account": hdfc.id, "amount_paise": 10_000_00}, format="json")
-    after = (c.get("/api/reports/summary/").json(), c.get("/api/reports/period/").json()["totals"])
+    after = (c.get("/api/reports/summary/").json(), reports())
     assert (after[0]["revenue"], after[0]["expenses_month_paise"]) == (before[0]["revenue"], before[0]["expenses_month_paise"])
-    assert (after[1]["revenue_paise"], after[1]["expenses_paise"]) == (before[1]["revenue_paise"], before[1]["expenses_paise"])
+    assert after[1] == before[1]
     assert c.get("/api/expenses/totals/").json()["total_paise"] == 0
 
 

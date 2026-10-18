@@ -30,7 +30,11 @@ apps/finance/        Account (branch cash or bank; BranchAccount: the one bank a
 apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
 apps/messages/       WhatsApp reminders: senders.py (FakeSender by default), Message, and the 6 AM job that
                      writes the day's list and sends it (tasks.py). App label "gym_messages": see apps.py
-apps/reports/        SummaryView (admin home, including expense dues), PeriodView (reports)
+apps/reports/        views/summary.py (SummaryView: admin Home, including expense dues; writes due dates); one read-only
+                     report per category (views/overview, revenue, expenses, money, members, attendance, tasks:
+                     GET /api/reports/<category>/?from&to&branch), sharing period.py (report_range: at most MAX_MONTHS = 3
+                     calendar months, never after the gym's today; Period: the querysets, `compare` with the days before
+                     in one query, `daily`) and serializers.py (typed response shapes)
 apps/audit/          AuditLog + record(request, action, obj, before, after)
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)
 ```

@@ -12,7 +12,7 @@ from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, Suppor
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import MessageViewSet
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
-from apps.reports.views import PeriodView, SummaryView
+from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
 from apps.tasks.views import TaskViewSet
 
 router = DefaultRouter()
@@ -49,7 +49,13 @@ urlpatterns = [
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
     path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/
     path("api/reports/summary/", SummaryView.as_view(), name="summary"),
-    path("api/reports/period/", PeriodView.as_view(), name="period"),
+    path("api/reports/overview/", OverviewView.as_view(), name="report-overview"),
+    path("api/reports/revenue/", RevenueView.as_view(), name="report-revenue"),
+    path("api/reports/expenses/", ExpensesView.as_view(), name="report-expenses"),
+    path("api/reports/money/", MoneyView.as_view(), name="report-money"),
+    path("api/reports/members/", MembersView.as_view(), name="report-members"),
+    path("api/reports/attendance/", AttendanceView.as_view(), name="report-attendance"),
+    path("api/reports/tasks/", TasksView.as_view(), name="report-tasks"),
     path("api/gym/settings/", GymSettingsView.as_view(), name="gym-settings"),
     path("api/cash/", CashView.as_view(), name="cash"),
     path("api/", include(router.urls)),

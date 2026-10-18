@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import IntegerField, OuterRef, Prefetch, Subquery, Sum, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Prefetch, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -116,6 +116,12 @@ class MemberQuerySet(models.QuerySet):
         return self.annotate(owed_total=owed - refunded_live, paid_total=paid - refunded).prefetch_related(
             Prefetch("subscriptions", queryset=live, to_attr="live_subs"))
 
+    def owing(self) -> dict:
+        """How many of these members owe money and how much in all: `balance_paise` summed in the database."""
+        left = self.with_totals().annotate(left=F("owed_total") - F("paid_total")).filter(left__gt=0)
+        agg = left.aggregate(n=Count("id"), t=Sum("left"))
+        return {"members": agg["n"], "total_paise": agg["t"] or 0}
+
 
 class Member(GymScoped):
     """The gym's view of a member. `user` is set when the desk creates their login (phone + password)."""
@@ -219,6 +225,8 @@ class Subscription(TimeStamped):
     class Meta:
         ordering = ["-starts"]
         constraints = [models.CheckConstraint(condition=models.Q(ends__gte=models.F("starts")), name="subscription_ends_after_start")]
+        # No gym column to lead with: the Members report finds plans that ran out in a span by their last day.
+        indexes = [models.Index(fields=["ends"], name="subscription_ends")]
 
     def is_frozen(self, today=None):
         today = today or timezone.localdate()
@@ -256,6 +264,7 @@ class Payment(GymScoped):
     class Meta:
         ordering = ["-taken_at"]
         constraints = [models.CheckConstraint(condition=models.Q(amount_paise__gt=0), name="payment_positive")]
+        indexes = [models.Index(fields=["gym", "taken_at"], name="payment_gym_taken_at")]
 
 
 class Refund(GymScoped):
