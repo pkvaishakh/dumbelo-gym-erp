@@ -7,7 +7,10 @@
  */
 
 /**
- * * `sent` - Sent
+ * * `queued` - Sending
+* `sent` - Sent
+* `delivered` - Delivered
+* `read` - Read
 * `failed` - Failed
  */
 export type MessageStatusEnum = typeof MessageStatusEnum[keyof typeof MessageStatusEnum];
@@ -15,6 +18,9 @@ export type MessageStatusEnum = typeof MessageStatusEnum[keyof typeof MessageSta
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MessageStatusEnum = {
+  queued: 'queued',
   sent: 'sent',
+  delivered: 'delivered',
+  read: 'read',
   failed: 'failed',
 } as const;

@@ -195,6 +195,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.billing.tasks.write_invoices",
         "schedule": crontab(minute=5),
     },
+    "message-retries": {
+        # Messages Meta turned away for now (rate limits, Meta busy), tried again once their wait is over
+        "task": "apps.messages.tasks.retry_messages",
+        "schedule": crontab(),  # every minute: the shortest wait is a minute
+    },
 }
 
 # ---- Credentials kept in the database (see apps/messages/crypto.py) ----
@@ -209,7 +214,7 @@ if bad := bad_encryption_keys(FIELD_ENCRYPTION_KEY):
 
 # ---- WhatsApp (see apps/messages/senders.py) ----
 # `fake` sends nothing and keeps what it would have sent, so a laptop and the tests need no WhatsApp account.
-# A server that really sends sets WHATSAPP_PROVIDER=whatsapp_cloud. The numbers and their keys are WhatsApp
+# A server that really sends sets WHATSAPP_PROVIDER=whatsapp_cloud, which posts templates to Meta's Cloud API. The numbers and their keys are WhatsApp
 # accounts in the database (the Console's WhatsApp screen), not settings: Rackline's shared number is one of them.
 WHATSAPP_PROVIDER = env("WHATSAPP_PROVIDER", default="fake")
 WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", default="v23.0")  # Meta's Graph API version, in every call's path

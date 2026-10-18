@@ -1,20 +1,28 @@
-"""How a message leaves Rackline. Nothing here calls a real provider yet.
+"""How a message leaves Rackline.
 
-`WHATSAPP_PROVIDER` picks one. The default, `fake`, keeps what it would have sent in memory, so a laptop and
-the tests can read the exact words without a WhatsApp account. The real one is a stub until sending through Meta
-is built (`docs/decisions.md`, Messages): it finds Rackline's shared number and refuses, so a server switched on
-too early records why nothing went out instead of dropping reminders quietly.
+`WHATSAPP_PROVIDER` picks the sender. The default, `fake`, keeps what it would have sent in memory, so a laptop and
+the tests can read the exact words without a WhatsApp account. `whatsapp_cloud` posts the message's template to
+Meta's Cloud API from the number the message was queued on (`services.py` picks it from the gym's WhatsApp mode).
 """
 from typing import Protocol
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from .models import WhatsAppAccount
+from . import meta
+from .models import Message, WhatsAppAccount
 
 
 class SendFailed(Exception):
-    """The provider wouldn't take the message. The reason goes on the Message row for the gym to read."""
+    """The provider wouldn't take the message. The reason goes on the Message row for the gym to read.
+
+    `temporary`: trying again later may work, and can't send it twice (the provider turned it away or never got
+    it). `code` is the provider's own code for the error, when it gave one.
+    """
+
+    def __init__(self, reason: str, code: str = "", temporary: bool = False):
+        super().__init__(reason)
+        self.code, self.temporary = code, temporary
 
 
 class Sender(Protocol):
@@ -22,8 +30,8 @@ class Sender(Protocol):
 
     name: str
 
-    def send(self, to: str, text: str) -> str:
-        """Send `text` to an Indian mobile number and answer with the provider's id for the message."""
+    def send_message(self, message: Message) -> str:
+        """Send a queued message to its number and answer with the provider's id for it. Raises SendFailed."""
         ...
 
 
@@ -33,28 +41,34 @@ class FakeSender:
     name = "fake"
     outbox: list[tuple[str, str]] = []  # (to, text) for every message, newest last
 
+    def send_message(self, message: Message) -> str:
+        return self.send(message.to, message.text)
+
     def send(self, to: str, text: str) -> str:
         self.outbox.append((to, text))
         return f"fake-{len(self.outbox)}"
 
 
 class CloudSender:
-    """Meta's WhatsApp Cloud API: the shape of the real sender, with the call still to come.
-
-    The numbers and their keys are WhatsApp accounts (`models.WhatsAppAccount`), set up in the Console; Rackline's
-    shared number is the one with no gym. Until sending through Meta is built, every send is recorded as failed,
-    saying why.
-    """
+    """Meta's WhatsApp Cloud API: the message's template, filled in, from the message's own number."""
 
     name = "whatsapp_cloud"
 
     def __init__(self):
-        self.account = WhatsAppAccount.objects.defer(*WhatsAppAccount.SECRET_FIELDS).filter(gym=None).first()
+        self._accounts: dict[int, WhatsAppAccount] = {}  # with their credentials, read once per run
 
-    def send(self, to: str, text: str) -> str:
-        if self.account is None:
-            raise SendFailed("WhatsApp isn't set up: Rackline's shared number hasn't been added in the Console")
-        raise SendFailed("WhatsApp isn't connected yet: sending through Meta comes next")
+    def _account(self, account_id: int) -> WhatsAppAccount:
+        if account_id not in self._accounts:
+            self._accounts[account_id] = WhatsAppAccount.objects.get(pk=account_id)
+        return self._accounts[account_id]
+
+    def send_message(self, message: Message) -> str:
+        if message.account_id is None or message.template_id is None:
+            raise SendFailed("There's no WhatsApp number or template to send this from")
+        try:
+            return meta.send_template(self._account(message.account_id), message.to, message.template, message.parameters)
+        except meta.MetaError as e:
+            raise SendFailed(str(e), code=e.code, temporary=e.temporary) from None
 
 
 SENDERS = {FakeSender.name: FakeSender, CloudSender.name: CloudSender}

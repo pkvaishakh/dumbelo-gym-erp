@@ -219,7 +219,8 @@ What was decided, so code and screens stay consistent. Change this file when a d
   number or who asked us to stop (the opt-out on their profile; replying STOP sets it too).
 - Delivery follows Meta's webhook: sent, delivered, read or failed, never going back. A failure keeps Meta's code
   and reason. Temporary failures (rate limits, Meta busy) are retried up to 3 times with growing waits; others are
-  not. One failure never stops the rest. Shared-number usage is counted from delivered billable messages, so a
+  not. One failure never stops the rest. A message Meta may already have taken (it didn't answer, or our worker
+  stopped mid-send) is never retried on its own: sending nothing beats sending twice. Shared-number usage is counted from delivered billable messages, so a
   repeated webhook can't count one twice.
 - SMS and email are not in the MVP.
 

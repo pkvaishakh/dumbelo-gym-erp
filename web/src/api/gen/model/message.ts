@@ -9,27 +9,24 @@ import type { MessageKindEnum } from './messageKindEnum';
 import type { MessageStatusEnum } from './messageStatusEnum';
 
 /**
- * A reminder as the desk sees it: when it went, what it said, and whether it arrived.
+ * A message as the desk sees it: when it went, what it said, and whether it arrived.
  */
 export interface Message {
   readonly id: number;
-  member: number;
-  readonly member_name: string;
-  kind: MessageKindEnum;
+  /** @nullable */
+  readonly member: number | null;
+  /** @nullable */
+  readonly member_name: string | null;
+  readonly kind: MessageKindEnum;
   readonly kind_label: string;
-  /**
-   * The number it was sent to, as it was that day
-   * @maxLength 13
-   */
-  to: string;
-  text: string;
-  /** The day in the gym's time zone this reminder was for */
-  for_date: string;
-  status: MessageStatusEnum;
-  /**
-   * Why it failed, in the provider's words
-   * @maxLength 200
-   */
-  error?: string;
+  /** The number it was sent to, as it was that day */
+  readonly to: string;
+  /** The template's words, filled in */
+  readonly text: string;
+  /** The day in the gym's time zone it was for */
+  readonly for_date: string;
+  readonly status: MessageStatusEnum;
+  /** Why it failed, in the provider's words */
+  readonly error: string;
   readonly created_at: string;
 }

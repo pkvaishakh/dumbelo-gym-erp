@@ -23,3 +23,13 @@ def send_reminders(at: str | None = None):
         reminders.queue_for(gym, day)
         sent += services.send_due(gym, day)["sent"]
     return sent
+
+
+@shared_task
+def retry_messages(at: str | None = None):
+    """Try again the messages Meta turned away for now (rate limits, Meta busy) whose wait is over.
+
+    Beat runs it every minute. Each message is taken by one run only, so overlapping runs can't send one twice.
+    `at` is an ISO timestamp for running it by hand; beat passes nothing. Returns how many went out.
+    """
+    return services.send_retries(datetime.fromisoformat(at) if at else None)["sent"]
