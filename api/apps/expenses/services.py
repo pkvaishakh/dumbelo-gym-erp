@@ -6,6 +6,7 @@ from django.db.models import Count, Max, Q, Sum
 
 from apps.core import clock
 from apps.core.errors import RuleBroken
+from apps.finance.models import Account
 
 from .models import Expense, ExpenseDue, RecurringExpense
 
@@ -69,6 +70,7 @@ def pay_due(due: ExpenseDue, *, amount_paise: int, method: str, paid_on: date, b
     expense = Expense.objects.create(
         gym=due.gym, branch_id=rule.branch_id, category=rule.category, amount_paise=amount_paise, method=method,
         paid_to=rule.paid_to, note=(note or f"{rule.name}, due {clock.date_label(due.due_on)}")[:200], spent_on=paid_on, created_by=by,
+        account=Account.objects.for_money(rule.branch_id, method, on=paid_on),
     )
     due.status, due.expense = ExpenseDue.PAID, expense
     due.save(update_fields=["status", "expense", "updated_at"])

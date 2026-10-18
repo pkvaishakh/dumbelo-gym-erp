@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { monthLabel, plural, rangeLabel, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
+import { lastDigits, monthLabel, moveLabel, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
 
@@ -91,5 +91,31 @@ describe("monthLabel", () => {
   it("names the month a payslip is for", () => {
     expect(monthLabel("2026-10-01")).toBe("October 2026");
     expect(monthLabel("2027-01")).toBe("January 2027");
+  });
+});
+
+describe("money moves", () => {
+  it("names a move by the accounts it went between", () => {
+    expect(moveLabel({ kind: "transfer", from_kind: "cash", to_kind: "bank" })).toBe("Cash to bank");
+    expect(moveLabel({ kind: "transfer", from_kind: "bank", to_kind: "cash" })).toBe("Bank to cash");
+    expect(moveLabel({ kind: "transfer", from_kind: "cash", to_kind: "cash" })).toBe("Cash between branches");
+    expect(moveLabel({ kind: "transfer", from_kind: "bank", to_kind: "bank" })).toBe("Bank to bank");
+    expect(moveLabel({ kind: "deposit", to_kind: "bank" })).toBe("Deposit");
+    expect(moveLabel({ kind: "withdrawal", from_kind: "cash" })).toBe("Withdrawal");
+  });
+  it("shows only the end of an account number", () => {
+    expect(lastDigits("50200012345678")).toBe("•• 5678");
+    expect(lastDigits("")).toBe("");
+  });
+});
+
+describe("recentMonths", () => {
+  it("lists this month first, then the ones before it", () => {
+    const months = recentMonths(3, new Date(2026, 0, 15));
+    expect(months).toEqual([
+      { value: "2026-01", label: "This month" },
+      { value: "2025-12", label: "Dec 2025" },
+      { value: "2025-11", label: "Nov 2025" },
+    ]);
   });
 });

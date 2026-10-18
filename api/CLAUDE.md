@@ -19,6 +19,9 @@ apps/expenses/       Expense, RecurringExpense + ExpenseDue (each date a bill is
                      pay_due, skip_due, bills_due)
 apps/payroll/        SalaryRule (+ SalaryItem), Payslip (+ PayslipLine), SalaryPayment; services.py (generate,
                      pay_for, approve, pay, salaries_owed). Paying a bill or salary writes an Expense
+apps/finance/        Account (branch cash or bank; BranchAccount: the one bank account a branch uses), MoneyMove (deposit,
+                     withdrawal, transfer); services.py (with_balance, set_branches, move, void, overview, statement). Payments
+                     and expenses carry the account they hit: `Account.objects.for_money(branch_id, method)`
 apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
 apps/messages/       WhatsApp reminders: senders.py (FakeSender by default), Message, and the 6 AM job that
                      writes the day's list and sends it (tasks.py). App label "gym_messages": see apps.py

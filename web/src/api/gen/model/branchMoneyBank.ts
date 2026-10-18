@@ -5,8 +5,9 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { AccountBrief } from './accountBrief';
 
-export interface TokenRefresh {
-  readonly access: string;
-  refresh: string;
-}
+/**
+ * @nullable
+ */
+export type BranchMoneyBank = AccountBrief | null;

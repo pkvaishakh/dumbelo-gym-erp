@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface TokenRefreshRequest {
-  /** @minLength 1 */
-  refresh: string;
+export interface AccountBrief {
+  id: number;
+  name: string;
+  balance_paise: number;
+  /** Other branches that use this bank account */
+  shared_with: string[];
 }

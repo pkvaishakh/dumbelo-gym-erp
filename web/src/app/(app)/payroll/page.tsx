@@ -1,5 +1,4 @@
 "use client";
-import { format, subMonths } from "date-fns";
 import { Banknote, Calculator, CircleCheck, UserRoundX, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,23 +8,15 @@ import { usePayslipsList, usePayslipsSummaryRetrieve } from "@/api/gen/payslips/
 import { PageBar } from "@/components/shell";
 import { Chips, Empty, ErrorText, Photo, Section, SkeletonRows, Stat } from "@/components/ui";
 import { PayslipStatus } from "@/features/money-out";
-import { monthLabel, PAY_TYPE_SHORT, plural, rupees } from "@/lib/format";
+import { monthLabel, PAY_TYPE_SHORT, plural, recentMonths, rupees } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
-
-/** This month and the five before it, newest first: payroll is worked out for months gone by, not ahead. */
-function recentMonths(now = new Date()) {
-  return Array.from({ length: 6 }, (_, i) => {
-    const m = subMonths(now, i);
-    return { value: format(m, "yyyy-MM"), label: i === 0 ? "This month" : format(m, "MMM yyyy") };
-  });
-}
 
 function PayrollPage() {
   const params = useSearchParams();
   const router = useRouter();
   const { branch, branchName } = useSession();
-  const months = recentMonths();
+  const months = recentMonths(); // payroll is worked out for months gone by, not ahead
   const asked = params.get("month");
   const month = asked && /^\d{4}-\d{2}$/.test(asked) ? asked : months[0]!.value;
   const sum = usePayslipsSummaryRetrieve({ month, ...(branch ? { branch } : {}) }).data?.data;

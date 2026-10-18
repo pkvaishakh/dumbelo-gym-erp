@@ -17,9 +17,9 @@ import type {
 
 import type {
   LoginRequest,
+  Refresh,
+  RefreshRequest,
   TokenBlacklistRequest,
-  TokenRefresh,
-  TokenRefreshRequest,
   Tokens
 } from '.././model';
 
@@ -193,7 +193,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 token if the refresh token is valid.
  */
 export type authRefreshCreateResponse200 = {
-  data: TokenRefresh
+  data: Refresh
   status: 200
 }
     
@@ -212,7 +212,7 @@ export const getAuthRefreshCreateUrl = () => {
   return `/api/auth/refresh/`
 }
 
-export const authRefreshCreate = async (tokenRefreshRequest: TokenRefreshRequest, options?: RequestInit): Promise<authRefreshCreateResponse> => {
+export const authRefreshCreate = async (refreshRequest: RefreshRequest, options?: RequestInit): Promise<authRefreshCreateResponse> => {
   
   return apiFetch<authRefreshCreateResponse>(getAuthRefreshCreateUrl(),
   {      
@@ -220,7 +220,7 @@ export const authRefreshCreate = async (tokenRefreshRequest: TokenRefreshRequest
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      tokenRefreshRequest,)
+      refreshRequest,)
   }
 );}
 
@@ -228,8 +228,8 @@ export const authRefreshCreate = async (tokenRefreshRequest: TokenRefreshRequest
 
 
 export const getAuthRefreshCreateMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRefreshCreate>>, TError,{data: TokenRefreshRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof authRefreshCreate>>, TError,{data: TokenRefreshRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRefreshCreate>>, TError,{data: RefreshRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof authRefreshCreate>>, TError,{data: RefreshRequest}, TContext> => {
 
 const mutationKey = ['authRefreshCreate'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -241,7 +241,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authRefreshCreate>>, {data: TokenRefreshRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authRefreshCreate>>, {data: RefreshRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  authRefreshCreate(data,requestOptions)
@@ -253,15 +253,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AuthRefreshCreateMutationResult = NonNullable<Awaited<ReturnType<typeof authRefreshCreate>>>
-    export type AuthRefreshCreateMutationBody = TokenRefreshRequest
+    export type AuthRefreshCreateMutationBody = RefreshRequest
     export type AuthRefreshCreateMutationError = unknown
 
     export const useAuthRefreshCreate = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRefreshCreate>>, TError,{data: TokenRefreshRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authRefreshCreate>>, TError,{data: RefreshRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof authRefreshCreate>>,
         TError,
-        {data: TokenRefreshRequest},
+        {data: RefreshRequest},
         TContext
       > => {
 

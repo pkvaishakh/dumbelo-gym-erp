@@ -6,6 +6,7 @@ from django.db import transaction
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
+from apps.finance.models import Account
 
 from .models import Member, Payment, Subscription, sold_at
 
@@ -59,15 +60,17 @@ def take_payment(member, amount_paise, method, by, branch=None, subscription=Non
             if sub.paid_paise() < sub.price_paise:
                 subscription = sub
                 break
+    branch = branch or member.home_branch
     return Payment.objects.create(
         gym=member.gym,
         member=member,
         subscription=subscription,
-        branch=branch or member.home_branch,
+        branch=branch,
         amount_paise=amount_paise,
         method=method,
         taken_by=by,
         note=note,
+        account=Account.objects.for_money(branch.id, method, on=clock.today(member.gym)),
     )
 
 

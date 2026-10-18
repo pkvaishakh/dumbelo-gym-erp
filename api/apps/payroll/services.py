@@ -12,6 +12,7 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.expenses.models import Expense
+from apps.finance.models import Account
 from apps.gyms.models import GymRole
 
 from .models import Payslip, PayslipLine, SalaryPayment, SalaryRule
@@ -217,5 +218,6 @@ def pay(slip: Payslip, *, amount_paise: int, method: str, paid_on: date, by: Gym
     expense = Expense.objects.create(
         gym=slip.gym, branch_id=slip.branch_id, category="salaries", amount_paise=amount_paise, method=method, paid_to=name,
         note=(note or f"Salary, {month_label(slip.month)}")[:200], spent_on=paid_on, created_by=by,
+        account=Account.objects.for_money(slip.branch_id, method, on=paid_on),
     )
     return SalaryPayment.objects.create(gym=slip.gym, payslip=slip, amount_paise=amount_paise, method=method, paid_on=paid_on, note=note, paid_by=by, expense=expense)

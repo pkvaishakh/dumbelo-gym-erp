@@ -19,6 +19,8 @@ class Expense(GymScoped):
     note = models.CharField(max_length=200, blank=True)
     spent_on = models.DateField(default=timezone.localdate)
     created_by = models.ForeignKey("gyms.GymRole", on_delete=models.PROTECT, related_name="+")
+    account = models.ForeignKey("finance.Account", null=True, blank=True, on_delete=models.PROTECT, related_name="expenses",
+                                help_text="Where the money came from, set when it is paid: the branch's cash, or its bank account")
 
     class Meta:
         ordering = ["-spent_on", "-created_at"]

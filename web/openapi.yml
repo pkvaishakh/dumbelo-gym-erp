@@ -5,6 +5,279 @@ info:
   description: 'Gym management for many gyms. Send `X-Gym: <gym slug>` with every
     call inside a gym.'
 paths:
+  /api/accounts/:
+    get:
+      operationId: accounts_list
+      description: |-
+        Each branch's cash in hand and the gym's bank accounts, with their balances and the branches each bank account
+        serves. Admins only. Never deleted: deactivated, once empty.
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - bank
+          - cash
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+          description: ''
+    post:
+      operationId: accounts_create
+      description: |-
+        Each branch's cash in hand and the gym's bank accounts, with their balances and the branches each bank account
+        serves. Admins only. Never deleted: deactivated, once empty.
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+  /api/accounts/{id}/:
+    get:
+      operationId: accounts_retrieve
+      description: |-
+        Each branch's cash in hand and the gym's bank accounts, with their balances and the branches each bank account
+        serves. Admins only. Never deleted: deactivated, once empty.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+    put:
+      operationId: accounts_update
+      description: |-
+        Each branch's cash in hand and the gym's bank accounts, with their balances and the branches each bank account
+        serves. Admins only. Never deleted: deactivated, once empty.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+    patch:
+      operationId: accounts_partial_update
+      description: |-
+        Each branch's cash in hand and the gym's bank accounts, with their balances and the branches each bank account
+        serves. Admins only. Never deleted: deactivated, once empty.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+  /api/accounts/{id}/activate/:
+    post:
+      operationId: accounts_activate_create
+      description: |-
+        Each branch's cash in hand and the gym's bank accounts, with their balances and the branches each bank account
+        serves. Admins only. Never deleted: deactivated, once empty.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+  /api/accounts/{id}/deactivate/:
+    post:
+      operationId: accounts_deactivate_create
+      description: Stop using it. It must hold nothing; branches that used it are
+        left without a bank account.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+  /api/accounts/{id}/statement/:
+    get:
+      operationId: accounts_statement_retrieve
+      description: |-
+        One month of this account, entry by entry with the balance after each, to check against the bank's
+        statement or the cash counted at the desk.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM; this month when left out
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountStatement'
+          description: ''
+  /api/accounts/branch/:
+    post:
+      operationId: accounts_branch_create
+      description: Give a branch the bank account its new UPI, card and bank money
+        goes into (or none). Old money stays put.
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BranchAccountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BranchAccountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BranchAccountRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyOverview'
+          description: ''
+  /api/accounts/overview/:
+    get:
+      operationId: accounts_overview_retrieve
+      description: |-
+        The money screen in one call: totals with each account counted once, each branch's cash and bank account,
+        and every account.
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyOverview'
+          description: ''
   /api/auth/login/:
     post:
       operationId: auth_login_create
@@ -67,20 +340,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
+              $ref: '#/components/schemas/RefreshRequest'
         required: true
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenRefresh'
+                $ref: '#/components/schemas/Refresh'
           description: ''
   /api/branches/:
     get:
@@ -1647,6 +1920,154 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Message'
+          description: ''
+  /api/money-moves/:
+    get:
+      operationId: money_moves_list
+      description: |-
+        Deposits, withdrawals and transfers between accounts or branches: money that is neither income nor spending.
+        Admins only. A wrong one is voided with a reason, never edited or deleted.
+      parameters:
+      - in: query
+        name: account
+        schema:
+          type: integer
+        description: Moves in or out of this account
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First day, YYYY-MM-DD
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - deposit
+          - transfer
+          - withdrawal
+        description: |-
+          * `deposit` - Deposit
+          * `withdrawal` - Withdrawal
+          * `transfer` - Transfer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last day, YYYY-MM-DD
+      - in: query
+        name: voided
+        schema:
+          type: boolean
+      tags:
+      - money-moves
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMoneyMoveList'
+          description: ''
+    post:
+      operationId: money_moves_create
+      description: |-
+        Deposits, withdrawals and transfers between accounts or branches: money that is neither income nor spending.
+        Admins only. A wrong one is voided with a reason, never edited or deleted.
+      tags:
+      - money-moves
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoneyMoveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MoneyMoveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MoneyMoveRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyMove'
+          description: ''
+  /api/money-moves/{id}/:
+    get:
+      operationId: money_moves_retrieve
+      description: |-
+        Deposits, withdrawals and transfers between accounts or branches: money that is neither income nor spending.
+        Admins only. A wrong one is voided with a reason, never edited or deleted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this money move.
+        required: true
+      tags:
+      - money-moves
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyMove'
+          description: ''
+  /api/money-moves/{id}/void/:
+    post:
+      operationId: money_moves_void_create
+      description: 'It was wrong: the money goes back where it came from. Kept, marked
+        voided, with the reason.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this money move.
+        required: true
+      tags:
+      - money-moves
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyMove'
           description: ''
   /api/offers/:
     get:
@@ -3952,6 +4373,190 @@ paths:
           description: ''
 components:
   schemas:
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/AccountKindEnum'
+        label:
+          type: string
+          readOnly: true
+          description: The bank account's name, or the branch's name and cash
+        name:
+          type: string
+          description: 'Bank accounts: what the gym calls it, like HDFC current account'
+          maxLength: 80
+        branch:
+          type: integer
+          nullable: true
+          description: 'Cash in hand: the branch whose cash it is'
+        branch_name:
+          type: string
+          readOnly: true
+          nullable: true
+        branches:
+          type: array
+          items:
+            type: integer
+          description: 'Bank accounts: the branches that use it. A branch using another
+            account moves here'
+        branch_names:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        bank_name:
+          type: string
+          maxLength: 80
+        account_number:
+          type: string
+          maxLength: 20
+        ifsc:
+          type: string
+          maxLength: 11
+        opening_balance_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 0
+          format: int64
+        opened_on:
+          type: string
+          format: date
+          readOnly: true
+          description: 'The day it was added to Rackline: money recorded from then
+            on moves its balance'
+        is_active:
+          type: boolean
+          readOnly: true
+        balance_paise:
+          type: integer
+          readOnly: true
+        collected_paise:
+          type: integer
+          readOnly: true
+          description: Payments taken into it since it was added
+        spent_paise:
+          type: integer
+          readOnly: true
+          description: Expenses paid from it since it was added
+        moved_in_paise:
+          type: integer
+          readOnly: true
+        moved_out_paise:
+          type: integer
+          readOnly: true
+      required:
+      - balance_paise
+      - branch_name
+      - branch_names
+      - collected_paise
+      - id
+      - is_active
+      - kind
+      - label
+      - moved_in_paise
+      - moved_out_paise
+      - opened_on
+      - spent_paise
+    AccountBrief:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        balance_paise:
+          type: integer
+        shared_with:
+          type: array
+          items:
+            type: string
+          description: Other branches that use this bank account
+      required:
+      - balance_paise
+      - id
+      - name
+      - shared_with
+    AccountKindEnum:
+      enum:
+      - cash
+      - bank
+      type: string
+      description: |-
+        * `cash` - Cash in hand
+        * `bank` - Bank account
+    AccountRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/AccountKindEnum'
+        name:
+          type: string
+          description: 'Bank accounts: what the gym calls it, like HDFC current account'
+          maxLength: 80
+        branch:
+          type: integer
+          nullable: true
+          description: 'Cash in hand: the branch whose cash it is'
+        branches:
+          type: array
+          items:
+            type: integer
+          description: 'Bank accounts: the branches that use it. A branch using another
+            account moves here'
+        bank_name:
+          type: string
+          maxLength: 80
+        account_number:
+          type: string
+          maxLength: 20
+        ifsc:
+          type: string
+          maxLength: 11
+        opening_balance_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 0
+          format: int64
+      required:
+      - kind
+    AccountStatement:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+          description: 'The first day shown: the month''s first, or the day the account
+            was added'
+        to:
+          type: string
+          format: date
+          description: 'The last day shown: the month''s last, or today'
+        opening_paise:
+          type: integer
+          description: The balance before the first day
+        closing_paise:
+          type: integer
+          description: The balance after the last day
+        in_paise:
+          type: integer
+        out_paise:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementEntry'
+      required:
+      - closing_paise
+      - entries
+      - from
+      - in_paise
+      - opening_paise
+      - out_paise
+      - to
     BillsDue:
       type: object
       properties:
@@ -3998,6 +4603,38 @@ components:
       - name
       - qr_code
       - sessions
+    BranchAccountRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        account:
+          type: integer
+          nullable: true
+          description: The bank account it uses from now on; null for none
+      required:
+      - account
+      - branch
+    BranchMoney:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cash:
+          allOf:
+          - $ref: '#/components/schemas/AccountBrief'
+          nullable: true
+        bank:
+          allOf:
+          - $ref: '#/components/schemas/AccountBrief'
+          nullable: true
+      required:
+      - bank
+      - cash
+      - id
+      - name
     BranchRef:
       type: object
       properties:
@@ -4813,6 +5450,137 @@ components:
         * `upi` - UPI
         * `card` - Card
         * `bank` - Bank transfer
+    MoneyMove:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/MoneyMoveKindEnum'
+        from_account:
+          type: integer
+          nullable: true
+        from_name:
+          type: string
+          readOnly: true
+          nullable: true
+        from_kind:
+          type: string
+          readOnly: true
+          nullable: true
+        to_account:
+          type: integer
+          nullable: true
+        to_name:
+          type: string
+          readOnly: true
+          nullable: true
+        to_kind:
+          type: string
+          readOnly: true
+          nullable: true
+        amount_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 1
+          format: int64
+        moved_on:
+          type: string
+          format: date
+        note:
+          type: string
+          maxLength: 200
+        created_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+      required:
+      - amount_paise
+      - created_at
+      - created_by_name
+      - from_kind
+      - from_name
+      - id
+      - kind
+      - to_kind
+      - to_name
+      - void_reason
+      - voided
+    MoneyMoveKindEnum:
+      enum:
+      - deposit
+      - withdrawal
+      - transfer
+      type: string
+      description: |-
+        * `deposit` - Deposit
+        * `withdrawal` - Withdrawal
+        * `transfer` - Transfer
+    MoneyMoveRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/MoneyMoveKindEnum'
+        from_account:
+          type: integer
+          nullable: true
+        to_account:
+          type: integer
+          nullable: true
+        amount_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 1
+          format: int64
+        moved_on:
+          type: string
+          format: date
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - amount_paise
+      - kind
+    MoneyOverview:
+      type: object
+      properties:
+        totals:
+          $ref: '#/components/schemas/MoneyTotals'
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/BranchMoney'
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+      required:
+      - accounts
+      - branches
+      - totals
+    MoneyTotals:
+      type: object
+      properties:
+        cash_paise:
+          type: integer
+        bank_paise:
+          type: integer
+        total_paise:
+          type: integer
+      required:
+      - bank_paise
+      - cash_paise
+      - total_paise
     MonthRequest:
       type: object
       properties:
@@ -5092,6 +5860,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Message'
+    PaginatedMoneyMoveList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoneyMove'
     PaginatedOfferList:
       type: object
       required:
@@ -5323,6 +6114,39 @@ components:
           minLength: 6
       required:
       - password
+    PatchedAccountRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/AccountKindEnum'
+        name:
+          type: string
+          description: 'Bank accounts: what the gym calls it, like HDFC current account'
+          maxLength: 80
+        branch:
+          type: integer
+          nullable: true
+          description: 'Cash in hand: the branch whose cash it is'
+        branches:
+          type: array
+          items:
+            type: integer
+          description: 'Bank accounts: the branches that use it. A branch using another
+            account moves here'
+        bank_name:
+          type: string
+          maxLength: 80
+        account_number:
+          type: string
+          maxLength: 20
+        ifsc:
+          type: string
+          maxLength: 11
+        opening_balance_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 0
+          format: int64
     PatchedBranchRequest:
       type: object
       description: A branch with its opening sessions. Sending `sessions` replaces
@@ -6391,6 +7215,31 @@ components:
       - method
       - name
       - starts
+    Refresh:
+      type: object
+      description: |-
+        simplejwt 5.3 refreshes without asking whether the account is still there: a deleted or disabled login
+        would keep getting access tokens, and the app would sit on 401s instead of going back to sign-in.
+      properties:
+        refresh:
+          type: string
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    RefreshRequest:
+      type: object
+      description: |-
+        simplejwt 5.3 refreshes without asking whether the account is still there: a deleted or disabled login
+        would keep getting access tokens, and the app would sit on 401s instead of going back to sign-in.
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
     RemoveLineRequest:
       type: object
       properties:
@@ -6750,6 +7599,49 @@ components:
         * `later` - later
         * `paid` - paid
         * `skipped` - skipped
+    StatementEntry:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/StatementEntryKindEnum'
+        id:
+          type: integer
+        member:
+          type: integer
+          nullable: true
+          description: 'Payments: the member who paid'
+        'on':
+          type: string
+          format: date
+        title:
+          type: string
+        meta:
+          type: string
+        amount_paise:
+          type: integer
+          description: 'Signed: above zero came in, below zero went out'
+        balance_paise:
+          type: integer
+          description: The balance after this entry
+      required:
+      - amount_paise
+      - balance_paise
+      - id
+      - kind
+      - member
+      - meta
+      - 'on'
+      - title
+    StatementEntryKindEnum:
+      enum:
+      - payment
+      - expense
+      - move
+      type: string
+      description: |-
+        * `payment` - payment
+        * `expense` - expense
+        * `move` - move
     Subscription:
       type: object
       properties:
@@ -7012,25 +7904,6 @@ components:
         refresh:
           type: string
           writeOnly: true
-          minLength: 1
-      required:
-      - refresh
-    TokenRefresh:
-      type: object
-      properties:
-        access:
-          type: string
-          readOnly: true
-        refresh:
-          type: string
-      required:
-      - access
-      - refresh
-    TokenRefreshRequest:
-      type: object
-      properties:
-        refresh:
-          type: string
           minLength: 1
       required:
       - refresh

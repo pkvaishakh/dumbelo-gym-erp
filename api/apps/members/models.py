@@ -234,6 +234,8 @@ class Payment(GymScoped):
     note = models.CharField(max_length=200, blank=True)
     voided = models.BooleanField(default=False)
     void_reason = models.CharField(max_length=200, blank=True)
+    account = models.ForeignKey("finance.Account", null=True, blank=True, on_delete=models.PROTECT, related_name="payments",
+                                help_text="Where the money went, set when it is taken: the branch's cash, or its bank account")
 
     class Meta:
         ordering = ["-taken_at"]
