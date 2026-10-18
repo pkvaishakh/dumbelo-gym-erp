@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from apps.core import clock
 from apps.core.errors import RuleBroken
+from apps.core.tenancy import gym_suspended
 from apps.gyms.models import Branch, BranchSession, GymRole
 
 from .models import CheckIn, _token
@@ -18,6 +19,8 @@ def check_in(branch, *, member=None, staff=None, source, by=None, at=None):
     gym = branch.gym
     at = at or timezone.now()
     local = clock.local(gym, at)
+    if gym.is_suspended:  # the wall QR and the turnstile don't come through InGym
+        raise gym_suspended()
     if not branch.is_active:
         raise RuleBroken("branch_closed", f"{branch.name} is not active")
 

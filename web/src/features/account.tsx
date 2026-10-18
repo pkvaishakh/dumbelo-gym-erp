@@ -6,10 +6,10 @@ import { ErrorText, Field, Sheet } from "@/components/ui";
 import { tokens } from "@/lib/api";
 import { phone } from "@/lib/format";
 import { fieldError, useAction } from "@/lib/hooks";
-import { useSession } from "@/lib/session";
+import { useWho } from "@/lib/session";
 
 export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { me } = useSession();
+  const { me } = useWho();
   const fresh = () => ({ name: me.name, email: me.email ?? "", phone: me.phone ? phone(me.phone) : "" });
   const [f, setF] = useState(fresh);
   const [was, setWas] = useState(false);

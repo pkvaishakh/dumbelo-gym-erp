@@ -22,7 +22,7 @@ cd web; npm run dev                                              # http://localh
 ```
 First time: see README.md (venv, `pip install -r requirements-dev.txt`, `migrate`, `seed_demo`, `npm install`).
 Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
-`@rackline.demo`, member `9800000001`. `python manage.py seed_demo --reset` rebuilds the demo gym.
+`@rackline.demo`, member `9800000001`, Rackline admin (the Console) rackline@. `python manage.py seed_demo --reset` rebuilds the demo gym.
 
 ## The four roles (one role per person per gym; full rules in `docs/decisions.md`)
 
@@ -34,6 +34,8 @@ Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptio
 | Member | Their own membership and visits, self check-in by wall QR | See anyone else |
 
 Rackline support: read-only, only while an admin-granted window is open, and logged.
+Rackline admins (`is_superuser`): the Console (`/console`, `/api/platform/`): gyms, their admins, prices, Rackline
+invoices, WhatsApp accounts. Never a gym's members or money without a support window.
 
 ## Don't touch
 

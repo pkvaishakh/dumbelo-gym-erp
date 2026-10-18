@@ -1,14 +1,17 @@
 "use client";
 import { Eye, EyeOff } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Barbell, ErrorText, Icon, Mark } from "@/components/ui";
-import { ApiError, tokens } from "@/lib/api";
+import type { Me } from "@/api/gen/model";
+import { api, ApiError, tokens } from "@/lib/api";
 import { signIn } from "@/lib/session";
 
 export default function LoginPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
@@ -17,9 +20,9 @@ export default function LoginPage() {
   const idRef = useRef<HTMLInputElement>(null);
   const pwRef = useRef<HTMLInputElement>(null);
 
-  const nextPath = () => {
+  const nextPath = (home = "/home") => {
     const n = new URLSearchParams(window.location.search).get("next");
-    return n && n.startsWith("/") && !n.startsWith("//") ? n : "/home";
+    return n && n.startsWith("/") && !n.startsWith("//") ? n : home;
   };
   useEffect(() => { if (tokens.access) router.replace(nextPath()); }, [router]);
 
@@ -34,8 +37,10 @@ export default function LoginPage() {
     setState("busy");
     try {
       await signIn(id.trim(), pw);
+      const me = await api<Me>("/api/me/");
+      qc.setQueryData(["/api/me/"], me); // the app needs it next: no second trip
       setState("done");
-      router.replace(nextPath());
+      router.replace(nextPath(me.is_rackline_admin ? "/console" : "/home")); // Rackline admins land on the Console
     } catch (err) {
       setState("idle");
       setErrors({ form: err instanceof ApiError ? err.message : "Can't reach Rackline. Check your connection and try again." });

@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import type { Me, Role } from "@/api/gen/model";
-import { api, ApiError, gymSlug, onSignedOut, tokens } from "./api";
+import { api, ApiError, gymSlug, onPaused, onSignedOut, tokens } from "./api";
 
 export type RoleName = "admin" | "receptionist" | "trainer" | "member";
 
@@ -13,6 +13,8 @@ type Session = {
   me: Me;
   role: Role & { role: RoleName };
   gym: string;
+  /** Rackline has suspended this gym: everyone sees the paused screen, and its admins can still open More. */
+  paused: boolean;
   /** Admin's chosen branch (null = all branches). Always null for everyone else: they see all their branches. */
   branch: number | null;
   branchName: string;
@@ -21,8 +23,13 @@ type Session = {
   signOut: () => void;
 };
 
+/** Who is signed in, for the frame the gym app and the Console share: the avatar and the account sheets. */
+type Who = { me: Me; signOut: () => void; moreHref: string };
+
 const Ctx = createContext<Session | null>(null);
+const WhoCtx = createContext<Who | null>(null);
 const BRANCH = "rl.branch";
+const ME = ["/api/me/"];
 
 export function useSession() {
   const s = useContext(Ctx);
@@ -30,18 +37,22 @@ export function useSession() {
   return s;
 }
 
+export function useWho() {
+  const w = useContext(WhoCtx);
+  if (!w) throw new Error("useWho outside SessionProvider or ConsoleProvider");
+  return w;
+}
+
 export async function signIn(identifier: string, password: string) {
   const t = await api<{ access: string; refresh: string }>("/api/auth/login/", { method: "POST", json: { identifier, password } });
   tokens.set(t.access, t.refresh);
 }
 
-/** Loads who is signed in and which gym and branch they're working in. Sends people without a session to sign-in. */
-export function SessionProvider({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
+/** Loads who is signed in, and sends people without a session to sign-in. Both providers start here. */
+function useSignedIn() {
   const router = useRouter();
   const qc = useQueryClient();
   const [ready, setReady] = useState(false);
-  const [gym, setGym] = useState<string | null>(null);
-  const [branch, setBranchState] = useState<number | null>(null);
 
   const signOut = useCallback(() => {
     const refresh = tokens.refresh;
@@ -55,11 +66,39 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
   useEffect(() => {
     const toLogin = () => router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);
     onSignedOut.handler = () => { qc.clear(); toLogin(); };
+    // A gym suspended while someone is using it: ask again who they are, and the paused screen takes over.
+    onPaused.handler = () => { qc.invalidateQueries({ queryKey: ME }); };
     if (!tokens.access && !tokens.refresh) toLogin();
     else setReady(true);
   }, [qc, router]);
 
-  const meQ = useQuery({ queryKey: ["/api/me/"], queryFn: () => api<Me>("/api/me/"), enabled: ready });
+  const meQ = useQuery({ queryKey: ME, queryFn: () => api<Me>("/api/me/"), enabled: ready });
+  return { meQ, signOut };
+}
+
+/** What to show when /api/me/ can't answer; null while it loads or once it has. */
+function trouble(meQ: UseQueryResult<Me>) {
+  const signedOut = meQ.error instanceof ApiError && meQ.error.status === 401; // api.ts is already sending them to sign-in
+  if (!meQ.isError || meQ.isFetching || signedOut) return null;
+  return (
+    <div className="rl-root" style={{ padding: 24 }}>
+      <h1 className="rl-display">Can&apos;t reach Rackline</h1>
+      <p className="rl-lede">{meQ.error instanceof ApiError && meQ.error.status ? meQ.error.message : "Check your connection and try again."}</p>
+      <button className="rl-button" style={{ marginTop: 24 }} onClick={() => meQ.refetch()}>Try Again</button>
+    </div>
+  );
+}
+
+/** The gym app's session: who, which gym and which branch. Rackline admins with no gym of their own go to the Console. */
+export function SessionProvider({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { meQ, signOut } = useSignedIn();
+  const [gym, setGym] = useState<string | null>(null);
+  const [branch, setBranchState] = useState<number | null>(null);
+  const consoleOnly = !!meQ.data?.is_rackline_admin && !meQ.data.roles.length;
+
+  useEffect(() => { if (consoleOnly) router.replace("/console"); }, [consoleOnly, router]);
 
   useEffect(() => {
     const me = meQ.data;
@@ -88,6 +127,7 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
       me,
       role: role as Session["role"],
       gym,
+      paused: role.gym_status === "suspended",
       branch,
       branchName: bName,
       setBranch: (id) => {
@@ -104,7 +144,9 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
       signOut,
     };
   }, [meQ.data, gym, branch, qc, signOut]);
+  const who = useMemo(() => (value ? { me: value.me, signOut, moreHref: "/more" } : null), [value, signOut]);
 
+  if (consoleOnly) return <>{fallback}</>;
   if (meQ.data && !meQ.data.roles.length) {
     return (
       <div className="rl-root" style={{ padding: 24 }}>
@@ -114,16 +156,22 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
       </div>
     );
   }
-  const signedOut = meQ.error instanceof ApiError && meQ.error.status === 401; // api.ts is already sending them to sign-in
-  if (meQ.isError && !meQ.isFetching && !signedOut) {
-    return (
-      <div className="rl-root" style={{ padding: 24 }}>
-        <h1 className="rl-display">Can&apos;t reach Rackline</h1>
-        <p className="rl-lede">{meQ.error instanceof ApiError && meQ.error.status ? meQ.error.message : "Check your connection and try again."}</p>
-        <button className="rl-button" style={{ marginTop: 24 }} onClick={() => meQ.refetch()}>Try Again</button>
-      </div>
-    );
-  }
-  if (!value) return <>{fallback}</>;
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  const problem = trouble(meQ);
+  if (problem) return problem;
+  if (!value || !who) return <>{fallback}</>;
+  return <WhoCtx.Provider value={who}><Ctx.Provider value={value}>{children}</Ctx.Provider></WhoCtx.Provider>;
+}
+
+/** The Console's session: Rackline admins only. Anyone else is sent to their gym. */
+export function ConsoleProvider({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
+  const router = useRouter();
+  const { meQ, signOut } = useSignedIn();
+  const me = meQ.data;
+  const allowed = !!me?.is_rackline_admin;
+  useEffect(() => { if (me && !allowed) router.replace("/home"); }, [me, allowed, router]);
+  const who = useMemo(() => (me ? { me, signOut, moreHref: "/console/more" } : null), [me, signOut]);
+  const problem = trouble(meQ);
+  if (problem) return problem;
+  if (!who || !allowed) return <>{fallback}</>;
+  return <WhoCtx.Provider value={who}>{children}</WhoCtx.Provider>;
 }

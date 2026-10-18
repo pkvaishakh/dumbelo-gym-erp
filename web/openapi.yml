@@ -1736,6 +1736,9 @@ paths:
       description: |-
         Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
         Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+
+        This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
+        there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
       tags:
       - me
       security:
@@ -1752,6 +1755,9 @@ paths:
       description: |-
         Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
         Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+
+        This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
+        there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
       tags:
       - me
       requestBody:
@@ -3344,6 +3350,388 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/platform/gyms/:
+    get:
+      operationId: platform_gyms_list
+      description: 'Every gym on Rackline. Gyms are never deleted: a gym that stops
+        paying is suspended.'
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name or short name, 2 characters or more
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - suspended
+          - trial
+        description: |-
+          * `trial` - Trial
+          * `active` - Active
+          * `suspended` - Suspended
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGymRowList'
+          description: ''
+    post:
+      operationId: platform_gyms_create
+      description: 'New Gym: on trial, with its first branch and its owner admin,
+        who can sign in at once.'
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GymCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GymCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GymCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewGym'
+          description: ''
+  /api/platform/gyms/{gym_id}/admins/:
+    get:
+      operationId: platform_gyms_admins_list
+      description: 'A gym''s admin accounts: Add Admin, Reset Password, Deactivate
+        (never the owner), Reactivate, Make Owner.'
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GymAdmin'
+          description: ''
+    post:
+      operationId: platform_gyms_admins_create
+      description: |-
+        Add Admin: someone new to Rackline gets a login with the first password you set; someone who already
+        signs in (at another gym) keeps theirs. A deactivated admin is turned back on.
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GymAdminAddRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GymAdminAddRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GymAdminAddRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymAdmin'
+          description: ''
+  /api/platform/gyms/{gym_id}/admins/{id}/deactivate/:
+    post:
+      operationId: platform_gyms_admins_deactivate_create
+      description: 'A gym''s admin accounts: Add Admin, Reset Password, Deactivate
+        (never the owner), Reactivate, Make Owner.'
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymAdmin'
+          description: ''
+  /api/platform/gyms/{gym_id}/admins/{id}/make-owner/:
+    post:
+      operationId: platform_gyms_admins_make_owner_create
+      description: 'Make this admin the account owner: they handle Rackline billing.
+        The old owner stays an admin.'
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymAdmin'
+          description: ''
+  /api/platform/gyms/{gym_id}/admins/{id}/reactivate/:
+    post:
+      operationId: platform_gyms_admins_reactivate_create
+      description: 'A gym''s admin accounts: Add Admin, Reset Password, Deactivate
+        (never the owner), Reactivate, Make Owner.'
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymAdmin'
+          description: ''
+  /api/platform/gyms/{gym_id}/admins/{id}/reset-password/:
+    post:
+      operationId: platform_gyms_admins_reset_password_create
+      description: A new password for an admin who lost theirs. They're signed out
+        on every device.
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym role.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffPasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/platform/gyms/{id}/:
+    get:
+      operationId: platform_gyms_retrieve
+      description: 'Every gym on Rackline. Gyms are never deleted: a gym that stops
+        paying is suspended.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymDetail'
+          description: ''
+    patch:
+      operationId: platform_gyms_partial_update
+      description: 'Change the gym''s name, time zone or billing email. The short
+        name never changes: the app sends it.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGymEditRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGymEditRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGymEditRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymDetail'
+          description: ''
+  /api/platform/gyms/{id}/activate/:
+    post:
+      operationId: platform_gyms_activate_create
+      description: Turn a suspended or trial gym on.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StatusChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StatusChangeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymDetail'
+          description: ''
+  /api/platform/gyms/{id}/suspend/:
+    post:
+      operationId: platform_gyms_suspend_create
+      description: 'Pause the gym: staff and members are refused at once, admins keep
+        their Rackline plan, messages stop.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this gym.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StatusChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StatusChangeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymDetail'
+          description: ''
   /api/recurring-expenses/:
     get:
       operationId: recurring_expenses_list
@@ -6193,6 +6581,265 @@ components:
         * `monthly` - Every month
         * `quarterly` - Every 3 months
         * `yearly` - Every year
+    GymAdmin:
+      type: object
+      description: 'An admin of the gym. `other_gyms` counts the other gyms the same
+        login opens: a new password works there too.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          readOnly: true
+          nullable: true
+        phone:
+          type: string
+          readOnly: true
+          nullable: true
+        is_owner:
+          type: boolean
+          readOnly: true
+          description: The admin who handles Rackline billing; other admins can't
+            remove them
+        is_active:
+          type: boolean
+          readOnly: true
+        other_gyms:
+          type: integer
+          readOnly: true
+      required:
+      - email
+      - id
+      - is_active
+      - is_owner
+      - name
+      - other_gyms
+      - phone
+    GymAdminAddRequest:
+      type: object
+      description: 'Add Admin: their email, and for someone new to Rackline, their
+        name and a first password.'
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        name:
+          type: string
+          maxLength: 120
+        password:
+          type: string
+          writeOnly: true
+          maxLength: 128
+      required:
+      - email
+    GymBranch:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        is_active:
+          type: boolean
+        member_count:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - member_count
+      - name
+    GymCreateRequest:
+      type: object
+      description: 'New Gym: the gym, its first branch and its owner admin (a new
+        login, or the one they already have).'
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        slug:
+          type: string
+          minLength: 1
+          description: 'Short name the app sends as X-Gym: lowercase letters, numbers
+            and dashes'
+          maxLength: 40
+        timezone:
+          type: string
+          minLength: 1
+          default: Asia/Kolkata
+          maxLength: 40
+        branch:
+          type: string
+          minLength: 1
+          description: The first branch's name
+          maxLength: 80
+        owner_name:
+          type: string
+          description: Needed for a new login
+          maxLength: 120
+        owner_email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        owner_password:
+          type: string
+          writeOnly: true
+          description: Needed for a new login
+          maxLength: 128
+        billing_email:
+          type: string
+          format: email
+          description: The owner's email if left out
+          maxLength: 254
+      required:
+      - branch
+      - name
+      - owner_email
+      - slug
+    GymDetail:
+      type: object
+      description: 'One gym: its status and why it last changed, and its branches.
+        Its admins are their own list.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          description: Sent by the app as the X-Gym header
+          pattern: ^[-a-zA-Z0-9_]+$
+        status:
+          allOf:
+          - $ref: '#/components/schemas/GymStatusEnum'
+          readOnly: true
+        timezone:
+          type: string
+          readOnly: true
+        billing_email:
+          type: string
+          format: email
+          readOnly: true
+        branch_count:
+          type: integer
+          readOnly: true
+          description: Active branches
+        member_count:
+          type: integer
+          readOnly: true
+          description: Members, leaving out archived ones
+        owner_name:
+          type: string
+          readOnly: true
+          nullable: true
+        owner_email:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_reason:
+          type: string
+          readOnly: true
+          description: Why a Rackline admin last suspended or activated it
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/GymBranch'
+          readOnly: true
+      required:
+      - billing_email
+      - branch_count
+      - branches
+      - created_at
+      - id
+      - member_count
+      - name
+      - owner_email
+      - owner_name
+      - slug
+      - status
+      - status_changed_at
+      - status_reason
+      - timezone
+    GymRow:
+      type: object
+      description: A gym in the Console's list. The counts and the owner come from
+        the queryset (`views.gyms`).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          description: Sent by the app as the X-Gym header
+          pattern: ^[-a-zA-Z0-9_]+$
+        status:
+          allOf:
+          - $ref: '#/components/schemas/GymStatusEnum'
+          readOnly: true
+        timezone:
+          type: string
+          readOnly: true
+        billing_email:
+          type: string
+          format: email
+          readOnly: true
+        branch_count:
+          type: integer
+          readOnly: true
+          description: Active branches
+        member_count:
+          type: integer
+          readOnly: true
+          description: Members, leaving out archived ones
+        owner_name:
+          type: string
+          readOnly: true
+          nullable: true
+        owner_email:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - billing_email
+      - branch_count
+      - created_at
+      - id
+      - member_count
+      - name
+      - owner_email
+      - owner_name
+      - slug
+      - status
+      - timezone
     GymSettings:
       type: object
       description: The gym's own rules. Only the switches can be changed here; the
@@ -6216,6 +6863,16 @@ components:
       - name
       - slug
       - timezone
+    GymStatusEnum:
+      enum:
+      - trial
+      - active
+      - suspended
+      type: string
+      description: |-
+        * `trial` - Trial
+        * `active` - Active
+        * `suspended` - Suspended
     LineRequest:
       type: object
       properties:
@@ -6268,10 +6925,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Role'
+        is_rackline_admin:
+          type: boolean
+          description: 'Runs the Console (/console): gyms, their admins, prices'
       required:
       - email
       - id
       - initials
+      - is_rackline_admin
       - name
       - phone
       - roles
@@ -6826,6 +7487,88 @@ components:
           pattern: ^\d{4}-\d{2}$
       required:
       - month
+    NewGym:
+      type: object
+      description: 'One gym: its status and why it last changed, and its branches.
+        Its admins are their own list.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          description: Sent by the app as the X-Gym header
+          pattern: ^[-a-zA-Z0-9_]+$
+        status:
+          allOf:
+          - $ref: '#/components/schemas/GymStatusEnum'
+          readOnly: true
+        timezone:
+          type: string
+          readOnly: true
+        billing_email:
+          type: string
+          format: email
+          readOnly: true
+        branch_count:
+          type: integer
+          readOnly: true
+          description: Active branches
+        member_count:
+          type: integer
+          readOnly: true
+          description: Members, leaving out archived ones
+        owner_name:
+          type: string
+          readOnly: true
+          nullable: true
+        owner_email:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_reason:
+          type: string
+          readOnly: true
+          description: Why a Rackline admin last suspended or activated it
+        status_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/GymBranch'
+          readOnly: true
+        owner_new_login:
+          type: boolean
+          readOnly: true
+          description: 'False: the owner already had a Rackline login and keeps their
+            password'
+      required:
+      - billing_email
+      - branch_count
+      - branches
+      - created_at
+      - id
+      - member_count
+      - name
+      - owner_email
+      - owner_name
+      - owner_new_login
+      - slug
+      - status
+      - status_changed_at
+      - status_reason
+      - timezone
     Note:
       type: object
       properties:
@@ -7144,6 +7887,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Expense'
+    PaginatedGymRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GymRow'
     PaginatedMemberList:
       type: object
       required:
@@ -7555,6 +8321,21 @@ components:
         spent_on:
           type: string
           format: date
+    PatchedGymEditRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 40
+        billing_email:
+          type: string
+          format: email
+          maxLength: 254
     PatchedGymSettingsRequest:
       type: object
       description: The gym's own rules. Only the switches can be changed here; the
@@ -9184,6 +9965,16 @@ components:
         gym_name:
           type: string
           readOnly: true
+        gym_status:
+          allOf:
+          - $ref: '#/components/schemas/GymStatusEnum'
+          readOnly: true
+          description: |-
+            suspended: the app shows its paused screen; only admins reach More
+
+            * `trial` - Trial
+            * `active` - Active
+            * `suspended` - Suspended
         timezone:
           type: string
           readOnly: true
@@ -9204,6 +9995,7 @@ components:
       - branches
       - gym
       - gym_name
+      - gym_status
       - role
       - timezone
     RoleEnum:
@@ -9586,6 +10378,16 @@ components:
         * `expense` - Expense
         * `move` - Money move
         * `refund` - Refund
+    StatusChangeRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Why, for the gym's history
+          maxLength: 200
+      required:
+      - reason
     Subscription:
       type: object
       properties:

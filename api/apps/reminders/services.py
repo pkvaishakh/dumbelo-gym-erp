@@ -43,7 +43,7 @@ def queue_for(gym, for_date: date) -> int:
 
 def gyms_at_reminder_hour(now=None):
     """The gyms whose own clock has just struck 6, with the local day the reminders belong to."""
-    for gym in Gym.objects.filter(status__in=["trial", "active"]):
+    for gym in Gym.objects.filter(status__in=Gym.OPEN):
         here = clock.local(gym, now)
         if here.hour == REMINDER_HOUR:
             yield gym, here.date()

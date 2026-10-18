@@ -9,14 +9,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { greeting } from "@/lib/format";
-import { useSession, type RoleName } from "@/lib/session";
+import { useSession, useWho, type RoleName } from "@/lib/session";
 import { CheckInSheet } from "@/features/checkin";
 
 import { Icon, Mark, Sheet } from "./ui";
 
 function Avatar() {
-  const { me } = useSession();
-  return <Link className="rl-avatar rl-pressable" href="/more" aria-label={`Profile: ${me.name}`}>{me.initials}</Link>;
+  const { me, moreHref } = useWho();
+  return <Link className="rl-avatar rl-pressable" href={moreHref} aria-label={`Profile: ${me.name}`}>{me.initials}</Link>;
 }
 
 /** The greeting at the top of a home screen, with the admin's branch switcher. Goes first inside <main>. */
@@ -189,6 +189,30 @@ export function TabBar() {
       </div></nav>
       {hasCreate && <CreateSheet open={create} onClose={() => setCreate(false)} onCheckIn={() => { setCreate(false); setChecking(true); }} />}
       {hasCreate && <CheckInSheet open={checking} onClose={() => setChecking(false)} />}
+    </div>
+  );
+}
+
+const CONSOLE_TABS: Tab[] = [
+  { href: "/console", label: "Gyms", icon: Building2 },
+  { href: "/console/more", label: "More", icon: LayoutGrid },
+];
+
+/** The Console's bottom navigation, for Rackline admins. */
+export function ConsoleTabBar() {
+  const path = usePathname();
+  if (/\/(new|edit)(\/|$)/.test(path)) return null;
+  const current = (href: string) => (href === "/console" ? path === "/console" || path.startsWith("/console/gyms") : path.startsWith(href));
+  return (
+    <div className="rl-root">
+      {/* The grid is built for five; the Console has fewer tabs, so they share the width evenly. */}
+      <nav className="rl-tabbar" aria-label="Console"><div className="rl-tabbar__in" style={{ gridTemplateColumns: `repeat(${CONSOLE_TABS.length}, minmax(0, 1fr))` }}>
+        {CONSOLE_TABS.map((t) => (
+          <Link key={t.href} className="rl-tab" href={t.href} aria-current={current(t.href) ? "page" : undefined}>
+            <span className="rl-tab__icon"><Icon as={t.icon} /></span>{t.label}
+          </Link>
+        ))}
+      </div></nav>
     </div>
   );
 }

@@ -12,6 +12,7 @@ from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, Suppor
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import MessageViewSet
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
+from apps.platform.views import GymAdminViewSet, GymViewSet
 from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
 from apps.tasks.views import TaskViewSet
 
@@ -37,6 +38,9 @@ router.register("accounts", AccountViewSet, basename="account")
 router.register("money-moves", MoneyMoveViewSet, basename="money-move")
 router.register("drawer-closes", DrawerCloseViewSet, basename="drawer-close")
 router.register("messages", MessageViewSet, basename="message")
+# Rackline's own side (the Console): no X-Gym, Rackline admins only.
+router.register("platform/gyms", GymViewSet, basename="platform-gym")
+router.register(r"platform/gyms/(?P<gym_id>\d+)/admins", GymAdminViewSet, basename="platform-gym-admin")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

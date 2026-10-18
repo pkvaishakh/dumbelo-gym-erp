@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.reminders",
     "apps.messages",
+    "apps.platform",
 ]
 
 MIDDLEWARE = [
@@ -156,6 +157,7 @@ SPECTACULAR_SETTINGS = {
         "MoneyMoveKindEnum": "apps.finance.models.MoneyMove.KINDS",
         "StatementEntryKindEnum": "apps.finance.models.StatementTick.KINDS",
         "TaskStatusEnum": "apps.tasks.models.Task.STATUSES",
+        "GymStatusEnum": "apps.gyms.models.Gym.STATUS",
     },
 }
 # ---- Background jobs (see config/celery.py) ----

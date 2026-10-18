@@ -32,6 +32,7 @@ Search before you write. If the thing exists, use it. If it nearly exists, exten
 
 - **Single sources** to reuse, never re-implement:
   - Gym, role and branch scoping: `GymViewMixin`, `in_my_branches`, role tuples (`apps/core/tenancy.py`)
+  - Rackline's own views (`/api/platform/`): `RacklineViewMixin` / `IsRacklineAdmin` (`apps/core/rackline.py`)
   - Foreign key input: `GymPK` (`apps/members/serializers.py`)
   - Times, days and local formatting: `apps/core/clock.py`
   - Paise and rupees: `apps/core/money.py` (API), `src/lib/format.ts` (web)

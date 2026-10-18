@@ -3,10 +3,22 @@
 The web app sends `X-Gym: <slug>` on every call inside a gym. We check the signed-in user has an active role there
 (or, for Rackline's own team, an open support window) and hang `request.gym` and `request.gym_role` on the request.
 Every gym-scoped view filters by `request.gym`, and by `request.gym_role.branch_ids()` where branches matter.
+
+A gym Rackline has suspended answers `gym_suspended` (403) on every gym endpoint, except views marked
+`open_when_suspended = True`, which its admins can still reach (their Rackline plan and invoices).
 """
-from rest_framework import exceptions, permissions
+from rest_framework import exceptions, permissions, status
 
 from apps.gyms.models import Gym, GymRole, SupportAccess
+
+from .errors import RuleBroken
+
+PAUSED_MESSAGE = "This gym's account is paused. Contact Rackline to turn it back on."
+
+
+def gym_suspended():
+    """The answer for anything a suspended gym's people try to do."""
+    return RuleBroken("gym_suspended", PAUSED_MESSAGE, status=status.HTTP_403_FORBIDDEN)
 
 
 class SupportRole:
@@ -31,8 +43,6 @@ def resolve_gym(request):
         gym = Gym.objects.get(slug=slug)
     except Gym.DoesNotExist:
         raise exceptions.NotFound("No such gym")
-    if gym.status == "suspended":
-        raise exceptions.PermissionDenied("This gym's account is suspended")
     role = GymRole.objects.filter(user=request.user, gym=gym, is_active=True).first()
     if role is None:
         if request.user.is_staff and SupportAccess.open_for(gym):
@@ -43,6 +53,12 @@ def resolve_gym(request):
     return gym, role
 
 
+def check_not_suspended(gym, role, view):
+    """Only after the role is known, so a suspended gym you have no part in still answers 404."""
+    if gym.is_suspended and not (getattr(view, "open_when_suspended", False) and role.role == GymRole.ADMIN):
+        raise gym_suspended()
+
+
 class InGym(permissions.BasePermission):
     """The caller has a role in the gym named by X-Gym. Views add `roles` rules on top (see RoleRules)."""
 
@@ -50,6 +66,7 @@ class InGym(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         gym, role = resolve_gym(request)
+        check_not_suspended(gym, role, view)
         if role.role == "support":
             return request.method in permissions.SAFE_METHODS
         rules = getattr(view, "roles", None)

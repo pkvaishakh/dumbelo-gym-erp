@@ -5,6 +5,7 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { GymStatusEnum } from './gymStatusEnum';
 import type { RoleEnum } from './roleEnum';
 import type { BranchRef } from './branchRef';
 
@@ -12,6 +13,12 @@ export interface Role {
   /** Sent by the app as the X-Gym header */
   readonly gym: string;
   readonly gym_name: string;
+  /** suspended: the app shows its paused screen; only admins reach More
+
+* `trial` - Trial
+* `active` - Active
+* `suspended` - Suspended */
+  readonly gym_status: GymStatusEnum;
   /** The gym's time zone, like Asia/Kolkata: its days start and end there */
   readonly timezone: string;
   role: RoleEnum;
