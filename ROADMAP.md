@@ -41,7 +41,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [ ] Backups, restore drill, onboarding a real gym (session 8)
 
 ## Rackline billing and WhatsApp
-- [ ] Rackline admins, the Console, gyms and their admin accounts, suspend and activate (session 9)
+- [x] Rackline admins, the Console, gyms and their admin accounts, suspend and activate (session 9)
 - [ ] Price list, each gym's Rackline plan, branch quota and buying more branches (session 10)
 - [ ] Rackline invoices, payments, receipts and what each gym owes (session 11)
 - [ ] WhatsApp accounts and templates, credentials encrypted (session 12)

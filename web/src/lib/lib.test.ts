@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countDifference, gymToday, lastDigits, monthLabel, moveLabel, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
+import { countDifference, gymToday, lastDigits, monthLabel, moveLabel, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, trend, until } from "./format";
 import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
@@ -156,5 +156,19 @@ describe("statement CSV", () => {
     expect(csv[2]).toBe("HDFC current,2026-10-02,Payment,Ravi,Payment by UPI,1500.00,2500.00,Yes");
     expect(csv[3]).toBe("HDFC current,2026-10-03,Expense,BESCOM,Utilities by UPI,-200.00,2300.00,");
     expect(csv[4]).toBe("HDFC current,2026-10-18,,Closing balance,,,2300.00,");
+  });
+});
+
+describe("gym short names", () => {
+  it("suggests one from the gym's name that the API accepts", () => {
+    expect(slugify("Iron House, Kochi")).toBe("iron-house-kochi");
+    expect(slugify("  Café Fit  ")).toBe("cafe-fit");
+    expect(slugify("Gym-".repeat(20))).toHaveLength(39); // cut to 40, then the trailing dash goes
+    expect(SLUG_RULE.test(slugify("Pulse Fitness 24x7"))).toBe(true);
+  });
+  it("refuses what the API refuses", () => {
+    expect(SLUG_RULE.test("ab")).toBe(false);
+    expect(SLUG_RULE.test("-iron")).toBe(false);
+    expect(SLUG_RULE.test("Iron")).toBe(false);
   });
 });

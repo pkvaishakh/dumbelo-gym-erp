@@ -5,7 +5,8 @@
 ```
 config/              settings (django-environ, .env), env.py (what a server must be told with
                      PRODUCTION=true), urls (router + a few APIViews)
-apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMixin), errors.py (RuleBroken,
+apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMixin, suspended gyms: gym_suspended and
+                     `open_when_suspended`), rackline.py (IsRacklineAdmin, RacklineViewMixin), errors.py (RuleBroken,
                      error shape), clock.py (gym time zone, days, months), money.py, models.py (GymScoped base),
                      views.py (/api/health/), middleware.py (lets the load balancer's check through),
                      management/commands/seed_demo.py
@@ -35,7 +36,10 @@ apps/reports/        views/summary.py (SummaryView: admin Home, including expens
                      GET /api/reports/<category>/?from&to&branch), sharing period.py (report_range: at most MAX_MONTHS = 3
                      calendar months, never after the gym's today; Period: the querysets, `compare` with the days before
                      in one query, `daily`) and serializers.py (typed response shapes)
-apps/audit/          AuditLog + record(request, action, obj, before, after)
+apps/platform/       Rackline's side under /api/platform/ (no X-Gym, Rackline admins only): services.py (create_gym, suspend,
+                     activate, add_admin, reset_admin_password, deactivate_admin, make_owner), views.py (gyms, a gym's admins),
+                     management/commands/create_gym.py (the same service)
+apps/audit/          AuditLog + record(request, action, obj, before, after, gym=None): pass `gym` from the Console
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)
 ```
 

@@ -141,3 +141,16 @@ export function moveLabel(m: { kind: string; from_kind?: string | null; to_kind?
 
 /** "•• 5678": enough of an account number to tell two accounts apart on a list. */
 export const lastDigits = (n: string | null | undefined) => (n ? `•• ${n.slice(-4)}` : "");
+
+/** A gym's short name from its name, as New Gym suggests it: "Iron House, Kochi" → "iron-house-kochi". The API's
+ *  rule: 3 to 40 lowercase letters, numbers and dashes, starting and ending with a letter or number. */
+export function slugify(name: string) {
+  return name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40).replace(/^-+|-+$/g, "");
+}
+export const SLUG_RULE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
+
+export const GYM_STATUS: Record<string, { label: string; badge: string }> = {
+  active: { label: "Active", badge: "active" },
+  trial: { label: "Trial", badge: "frozen" },
+  suspended: { label: "Suspended", badge: "expired" },
+};

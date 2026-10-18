@@ -1,6 +1,6 @@
 "use client";
 import {
-  Banknote, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Banknote, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -10,20 +10,22 @@ import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
 import { PageBar } from "@/components/shell";
 import { Details, Icon, MenuRow, Section } from "@/components/ui";
 import { AccountSheet, PasswordSheet } from "@/features/account";
+import { PausedNotice } from "@/features/paused";
 import { phone, plural, rupees } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import type { Collection, Summary } from "@/lib/types";
 
 export default function MorePage() {
-  const { me, role, signOut, switchGym } = useSession();
+  const { me, role, paused, signOut, switchGym } = useSession();
   const r = role.role;
+  const admin = r === "admin" && !paused; // a paused gym's admin reaches More only, and the gym's figures stay shut
   const desk = r === "receptionist";
   const label = { admin: "Admin", receptionist: "Receptionist", trainer: "Trainer", member: "Member" }[r];
-  const summary = useGet<Summary>("/api/reports/summary/", undefined, r === "admin");
-  const col = useGet<Collection>("/api/payments/collection/", undefined, r === "admin" || desk);
+  const summary = useGet<Summary>("/api/reports/summary/", undefined, admin);
+  const col = useGet<Collection>("/api/payments/collection/", undefined, admin || desk);
   const spent = useExpensesTodayRetrieve(undefined, { query: { enabled: desk } }).data?.data;
-  const funds = useAccountsOverviewRetrieve({ query: { enabled: r === "admin" } }).data?.data.totals;
+  const funds = useAccountsOverviewRetrieve({ query: { enabled: admin } }).data?.data.totals;
   const drawers = useCashList(undefined, { query: { enabled: desk } }).data?.data;
   const cashIn = drawers?.filter((d) => d.balance_paise !== null).reduce((t, d) => t + (d.balance_paise ?? 0), 0);
   const [sheet, setSheet] = useState<"details" | "password" | null>(null);
@@ -32,7 +34,8 @@ export default function MorePage() {
     <div className="rl-app rl-root">
       <PageBar title="More" sub={`${me.name} • ${label}`} />
       <main className="rl-app__main">
-        {r === "admin" && (
+        {r === "admin" && paused && <Section title="Your gym"><PausedNotice /></Section>}
+        {admin && (
           <Section title="Your gym">
             <ul className="rl-card rl-remind">
               <MenuRow icon={Users} title="Members" href="/members" value={summary.data ? plural(summary.data.members.total, "member") : undefined} />
@@ -94,6 +97,11 @@ export default function MorePage() {
             </ul>
           )}
         </Section>
+        {me.is_rackline_admin && (
+          <Section title="Rackline">
+            <ul className="rl-card rl-remind"><MenuRow icon={ShieldCheck} title="Rackline Console" href="/console" /></ul>
+          </Section>
+        )}
         <Section label="Sign out">
           <ul className="rl-card rl-remind">
             {me.roles.length > 1 && me.roles.filter((x) => x.gym !== role.gym).map((x) => (

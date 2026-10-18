@@ -1,6 +1,9 @@
 "use client";
+import { usePathname } from "next/navigation";
+
 import { TabBar } from "@/components/shell";
-import { SessionProvider } from "@/lib/session";
+import { PausedScreen } from "@/features/paused";
+import { SessionProvider, useSession } from "@/lib/session";
 
 function Loading() {
   return (
@@ -14,11 +17,18 @@ function Loading() {
   );
 }
 
+/** A suspended gym shows its paused screen everywhere, except More for its admins (the API keeps the rest shut). */
+function Frame({ children }: { children: React.ReactNode }) {
+  const { role, paused } = useSession();
+  const path = usePathname();
+  if (!paused) return <>{children}<TabBar /></>;
+  return role.role === "admin" && path === "/more" ? <>{children}</> : <PausedScreen />;
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider fallback={<Loading />}>
-      {children}
-      <TabBar />
+      <Frame>{children}</Frame>
     </SessionProvider>
   );
 }

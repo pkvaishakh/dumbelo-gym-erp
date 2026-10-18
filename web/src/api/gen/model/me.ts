@@ -16,4 +16,6 @@ export interface Me {
   /** @nullable */
   phone: string | null;
   roles: Role[];
+  /** Runs the Console (/console): gyms, their admins, prices */
+  is_rackline_admin: boolean;
 }

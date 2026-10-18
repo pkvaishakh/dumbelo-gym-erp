@@ -5,14 +5,17 @@ from rest_framework.views import exception_handler as drf_handler
 
 
 class RuleBroken(exceptions.APIException):
-    """A business rule said no (expired membership, second check-in today...). 409 with a code the app can switch on."""
+    """A business rule said no (expired membership, second check-in today...). 409 with a code the app can switch on;
+    `status` is for the few rules that are about access rather than the request (a paused gym answers 403)."""
 
     status_code = status.HTTP_409_CONFLICT
     default_code = "rule"
 
-    def __init__(self, code, message):
+    def __init__(self, code, message, status=None):
         super().__init__(detail=message, code=code)
         self.rule_code = code
+        if status is not None:
+            self.status_code = status
 
 
 def exception_handler(exc, context):

@@ -63,6 +63,8 @@ async function refreshAccess(): Promise<boolean> {
 }
 
 export const onSignedOut = { handler: () => {} };
+/** Called when the API says the gym is suspended, so the app can show its paused screen (session.tsx). */
+export const onPaused = { handler: () => {} };
 
 async function send(url: string, init: RequestInit, retry = true): Promise<Response> {
   const headers = new Headers(init.headers);
@@ -94,15 +96,20 @@ async function parse(res: Response) {
   }
 }
 
+type ErrorBody = { error?: { code: string; message: string; fields?: Record<string, unknown> } };
+
+function failure(res: Response, body: unknown) {
+  const err = body && typeof body === "object" ? (body as ErrorBody).error ?? null : null;
+  if (res.status === 403 && err?.code === "gym_suspended") onPaused.handler();
+  return new ApiError(res.status, err?.code ?? "error", err?.message ?? "Something went wrong. Try again.", err?.fields);
+}
+
 /** Plain JSON call: returns the body or throws ApiError. */
 export async function api<T = unknown>(url: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { json, ...rest } = init;
   const res = await send(url, json === undefined ? rest : { ...rest, body: JSON.stringify(json) });
   const body = await parse(res);
-  if (!res.ok) {
-    const err = (body && (body as { error?: { code: string; message: string; fields?: Record<string, unknown> } }).error) || null;
-    throw new ApiError(res.status, err?.code ?? "error", err?.message ?? "Something went wrong. Try again.", err?.fields);
-  }
+  if (!res.ok) throw failure(res, body);
   return body as T;
 }
 
@@ -110,9 +117,6 @@ export async function api<T = unknown>(url: string, init: RequestInit & { json?:
 export async function apiFetch<T>(url: string, options: RequestInit): Promise<T> {
   const res = await send(url, options);
   const data = await parse(res);
-  if (!res.ok) {
-    const err = (data && (data as { error?: { code: string; message: string; fields?: Record<string, unknown> } }).error) || null;
-    throw new ApiError(res.status, err?.code ?? "error", err?.message ?? "Something went wrong. Try again.", err?.fields);
-  }
+  if (!res.ok) throw failure(res, data);
   return { data, status: res.status, headers: res.headers } as T;
 }

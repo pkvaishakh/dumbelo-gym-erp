@@ -16,7 +16,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 
 from apps.core.errors import RuleBroken
-from apps.gyms.models import GymRole
+from apps.core.rackline import is_rackline_admin
+from apps.gyms.models import Gym, GymRole
 
 from . import services
 from .models import User, normalize_phone
@@ -101,12 +102,14 @@ class BranchRefSerializer(serializers.Serializer):
 class RoleSerializer(serializers.ModelSerializer):
     gym = serializers.SlugRelatedField(slug_field="slug", read_only=True)
     gym_name = serializers.CharField(source="gym.name", read_only=True)
+    gym_status = serializers.ChoiceField(source="gym.status", choices=Gym.STATUS, read_only=True,
+                                         help_text="suspended: the app shows its paused screen; only admins reach More")
     timezone = serializers.CharField(source="gym.timezone", read_only=True, help_text="The gym's time zone, like Asia/Kolkata: its days start and end there")
     branches = serializers.SerializerMethodField()
 
     class Meta:
         model = GymRole
-        fields = ["gym", "gym_name", "timezone", "role", "is_owner", "branches"]
+        fields = ["gym", "gym_name", "gym_status", "timezone", "role", "is_owner", "branches"]
 
     @extend_schema_field(BranchRefSerializer(many=True))
     def get_branches(self, obj):
@@ -121,6 +124,7 @@ class MeSerializer(serializers.Serializer):
     email = serializers.EmailField(allow_null=True)
     phone = serializers.CharField(allow_null=True)
     roles = RoleSerializer(many=True)
+    is_rackline_admin = serializers.BooleanField(help_text="Runs the Console (/console): gyms, their admins, prices")
 
 
 class MeEditSerializer(serializers.ModelSerializer):
@@ -168,13 +172,17 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 def me_data(u):
-    roles = GymRole.objects.filter(user=u, is_active=True, gym__status__in=["trial", "active"]).select_related("gym")
-    return MeSerializer({"id": u.id, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles}).data
+    roles = GymRole.objects.filter(user=u, is_active=True).select_related("gym")
+    return MeSerializer({"id": u.id, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles,
+                         "is_rackline_admin": is_rackline_admin(u)}).data
 
 
 class MeView(APIView):
     """Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
-    Staff can change their own name, email and mobile number; a member's details are changed by the front desk."""
+    Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+
+    This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
+    there carry `gym_status`, so the app can show the paused screen instead of failing on every call."""
 
     @extend_schema(responses=MeSerializer)
     def get(self, request):

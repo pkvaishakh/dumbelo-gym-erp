@@ -8,7 +8,10 @@ A tablet or desktop gets the same layout widened (two columns inside 960 px), ne
 ```
 src/app/login                 shared sign-in
 src/app/(app)/layout.tsx      SessionProvider (who, which gym, which branch) + bottom TabBar
-src/app/(app)/<route>         one folder per screen; task screens are /…/new or /…/edit (no tab bar there)
+src/app/(app)/<route>         one folder per screen; task screens are /…/new or /…/edit (no tab bar there).
+                              A suspended gym shows features/paused everywhere but More (admins only)
+src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar; gyms list, a gym,
+                              New Gym, More. Its parts are in src/features/console/
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
                               Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
@@ -22,7 +25,8 @@ src/features/                 bigger parts shared by routes: homes, checkin (des
                               ReportScreen, ReportPrint, Download; parts: Lead, Trend, SeriesChart, BarList; one file per
                               category; categories: the registry)
 src/lib/api.ts                fetch wrapper: token, refresh, X-Gym, ApiError; apiFetch is orval's mutator
-src/lib/session.tsx           useSession(): me, role, gym, branch, setBranch, signOut
+src/lib/session.tsx           useSession(): me, role, gym, paused, branch, setBranch, signOut (gym app); useWho(): me,
+                              signOut (both apps: avatar, account sheets); ConsoleProvider
 src/lib/hooks.ts              useGet (loosely typed GETs), useAction (writes + refresh), fieldError
 src/lib/format.ts             rupees, dates, clock times, greeting, STATUS_LABEL, gymToday (the gym's day, not the device's)
 src/lib/types.ts              shapes of endpoints the schema leaves loose (summary, collection…)

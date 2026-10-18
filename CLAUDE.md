@@ -22,7 +22,7 @@ cd web; npm run dev                                              # http://localh
 ```
 First time: see README.md (venv, `pip install -r requirements-dev.txt`, `migrate`, `seed_demo`, `npm install`).
 Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
-`@rackline.demo`, member `9800000001`. `python manage.py seed_demo --reset` rebuilds the demo gym.
+`@rackline.demo`, member `9800000001`, Rackline admin (the Console) rackline@. `python manage.py seed_demo --reset` rebuilds the demo gym.
 
 ## The four roles (one role per person per gym; full rules in `docs/decisions.md`)
 

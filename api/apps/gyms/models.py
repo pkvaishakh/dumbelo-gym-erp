@@ -12,16 +12,24 @@ from apps.core.models import TimeStamped
 class Gym(TimeStamped):
     """A paying customer (tenant). Everything else hangs off a gym."""
 
-    STATUS = [("trial", "Trial"), ("active", "Active"), ("suspended", "Suspended")]
+    TRIAL, ACTIVE, SUSPENDED = "trial", "active", "suspended"
+    STATUS = [(TRIAL, "Trial"), (ACTIVE, "Active"), (SUSPENDED, "Suspended")]
+    OPEN = (TRIAL, ACTIVE)  # the gyms whose people can use the app
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True, help_text="Sent by the app as the X-Gym header")
-    status = models.CharField(max_length=12, choices=STATUS, default="trial")
+    status = models.CharField(max_length=12, choices=STATUS, default=TRIAL, db_index=True)
+    status_reason = models.CharField(max_length=200, blank=True, help_text="Why a Rackline admin last suspended or activated it")
+    status_changed_at = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=40, default="Asia/Kolkata")
     billing_email = models.EmailField(blank=True)
     reminders_on = models.BooleanField(default=True, help_text="Send members their renewal and dues reminders")
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_suspended(self):
+        return self.status == self.SUSPENDED
 
 
 def _qr_code():

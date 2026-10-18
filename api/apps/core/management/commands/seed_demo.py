@@ -3,6 +3,7 @@
 Every demo login uses the password `rackline-demo`:
   meera@rackline.demo (admin, account owner)   arjun@ / kavya@ (receptionists)   neha@ / neeraj@ / alex@ / imran@ (trainers)
   members sign in with their phone, e.g. 9800000001
+  rackline@rackline.demo (a Rackline admin: the Console at /console, no role in the gym)
 """
 import random
 from datetime import datetime, time, timedelta
@@ -65,6 +66,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, reset=False, members=60, **kw):
         rnd = random.Random(7)
+        self._rackline_admin()
         old = Gym.objects.filter(slug="rackline-fitness").first()
         if old and not reset:
             self.stdout.write("The demo gym already exists. Run with --reset to rebuild it.")
@@ -197,6 +199,11 @@ class Command(BaseCommand):
             f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
             f"Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
         ))
+
+    def _rackline_admin(self):
+        """Rackline's own login for the Console. Kept across --reset: it belongs to no gym."""
+        if not User.objects.filter(email="rackline@rackline.demo").exists():
+            User.objects.create_superuser(email="rackline@rackline.demo", password=PASSWORD, name="Rackline Admin")
 
     def _accounts(self, gym, branches, meera, today):
         """Cash in hand at every branch; one HDFC account shared by Indiranagar and Koramangala, its own account for

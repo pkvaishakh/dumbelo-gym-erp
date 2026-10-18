@@ -41,6 +41,9 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 /**
  * Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
 Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+
+This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
+there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
  */
 export type meRetrieveResponse200 = {
   data: Me
@@ -151,6 +154,9 @@ export function useMeRetrieve<TData = Awaited<ReturnType<typeof meRetrieve>>, TE
 /**
  * Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
 Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+
+This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
+there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
  */
 export type mePartialUpdateResponse200 = {
   data: Me
