@@ -1,6 +1,6 @@
 """Time in the gym's own time zone. Stored times are UTC; days, sessions and reports follow the gym's clock."""
 import calendar
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.utils import timezone
@@ -31,6 +31,13 @@ def date_label(day: date) -> str:
 
 def today(gym):
     return local(gym).date()
+
+
+def moment(value: str) -> datetime:
+    """A time typed on the command line: ISO, or a day (its midnight). Without a time zone it is UTC, as everything
+    stored is. Raises ValueError for anything else."""
+    at = datetime.fromisoformat(value)
+    return at if timezone.is_aware(at) else at.replace(tzinfo=UTC)
 
 
 def day_bounds(gym, day: date):

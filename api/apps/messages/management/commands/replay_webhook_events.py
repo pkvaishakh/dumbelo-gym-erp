@@ -7,11 +7,11 @@
 For a status that came before its send saved Meta's id, or a call that broke on a bug since fixed. Safe to run
 again: statuses only move forward and a reply is acted on once.
 """
-from datetime import UTC, datetime
+from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
+from apps.core import clock
 from apps.core.jobs import run_job
 from apps.core.models import JobRun
 from apps.messages.models import WebhookEvent
@@ -19,12 +19,10 @@ from apps.messages.webhook import replay
 
 
 def _since(value: str) -> datetime:
-    """An ISO time, or a day (from its start). Without a time zone it is UTC, as everything stored is."""
     try:
-        at = datetime.fromisoformat(value)  # a bare day is its midnight
+        return clock.moment(value)
     except ValueError:
         raise CommandError("Give --since as YYYY-MM-DD or YYYY-MM-DDTHH:MM") from None
-    return at if timezone.is_aware(at) else at.replace(tzinfo=UTC)
 
 
 class Command(BaseCommand):

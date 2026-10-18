@@ -272,4 +272,8 @@ What was decided, so code and screens stay consistent. Change this file when a d
   or running, and it is audited. The retries aren't offered: they run every minute anyway. The webhook replay runs
   only when asked (Run Now, or `manage.py replay_webhook_events`): a call that broke on a bug would only break
   again until the bug is fixed.
+- Backups: RDS keeps 14 days, restorable to any second in them, encrypted. Once a month a copy is restored and
+  checked against the live database with `manage.py verify_counts` (rows written by the restore time must match:
+  nothing is ever deleted, so they can't change after it), then deleted. Steps and the drill log:
+  `docs/operations.md`. The old encryption key is kept 14 days after a rotation, so older backups stay readable.
 - Open: more languages than English.
