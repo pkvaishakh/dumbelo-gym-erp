@@ -29,8 +29,15 @@ apps/finance/        Account (branch cash or bank; BranchAccount: the one bank a
                      inside the transaction that records them. Anything that corrects, voids or removes one calls
                      `before_change(kind, id)` first (reconciled entries are locked)
 apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
-apps/messages/       WhatsApp reminders: senders.py (FakeSender by default), Message, and the 6 AM job that
-                     writes the day's list and sends it (tasks.py). App label "gym_messages": see apps.py
+apps/messages/       WhatsApp: senders.py (FakeSender by default), Message, and the 6 AM job that writes the day's
+                     list and sends it (tasks.py). WhatsAppAccount (Rackline's shared number has no gym; a gym's own)
+                     and WhatsAppTemplate (kinds and their PARAMETERS); crypto.py (EncryptedTextField over
+                     FIELD_ENCRYPTION_KEY, MultiFernet; `manage.py rotate_credentials`); accounts.py (add_account,
+                     change_account, replace_credentials, test_connection, account_for: the account a gym sends from,
+                     save_template); meta.py (Graph API calls, errors scrubbed of credentials); views/gym.py
+                     (/api/messages/, /api/gym/whatsapp/) and views/console.py (/api/platform/whatsapp-accounts/,
+                     /api/platform/whatsapp-templates/). Querysets that show an account defer SECRET_FIELDS.
+                     App label "gym_messages": see apps.py
 apps/reports/        views/summary.py (SummaryView: admin Home, including expense dues; writes due dates); one read-only
                      report per category (views/overview, revenue, expenses, money, members, attendance, tasks:
                      GET /api/reports/<category>/?from&to&branch), sharing period.py (report_range: at most MAX_MONTHS = 3

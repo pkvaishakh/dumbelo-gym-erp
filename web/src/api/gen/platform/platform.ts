@@ -36,30 +36,42 @@ import type {
   ConsoleInvoice,
   ConsoleInvoicePayment,
   ConsolePlan,
+  CredentialsRequest,
   DeclineRequest,
   GymAdmin,
   GymAdminAddRequest,
   GymCreateRequest,
   GymDetail,
   InvoiceVoidRequest,
+  MessageKind,
   NewGym,
   PaginatedChargeList,
   PaginatedConsoleBranchAskList,
   PaginatedConsoleInvoiceRowList,
   PaginatedGymRowList,
   PaginatedPriceListList,
+  PaginatedWhatsAppAccountList,
+  PaginatedWhatsAppTemplateList,
   PatchedGymEditRequest,
   PatchedPlanChangeRequest,
+  PatchedWhatsAppAccountChangeRequest,
+  PatchedWhatsAppTemplateInputRequest,
   PlatformBranchRequestsListParams,
   PlatformChargesListParams,
   PlatformGymsListParams,
   PlatformInvoicesListParams,
   PlatformPricesListParams,
+  PlatformWhatsappAccountsListParams,
+  PlatformWhatsappTemplatesListParams,
   PriceList,
   PriceListCreateRequest,
   RecordPaymentRequest,
   StaffPasswordRequest,
-  StatusChangeRequest
+  StatusChangeRequest,
+  WhatsAppAccount,
+  WhatsAppAccountCreateRequest,
+  WhatsAppTemplate,
+  WhatsAppTemplateInputRequest
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -3122,4 +3134,1184 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * WhatsApp accounts: Rackline's shared number first, then gyms' own. Filter with `?gym=` or `?status=`.
+ */
+export type platformWhatsappAccountsListResponse200 = {
+  data: PaginatedWhatsAppAccountList
+  status: 200
+}
     
+export type platformWhatsappAccountsListResponseSuccess = (platformWhatsappAccountsListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappAccountsListResponse = (platformWhatsappAccountsListResponseSuccess)
+
+export const getPlatformWhatsappAccountsListUrl = (params?: PlatformWhatsappAccountsListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/whatsapp-accounts/?${stringifiedParams}` : `/api/platform/whatsapp-accounts/`
+}
+
+export const platformWhatsappAccountsList = async (params?: PlatformWhatsappAccountsListParams, options?: RequestInit): Promise<platformWhatsappAccountsListResponse> => {
+  
+  return apiFetch<platformWhatsappAccountsListResponse>(getPlatformWhatsappAccountsListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformWhatsappAccountsListInfiniteQueryKey = (params?: PlatformWhatsappAccountsListParams,) => {
+    return [
+    'infinite', `/api/platform/whatsapp-accounts/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformWhatsappAccountsListQueryKey = (params?: PlatformWhatsappAccountsListParams,) => {
+    return [
+    `/api/platform/whatsapp-accounts/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformWhatsappAccountsListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, PlatformWhatsappAccountsListParams['offset']>, TError = unknown>(params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData, QueryKey, PlatformWhatsappAccountsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappAccountsListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, QueryKey, PlatformWhatsappAccountsListParams['offset']> = ({ signal, pageParam }) => platformWhatsappAccountsList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData, QueryKey, PlatformWhatsappAccountsListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappAccountsListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsList>>>
+export type PlatformWhatsappAccountsListInfiniteQueryError = unknown
+
+
+export function usePlatformWhatsappAccountsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, PlatformWhatsappAccountsListParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformWhatsappAccountsListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData, QueryKey, PlatformWhatsappAccountsListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappAccountsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, PlatformWhatsappAccountsListParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData, QueryKey, PlatformWhatsappAccountsListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappAccountsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, PlatformWhatsappAccountsListParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData, QueryKey, PlatformWhatsappAccountsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappAccountsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, PlatformWhatsappAccountsListParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData, QueryKey, PlatformWhatsappAccountsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappAccountsListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformWhatsappAccountsListQueryOptions = <TData = Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError = unknown>(params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappAccountsListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappAccountsList>>> = ({ signal }) => platformWhatsappAccountsList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappAccountsListQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsList>>>
+export type PlatformWhatsappAccountsListQueryError = unknown
+
+
+export function usePlatformWhatsappAccountsList<TData = Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError = unknown>(
+ params: undefined |  PlatformWhatsappAccountsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappAccountsList<TData = Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError = unknown>(
+ params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappAccountsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappAccountsList<TData = Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError = unknown>(
+ params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappAccountsList<TData = Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError = unknown>(
+ params?: PlatformWhatsappAccountsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappAccountsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Add Account. Nothing is checked with Meta until Test Connection.
+ */
+export type platformWhatsappAccountsCreateResponse201 = {
+  data: WhatsAppAccount
+  status: 201
+}
+    
+export type platformWhatsappAccountsCreateResponseSuccess = (platformWhatsappAccountsCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappAccountsCreateResponse = (platformWhatsappAccountsCreateResponseSuccess)
+
+export const getPlatformWhatsappAccountsCreateUrl = () => {
+
+
+  
+
+  return `/api/platform/whatsapp-accounts/`
+}
+
+export const platformWhatsappAccountsCreate = async (whatsAppAccountCreateRequest: WhatsAppAccountCreateRequest, options?: RequestInit): Promise<platformWhatsappAccountsCreateResponse> => {
+  
+  return apiFetch<platformWhatsappAccountsCreateResponse>(getPlatformWhatsappAccountsCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      whatsAppAccountCreateRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformWhatsappAccountsCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsCreate>>, TError,{data: WhatsAppAccountCreateRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsCreate>>, TError,{data: WhatsAppAccountCreateRequest}, TContext> => {
+
+const mutationKey = ['platformWhatsappAccountsCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformWhatsappAccountsCreate>>, {data: WhatsAppAccountCreateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  platformWhatsappAccountsCreate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformWhatsappAccountsCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsCreate>>>
+    export type PlatformWhatsappAccountsCreateMutationBody = WhatsAppAccountCreateRequest
+    export type PlatformWhatsappAccountsCreateMutationError = unknown
+
+    export const usePlatformWhatsappAccountsCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsCreate>>, TError,{data: WhatsAppAccountCreateRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformWhatsappAccountsCreate>>,
+        TError,
+        {data: WhatsAppAccountCreateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformWhatsappAccountsCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * WhatsApp accounts: Rackline's shared number first, then gyms' own. Filter with `?gym=` or `?status=`.
+ */
+export type platformWhatsappAccountsRetrieveResponse200 = {
+  data: WhatsAppAccount
+  status: 200
+}
+    
+export type platformWhatsappAccountsRetrieveResponseSuccess = (platformWhatsappAccountsRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappAccountsRetrieveResponse = (platformWhatsappAccountsRetrieveResponseSuccess)
+
+export const getPlatformWhatsappAccountsRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/whatsapp-accounts/${id}/`
+}
+
+export const platformWhatsappAccountsRetrieve = async (id: number, options?: RequestInit): Promise<platformWhatsappAccountsRetrieveResponse> => {
+  
+  return apiFetch<platformWhatsappAccountsRetrieveResponse>(getPlatformWhatsappAccountsRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformWhatsappAccountsRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/platform/whatsapp-accounts/${id}/`
+    ] as const;
+    }
+
+    
+export const getPlatformWhatsappAccountsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappAccountsRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>> = ({ signal }) => platformWhatsappAccountsRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappAccountsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>>
+export type PlatformWhatsappAccountsRetrieveQueryError = unknown
+
+
+export function usePlatformWhatsappAccountsRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappAccountsRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappAccountsRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappAccountsRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappAccountsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappAccountsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * New ids or display number. New ids mean checking it again.
+ */
+export type platformWhatsappAccountsPartialUpdateResponse200 = {
+  data: WhatsAppAccount
+  status: 200
+}
+    
+export type platformWhatsappAccountsPartialUpdateResponseSuccess = (platformWhatsappAccountsPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappAccountsPartialUpdateResponse = (platformWhatsappAccountsPartialUpdateResponseSuccess)
+
+export const getPlatformWhatsappAccountsPartialUpdateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/whatsapp-accounts/${id}/`
+}
+
+export const platformWhatsappAccountsPartialUpdate = async (id: number,
+    patchedWhatsAppAccountChangeRequest: PatchedWhatsAppAccountChangeRequest, options?: RequestInit): Promise<platformWhatsappAccountsPartialUpdateResponse> => {
+  
+  return apiFetch<platformWhatsappAccountsPartialUpdateResponse>(getPlatformWhatsappAccountsPartialUpdateUrl(id),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedWhatsAppAccountChangeRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformWhatsappAccountsPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsPartialUpdate>>, TError,{id: number;data: PatchedWhatsAppAccountChangeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsPartialUpdate>>, TError,{id: number;data: PatchedWhatsAppAccountChangeRequest}, TContext> => {
+
+const mutationKey = ['platformWhatsappAccountsPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformWhatsappAccountsPartialUpdate>>, {id: number;data: PatchedWhatsAppAccountChangeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformWhatsappAccountsPartialUpdate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformWhatsappAccountsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsPartialUpdate>>>
+    export type PlatformWhatsappAccountsPartialUpdateMutationBody = PatchedWhatsAppAccountChangeRequest
+    export type PlatformWhatsappAccountsPartialUpdateMutationError = unknown
+
+    export const usePlatformWhatsappAccountsPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsPartialUpdate>>, TError,{id: number;data: PatchedWhatsAppAccountChangeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformWhatsappAccountsPartialUpdate>>,
+        TError,
+        {id: number;data: PatchedWhatsAppAccountChangeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformWhatsappAccountsPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * New access token, app secret or both. The audit log says which changed, never what to.
+ */
+export type platformWhatsappAccountsReplaceCredentialsCreateResponse200 = {
+  data: WhatsAppAccount
+  status: 200
+}
+    
+export type platformWhatsappAccountsReplaceCredentialsCreateResponseSuccess = (platformWhatsappAccountsReplaceCredentialsCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappAccountsReplaceCredentialsCreateResponse = (platformWhatsappAccountsReplaceCredentialsCreateResponseSuccess)
+
+export const getPlatformWhatsappAccountsReplaceCredentialsCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/whatsapp-accounts/${id}/replace-credentials/`
+}
+
+export const platformWhatsappAccountsReplaceCredentialsCreate = async (id: number,
+    credentialsRequest: CredentialsRequest, options?: RequestInit): Promise<platformWhatsappAccountsReplaceCredentialsCreateResponse> => {
+  
+  return apiFetch<platformWhatsappAccountsReplaceCredentialsCreateResponse>(getPlatformWhatsappAccountsReplaceCredentialsCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      credentialsRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformWhatsappAccountsReplaceCredentialsCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsReplaceCredentialsCreate>>, TError,{id: number;data: CredentialsRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsReplaceCredentialsCreate>>, TError,{id: number;data: CredentialsRequest}, TContext> => {
+
+const mutationKey = ['platformWhatsappAccountsReplaceCredentialsCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformWhatsappAccountsReplaceCredentialsCreate>>, {id: number;data: CredentialsRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformWhatsappAccountsReplaceCredentialsCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformWhatsappAccountsReplaceCredentialsCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsReplaceCredentialsCreate>>>
+    export type PlatformWhatsappAccountsReplaceCredentialsCreateMutationBody = CredentialsRequest
+    export type PlatformWhatsappAccountsReplaceCredentialsCreateMutationError = unknown
+
+    export const usePlatformWhatsappAccountsReplaceCredentialsCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsReplaceCredentialsCreate>>, TError,{id: number;data: CredentialsRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformWhatsappAccountsReplaceCredentialsCreate>>,
+        TError,
+        {id: number;data: CredentialsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformWhatsappAccountsReplaceCredentialsCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Test Connection: asks Meta for the number's details. Sends no message.
+ */
+export type platformWhatsappAccountsTestCreateResponse200 = {
+  data: WhatsAppAccount
+  status: 200
+}
+    
+export type platformWhatsappAccountsTestCreateResponseSuccess = (platformWhatsappAccountsTestCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappAccountsTestCreateResponse = (platformWhatsappAccountsTestCreateResponseSuccess)
+
+export const getPlatformWhatsappAccountsTestCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/whatsapp-accounts/${id}/test/`
+}
+
+export const platformWhatsappAccountsTestCreate = async (id: number, options?: RequestInit): Promise<platformWhatsappAccountsTestCreateResponse> => {
+  
+  return apiFetch<platformWhatsappAccountsTestCreateResponse>(getPlatformWhatsappAccountsTestCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getPlatformWhatsappAccountsTestCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsTestCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsTestCreate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['platformWhatsappAccountsTestCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformWhatsappAccountsTestCreate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  platformWhatsappAccountsTestCreate(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformWhatsappAccountsTestCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappAccountsTestCreate>>>
+    
+    export type PlatformWhatsappAccountsTestCreateMutationError = unknown
+
+    export const usePlatformWhatsappAccountsTestCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappAccountsTestCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformWhatsappAccountsTestCreate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformWhatsappAccountsTestCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * An account's templates (`?account=`), by message. Never deleted: one Meta no longer sends is Disabled.
+ */
+export type platformWhatsappTemplatesListResponse200 = {
+  data: PaginatedWhatsAppTemplateList
+  status: 200
+}
+    
+export type platformWhatsappTemplatesListResponseSuccess = (platformWhatsappTemplatesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappTemplatesListResponse = (platformWhatsappTemplatesListResponseSuccess)
+
+export const getPlatformWhatsappTemplatesListUrl = (params?: PlatformWhatsappTemplatesListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/whatsapp-templates/?${stringifiedParams}` : `/api/platform/whatsapp-templates/`
+}
+
+export const platformWhatsappTemplatesList = async (params?: PlatformWhatsappTemplatesListParams, options?: RequestInit): Promise<platformWhatsappTemplatesListResponse> => {
+  
+  return apiFetch<platformWhatsappTemplatesListResponse>(getPlatformWhatsappTemplatesListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformWhatsappTemplatesListInfiniteQueryKey = (params?: PlatformWhatsappTemplatesListParams,) => {
+    return [
+    'infinite', `/api/platform/whatsapp-templates/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformWhatsappTemplatesListQueryKey = (params?: PlatformWhatsappTemplatesListParams,) => {
+    return [
+    `/api/platform/whatsapp-templates/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformWhatsappTemplatesListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, PlatformWhatsappTemplatesListParams['offset']>, TError = unknown>(params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData, QueryKey, PlatformWhatsappTemplatesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappTemplatesListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, QueryKey, PlatformWhatsappTemplatesListParams['offset']> = ({ signal, pageParam }) => platformWhatsappTemplatesList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData, QueryKey, PlatformWhatsappTemplatesListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappTemplatesListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>>
+export type PlatformWhatsappTemplatesListInfiniteQueryError = unknown
+
+
+export function usePlatformWhatsappTemplatesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, PlatformWhatsappTemplatesListParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformWhatsappTemplatesListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData, QueryKey, PlatformWhatsappTemplatesListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, PlatformWhatsappTemplatesListParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData, QueryKey, PlatformWhatsappTemplatesListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, PlatformWhatsappTemplatesListParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData, QueryKey, PlatformWhatsappTemplatesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappTemplatesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, PlatformWhatsappTemplatesListParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData, QueryKey, PlatformWhatsappTemplatesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappTemplatesListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformWhatsappTemplatesListQueryOptions = <TData = Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError = unknown>(params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappTemplatesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>> = ({ signal }) => platformWhatsappTemplatesList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappTemplatesListQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>>
+export type PlatformWhatsappTemplatesListQueryError = unknown
+
+
+export function usePlatformWhatsappTemplatesList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError = unknown>(
+ params: undefined |  PlatformWhatsappTemplatesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError = unknown>(
+ params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError = unknown>(
+ params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappTemplatesList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError = unknown>(
+ params?: PlatformWhatsappTemplatesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappTemplatesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * An account's templates (`?account=`), by message. Never deleted: one Meta no longer sends is Disabled.
+ */
+export type platformWhatsappTemplatesCreateResponse201 = {
+  data: WhatsAppTemplate
+  status: 201
+}
+    
+export type platformWhatsappTemplatesCreateResponseSuccess = (platformWhatsappTemplatesCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappTemplatesCreateResponse = (platformWhatsappTemplatesCreateResponseSuccess)
+
+export const getPlatformWhatsappTemplatesCreateUrl = () => {
+
+
+  
+
+  return `/api/platform/whatsapp-templates/`
+}
+
+export const platformWhatsappTemplatesCreate = async (whatsAppTemplateInputRequest: WhatsAppTemplateInputRequest, options?: RequestInit): Promise<platformWhatsappTemplatesCreateResponse> => {
+  
+  return apiFetch<platformWhatsappTemplatesCreateResponse>(getPlatformWhatsappTemplatesCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      whatsAppTemplateInputRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformWhatsappTemplatesCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesCreate>>, TError,{data: WhatsAppTemplateInputRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesCreate>>, TError,{data: WhatsAppTemplateInputRequest}, TContext> => {
+
+const mutationKey = ['platformWhatsappTemplatesCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformWhatsappTemplatesCreate>>, {data: WhatsAppTemplateInputRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  platformWhatsappTemplatesCreate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformWhatsappTemplatesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappTemplatesCreate>>>
+    export type PlatformWhatsappTemplatesCreateMutationBody = WhatsAppTemplateInputRequest
+    export type PlatformWhatsappTemplatesCreateMutationError = unknown
+
+    export const usePlatformWhatsappTemplatesCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesCreate>>, TError,{data: WhatsAppTemplateInputRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformWhatsappTemplatesCreate>>,
+        TError,
+        {data: WhatsAppTemplateInputRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformWhatsappTemplatesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * An account's templates (`?account=`), by message. Never deleted: one Meta no longer sends is Disabled.
+ */
+export type platformWhatsappTemplatesRetrieveResponse200 = {
+  data: WhatsAppTemplate
+  status: 200
+}
+    
+export type platformWhatsappTemplatesRetrieveResponseSuccess = (platformWhatsappTemplatesRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappTemplatesRetrieveResponse = (platformWhatsappTemplatesRetrieveResponseSuccess)
+
+export const getPlatformWhatsappTemplatesRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/whatsapp-templates/${id}/`
+}
+
+export const platformWhatsappTemplatesRetrieve = async (id: number, options?: RequestInit): Promise<platformWhatsappTemplatesRetrieveResponse> => {
+  
+  return apiFetch<platformWhatsappTemplatesRetrieveResponse>(getPlatformWhatsappTemplatesRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformWhatsappTemplatesRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/platform/whatsapp-templates/${id}/`
+    ] as const;
+    }
+
+    
+export const getPlatformWhatsappTemplatesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappTemplatesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>> = ({ signal }) => platformWhatsappTemplatesRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappTemplatesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>>
+export type PlatformWhatsappTemplatesRetrieveQueryError = unknown
+
+
+export function usePlatformWhatsappTemplatesRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappTemplatesRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappTemplatesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Edit Template: what's left out stays. Its status is copied from Meta's dashboard.
+ */
+export type platformWhatsappTemplatesPartialUpdateResponse200 = {
+  data: WhatsAppTemplate
+  status: 200
+}
+    
+export type platformWhatsappTemplatesPartialUpdateResponseSuccess = (platformWhatsappTemplatesPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappTemplatesPartialUpdateResponse = (platformWhatsappTemplatesPartialUpdateResponseSuccess)
+
+export const getPlatformWhatsappTemplatesPartialUpdateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/whatsapp-templates/${id}/`
+}
+
+export const platformWhatsappTemplatesPartialUpdate = async (id: number,
+    patchedWhatsAppTemplateInputRequest: PatchedWhatsAppTemplateInputRequest, options?: RequestInit): Promise<platformWhatsappTemplatesPartialUpdateResponse> => {
+  
+  return apiFetch<platformWhatsappTemplatesPartialUpdateResponse>(getPlatformWhatsappTemplatesPartialUpdateUrl(id),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedWhatsAppTemplateInputRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformWhatsappTemplatesPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesPartialUpdate>>, TError,{id: number;data: PatchedWhatsAppTemplateInputRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesPartialUpdate>>, TError,{id: number;data: PatchedWhatsAppTemplateInputRequest}, TContext> => {
+
+const mutationKey = ['platformWhatsappTemplatesPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformWhatsappTemplatesPartialUpdate>>, {id: number;data: PatchedWhatsAppTemplateInputRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformWhatsappTemplatesPartialUpdate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformWhatsappTemplatesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappTemplatesPartialUpdate>>>
+    export type PlatformWhatsappTemplatesPartialUpdateMutationBody = PatchedWhatsAppTemplateInputRequest
+    export type PlatformWhatsappTemplatesPartialUpdateMutationError = unknown
+
+    export const usePlatformWhatsappTemplatesPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesPartialUpdate>>, TError,{id: number;data: PatchedWhatsAppTemplateInputRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformWhatsappTemplatesPartialUpdate>>,
+        TError,
+        {id: number;data: PatchedWhatsAppTemplateInputRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformWhatsappTemplatesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The messages Rackline sends and the details each can fill a template with. A fixed list of seven.
+ */
+export type platformWhatsappTemplatesKindsListResponse200 = {
+  data: MessageKind[]
+  status: 200
+}
+    
+export type platformWhatsappTemplatesKindsListResponseSuccess = (platformWhatsappTemplatesKindsListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappTemplatesKindsListResponse = (platformWhatsappTemplatesKindsListResponseSuccess)
+
+export const getPlatformWhatsappTemplatesKindsListUrl = () => {
+
+
+  
+
+  return `/api/platform/whatsapp-templates/kinds/`
+}
+
+export const platformWhatsappTemplatesKindsList = async ( options?: RequestInit): Promise<platformWhatsappTemplatesKindsListResponse> => {
+  
+  return apiFetch<platformWhatsappTemplatesKindsListResponse>(getPlatformWhatsappTemplatesKindsListUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformWhatsappTemplatesKindsListQueryKey = () => {
+    return [
+    `/api/platform/whatsapp-templates/kinds/`
+    ] as const;
+    }
+
+    
+export const getPlatformWhatsappTemplatesKindsListQueryOptions = <TData = Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappTemplatesKindsListQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>> = ({ signal }) => platformWhatsappTemplatesKindsList({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappTemplatesKindsListQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>>
+export type PlatformWhatsappTemplatesKindsListQueryError = unknown
+
+
+export function usePlatformWhatsappTemplatesKindsList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesKindsList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappTemplatesKindsList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappTemplatesKindsList<TData = Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappTemplatesKindsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappTemplatesKindsListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

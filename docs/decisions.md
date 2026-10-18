@@ -197,6 +197,15 @@ What was decided, so code and screens stay consistent. Change this file when a d
   numbers, credentials and templates; a gym's admins see the number and whether it works, never the credentials.
   Credentials are encrypted in the database (`FIELD_ENCRYPTION_KEY`), write-only, and never in a response, a log
   or the audit log (it says only that they changed).
+- A WhatsApp account is a number Rackline sends from: Rackline's shared number (one, belonging to no gym) or a
+  gym's own (at most one per gym). It is never deleted. Its status is "not checked yet" until Test Connection,
+  which only asks Meta for the number's details (it sends nothing), then "working" or "not working" with Meta's
+  reason; new ids or new credentials put it back to "not checked yet". The webhook's verify token is Rackline's
+  own, not Meta's, so the Console shows it to type into Meta; a gym's admins never see it.
+- Each account has its templates: one per message kind and language may be approved at a time (the sender never
+  has to choose), each listing which of the message's details fills `{{1}}`, `{{2}}`… of its approved text. The
+  details each message can use are fixed in code (`WhatsAppTemplate.PARAMETERS`). Rackline admins copy a
+  template's status from Meta's dashboard by hand; templates are never deleted, only disabled.
 - Messages: plan ending in 7 and 3 days, plan ends today, payment due (to members); payment received, the member's
   receipt (**off by default** for each gym); task assigned (to the trainer or receptionist, when an admin assigns
   it); Rackline invoice due and Rackline payment received (to the gym's owner, controlled by Rackline admins).

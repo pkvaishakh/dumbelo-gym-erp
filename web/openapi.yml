@@ -1863,6 +1863,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/GymSettings'
           description: ''
+  /api/gym/whatsapp/:
+    get:
+      operationId: gym_whatsapp_retrieve
+      description: |-
+        More → Settings → WhatsApp: whether messages go from Rackline's number, the gym's own or not at all, the
+        number, and whether it works. Admins only; set up by Rackline, so there is nothing here to change.
+      tags:
+      - gym
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymWhatsApp'
+          description: ''
   /api/health/:
     get:
       operationId: health_retrieve
@@ -4422,6 +4439,359 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PriceList'
+          description: ''
+  /api/platform/whatsapp-accounts/:
+    get:
+      operationId: platform_whatsapp_accounts_list
+      description: 'WhatsApp accounts: Rackline''s shared number first, then gyms''
+        own. Filter with `?gym=` or `?status=`.'
+      parameters:
+      - in: query
+        name: gym
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - failing
+          - new
+          - working
+        description: |-
+          * `new` - Not checked yet
+          * `working` - Working
+          * `failing` - Not working
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWhatsAppAccountList'
+          description: ''
+    post:
+      operationId: platform_whatsapp_accounts_create
+      description: Add Account. Nothing is checked with Meta until Test Connection.
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppAccountCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WhatsAppAccountCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WhatsAppAccountCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppAccount'
+          description: ''
+  /api/platform/whatsapp-accounts/{id}/:
+    get:
+      operationId: platform_whatsapp_accounts_retrieve
+      description: 'WhatsApp accounts: Rackline''s shared number first, then gyms''
+        own. Filter with `?gym=` or `?status=`.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this whats app account.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppAccount'
+          description: ''
+    patch:
+      operationId: platform_whatsapp_accounts_partial_update
+      description: New ids or display number. New ids mean checking it again.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this whats app account.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWhatsAppAccountChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWhatsAppAccountChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWhatsAppAccountChangeRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppAccount'
+          description: ''
+  /api/platform/whatsapp-accounts/{id}/replace-credentials/:
+    post:
+      operationId: platform_whatsapp_accounts_replace_credentials_create
+      description: New access token, app secret or both. The audit log says which
+        changed, never what to.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this whats app account.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppAccount'
+          description: ''
+  /api/platform/whatsapp-accounts/{id}/test/:
+    post:
+      operationId: platform_whatsapp_accounts_test_create
+      description: 'Test Connection: asks Meta for the number''s details. Sends no
+        message.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this whats app account.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppAccount'
+          description: ''
+  /api/platform/whatsapp-templates/:
+    get:
+      operationId: platform_whatsapp_templates_list
+      description: 'An account''s templates (`?account=`), by message. Never deleted:
+        one Meta no longer sends is Disabled.'
+      parameters:
+      - in: query
+        name: account
+        schema:
+          type: integer
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - payment_due
+          - payment_received
+          - plan_ending
+          - plan_ends_today
+          - rackline_invoice_due
+          - rackline_payment_received
+          - task_assigned
+        description: |-
+          * `plan_ending` - Plan ending soon
+          * `plan_ends_today` - Plan ends today
+          * `payment_due` - Payment due
+          * `payment_received` - Payment received
+          * `task_assigned` - Task assigned
+          * `rackline_invoice_due` - Rackline invoice due
+          * `rackline_payment_received` - Rackline payment received
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - approved
+          - disabled
+          - paused
+          - pending
+          - rejected
+        description: |-
+          * `pending` - Waiting for Meta
+          * `approved` - Approved
+          * `rejected` - Rejected
+          * `paused` - Paused
+          * `disabled` - Disabled
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWhatsAppTemplateList'
+          description: ''
+    post:
+      operationId: platform_whatsapp_templates_create
+      description: 'An account''s templates (`?account=`), by message. Never deleted:
+        one Meta no longer sends is Disabled.'
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppTemplateInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WhatsAppTemplateInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WhatsAppTemplateInputRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppTemplate'
+          description: ''
+  /api/platform/whatsapp-templates/{id}/:
+    get:
+      operationId: platform_whatsapp_templates_retrieve
+      description: 'An account''s templates (`?account=`), by message. Never deleted:
+        one Meta no longer sends is Disabled.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this whats app template.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppTemplate'
+          description: ''
+    patch:
+      operationId: platform_whatsapp_templates_partial_update
+      description: 'Edit Template: what''s left out stays. Its status is copied from
+        Meta''s dashboard.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this whats app template.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWhatsAppTemplateInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWhatsAppTemplateInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWhatsAppTemplateInputRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhatsAppTemplate'
+          description: ''
+  /api/platform/whatsapp-templates/kinds/:
+    get:
+      operationId: platform_whatsapp_templates_kinds_list
+      description: The messages Rackline sends and the details each can fill a template
+        with. A fixed list of seven.
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageKind'
           description: ''
   /api/recurring-expenses/:
     get:
@@ -7258,6 +7628,21 @@ components:
       - utility_message_paise
       - whatsapp_mode
       - whatsapp_setup_paise
+    CredentialsRequest:
+      type: object
+      description: 'Replace Credentials: either or both. The ones left out stay as
+        they are.'
+      properties:
+        access_token:
+          type: string
+          writeOnly: true
+          minLength: 20
+          maxLength: 1024
+        app_secret:
+          type: string
+          writeOnly: true
+          minLength: 16
+          maxLength: 256
     CurrentPlan:
       type: object
       properties:
@@ -8320,6 +8705,45 @@ components:
         * `trial` - Trial
         * `active` - Active
         * `suspended` - Suspended
+    GymWhatsApp:
+      type: object
+      description: How the gym's messages go out, the number they come from and whether
+        it works. Never any credential.
+      properties:
+        mode:
+          $ref: '#/components/schemas/WhatsappModeEnum'
+        number:
+          type: string
+          nullable: true
+          description: The number members see messages from
+        verified_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/GymWhatsappStatusEnum'
+        checked_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - checked_at
+      - mode
+      - number
+      - status
+      - verified_name
+    GymWhatsappStatusEnum:
+      enum:
+      - new
+      - working
+      - failing
+      - not_set_up
+      - 'off'
+      type: string
+      description: |-
+        * `new` - Not checked yet
+        * `working` - Working
+        * `failing` - Not working
+        * `not_set_up` - Not set up yet
+        * `off` - Off
     InvoiceDetail:
       type: object
       description: One invoice with its lines and payments, as the gym's admins see
@@ -9015,6 +9439,23 @@ components:
       - status
       - text
       - to
+    MessageKind:
+      type: object
+      description: A message Rackline sends, and the details a template for it can
+        use.
+      properties:
+        kind:
+          $ref: '#/components/schemas/MessageKindEnum'
+        label:
+          type: string
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateParameter'
+      required:
+      - kind
+      - label
+      - parameters
     MessageKindEnum:
       enum:
       - expiring_7
@@ -10110,6 +10551,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Task'
+    PaginatedWhatsAppAccountList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhatsAppAccount'
+    PaginatedWhatsAppTemplateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhatsAppTemplate'
     PasswordChangeRequest:
       type: object
       properties:
@@ -10552,6 +11039,64 @@ components:
           format: time
           nullable: true
           description: Without a time, due by the end of the day
+    PatchedWhatsAppAccountChangeRequest:
+      type: object
+      properties:
+        waba_id:
+          type: string
+          minLength: 1
+          description: Meta's WhatsApp Business account id
+          pattern: ^\d{5,32}$
+        phone_number_id:
+          type: string
+          minLength: 1
+          description: Meta's phone number id (not the number itself)
+          pattern: ^\d{5,32}$
+        display_number:
+          type: string
+          minLength: 1
+          pattern: ^\+?[\d ()-]{6,23}$
+    PatchedWhatsAppTemplateInputRequest:
+      type: object
+      description: Add Template and Edit Template. On an edit, what's left out stays
+        as it was.
+      properties:
+        account:
+          type: integer
+          description: Only when adding
+        kind:
+          $ref: '#/components/schemas/MessageKindEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 512
+          pattern: ^[a-z0-9_]{1,512}$
+        language:
+          type: string
+          minLength: 1
+          default: en
+          pattern: ^[a-z]{2,3}(_[A-Z]{2})?$
+        category:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappCategoryEnum'
+          default: utility
+        body:
+          type: string
+          minLength: 1
+          description: The text as Meta approved it, with {{1}}, {{2}}…
+          maxLength: 1024
+        parameters:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+          description: Which detail fills {{1}}, {{2}}…, in order
+          maxItems: 10
+        status:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappTemplateStatusEnum'
+          default: pending
     PayDueRequest:
       type: object
       properties:
@@ -12847,6 +13392,16 @@ components:
       - overdue
       - todo
       - total
+    TemplateParameter:
+      type: object
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+      required:
+      - label
+      - name
     TickRequest:
       type: object
       properties:
@@ -12904,6 +13459,262 @@ components:
           maxLength: 200
       required:
       - reason
+    WhatsAppAccount:
+      type: object
+      description: An account as Rackline admins see it. `template_count` comes from
+        the queryset.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        gym:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Empty for Rackline's shared number
+        gym_name:
+          type: string
+          readOnly: true
+          nullable: true
+        is_shared:
+          type: boolean
+          readOnly: true
+        waba_id:
+          type: string
+          readOnly: true
+          description: Meta's id for the WhatsApp Business account
+        phone_number_id:
+          type: string
+          readOnly: true
+          description: Meta's id for the number, which messages are sent through
+        display_number:
+          type: string
+          readOnly: true
+          description: The number people see, e.g. +91 98000 00000
+        verified_name:
+          type: string
+          readOnly: true
+          description: The name Meta shows, from the last Test Connection
+        access_token_last4:
+          type: string
+          readOnly: true
+        app_secret_last4:
+          type: string
+          readOnly: true
+        webhook_url:
+          type: string
+          readOnly: true
+          description: Typed into Meta's webhook settings, with the verify token
+        verify_token:
+          type: string
+          readOnly: true
+          description: Meta sends it back to prove the webhook is ours
+        status:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappAccountStatusEnum'
+          readOnly: true
+        checked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When Test Connection last ran
+        last_error:
+          type: string
+          readOnly: true
+          description: Why the last Test Connection failed, in Meta's words
+        template_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - access_token_last4
+      - app_secret_last4
+      - checked_at
+      - created_at
+      - display_number
+      - gym
+      - gym_name
+      - id
+      - is_shared
+      - last_error
+      - phone_number_id
+      - status
+      - template_count
+      - verified_name
+      - verify_token
+      - waba_id
+      - webhook_url
+    WhatsAppAccountCreateRequest:
+      type: object
+      description: Add Account. No gym means Rackline's shared number.
+      properties:
+        waba_id:
+          type: string
+          minLength: 1
+          description: Meta's WhatsApp Business account id
+          pattern: ^\d{5,32}$
+        phone_number_id:
+          type: string
+          minLength: 1
+          description: Meta's phone number id (not the number itself)
+          pattern: ^\d{5,32}$
+        display_number:
+          type: string
+          minLength: 1
+          pattern: ^\+?[\d ()-]{6,23}$
+        gym:
+          type: integer
+          nullable: true
+          description: The gym whose own number this is; leave out for Rackline's
+            shared number
+        access_token:
+          type: string
+          writeOnly: true
+          minLength: 20
+          description: A permanent access token for the number (a system user's)
+          maxLength: 1024
+        app_secret:
+          type: string
+          writeOnly: true
+          minLength: 16
+          description: The Meta app's secret, which signs its webhook calls
+          maxLength: 256
+      required:
+      - access_token
+      - app_secret
+      - display_number
+      - phone_number_id
+      - waba_id
+    WhatsAppTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        account:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/MessageKindEnum'
+          readOnly: true
+        kind_label:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+          description: The template's name in Meta, e.g. plan_ending_v2
+        language:
+          type: string
+          readOnly: true
+          default: en
+          description: Meta's language code, e.g. en or en_US
+        category:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappCategoryEnum'
+          readOnly: true
+        body:
+          type: string
+          readOnly: true
+          description: The text as Meta approved it, with {{1}}, {{2}}… where the
+            details go
+        parameters:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappTemplateStatusEnum'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - account
+      - body
+      - category
+      - id
+      - kind
+      - kind_label
+      - language
+      - name
+      - parameters
+      - status
+      - updated_at
+    WhatsAppTemplateInputRequest:
+      type: object
+      description: Add Template and Edit Template. On an edit, what's left out stays
+        as it was.
+      properties:
+        account:
+          type: integer
+          description: Only when adding
+        kind:
+          $ref: '#/components/schemas/MessageKindEnum'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 512
+          pattern: ^[a-z0-9_]{1,512}$
+        language:
+          type: string
+          minLength: 1
+          default: en
+          pattern: ^[a-z]{2,3}(_[A-Z]{2})?$
+        category:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappCategoryEnum'
+          default: utility
+        body:
+          type: string
+          minLength: 1
+          description: The text as Meta approved it, with {{1}}, {{2}}…
+          maxLength: 1024
+        parameters:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+          description: Which detail fills {{1}}, {{2}}…, in order
+          maxItems: 10
+        status:
+          allOf:
+          - $ref: '#/components/schemas/WhatsappTemplateStatusEnum'
+          default: pending
+      required:
+      - account
+      - body
+      - kind
+      - name
+      - parameters
+    WhatsappAccountStatusEnum:
+      enum:
+      - new
+      - working
+      - failing
+      type: string
+      description: |-
+        * `new` - Not checked yet
+        * `working` - Working
+        * `failing` - Not working
+    WhatsappCategoryEnum:
+      enum:
+      - utility
+      - marketing
+      - authentication
+      type: string
+      description: |-
+        * `utility` - Utility
+        * `marketing` - Marketing
+        * `authentication` - Authentication
     WhatsappModeEnum:
       enum:
       - shared
@@ -12914,6 +13725,20 @@ components:
         * `shared` - Rackline's number
         * `own` - The gym's own number
         * `off` - Off
+    WhatsappTemplateStatusEnum:
+      enum:
+      - pending
+      - approved
+      - rejected
+      - paused
+      - disabled
+      type: string
+      description: |-
+        * `pending` - Waiting for Meta
+        * `approved` - Approved
+        * `rejected` - Rejected
+        * `paused` - Paused
+        * `disabled` - Disabled
   securitySchemes:
     jwtAuth:
       type: http

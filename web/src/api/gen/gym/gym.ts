@@ -26,6 +26,7 @@ import type {
 
 import type {
   GymSettings,
+  GymWhatsApp,
   PatchedGymSettingsRequest
 } from '.././model';
 
@@ -233,4 +234,113 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * More → Settings → WhatsApp: whether messages go from Rackline's number, the gym's own or not at all, the
+number, and whether it works. Admins only; set up by Rackline, so there is nothing here to change.
+ */
+export type gymWhatsappRetrieveResponse200 = {
+  data: GymWhatsApp
+  status: 200
+}
     
+export type gymWhatsappRetrieveResponseSuccess = (gymWhatsappRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type gymWhatsappRetrieveResponse = (gymWhatsappRetrieveResponseSuccess)
+
+export const getGymWhatsappRetrieveUrl = () => {
+
+
+  
+
+  return `/api/gym/whatsapp/`
+}
+
+export const gymWhatsappRetrieve = async ( options?: RequestInit): Promise<gymWhatsappRetrieveResponse> => {
+  
+  return apiFetch<gymWhatsappRetrieveResponse>(getGymWhatsappRetrieveUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGymWhatsappRetrieveQueryKey = () => {
+    return [
+    `/api/gym/whatsapp/`
+    ] as const;
+    }
+
+    
+export const getGymWhatsappRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGymWhatsappRetrieveQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof gymWhatsappRetrieve>>> = ({ signal }) => gymWhatsappRetrieve({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GymWhatsappRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof gymWhatsappRetrieve>>>
+export type GymWhatsappRetrieveQueryError = unknown
+
+
+export function useGymWhatsappRetrieve<TData = Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof gymWhatsappRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof gymWhatsappRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGymWhatsappRetrieve<TData = Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof gymWhatsappRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof gymWhatsappRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGymWhatsappRetrieve<TData = Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGymWhatsappRetrieve<TData = Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymWhatsappRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGymWhatsappRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

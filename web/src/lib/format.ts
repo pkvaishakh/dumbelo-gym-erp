@@ -171,6 +171,24 @@ export const WHATSAPP_MODE: Record<string, { label: string; note: string }> = {
   off: { label: "Off", note: "No WhatsApp messages are sent" },
 };
 
+/** Whether a WhatsApp number works, as a badge: an account's status, or a gym's ("not set up", "off"). */
+export const WHATSAPP_STATUS: Record<string, { label: string; badge: string }> = {
+  new: { label: "Not checked yet", badge: "frozen" },
+  working: { label: "Working", badge: "active" },
+  failing: { label: "Not working", badge: "expired" },
+  not_set_up: { label: "Not set up yet", badge: "expiring" },
+  off: { label: "Off", badge: "off" },
+};
+
+/** A WhatsApp template's status, as Meta's dashboard shows it. */
+export const TEMPLATE_STATUS: Record<string, { label: string; badge: string }> = {
+  pending: { label: "Waiting for Meta", badge: "frozen" },
+  approved: { label: "Approved", badge: "active" },
+  rejected: { label: "Rejected", badge: "expired" },
+  paused: { label: "Paused", badge: "expiring" },
+  disabled: { label: "Disabled", badge: "off" },
+};
+
 export const BRANCH_ASK_STATUS: Record<string, { label: string; badge: string }> = {
   asked: { label: "Waiting", badge: "frozen" },
   approved: { label: "Approved", badge: "active" },

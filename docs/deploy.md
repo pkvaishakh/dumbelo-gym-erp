@@ -25,7 +25,8 @@ differs. App Runner runs HTTP services only, so the worker and beat run as two s
 - Docker on your machine, to build the image the first time.
 - A Vercel account connected to the GitHub repository.
 - A domain. This page uses `rackline.in`: `api.rackline.in` for the API, `app.rackline.in` for the app.
-- A WhatsApp Cloud API number with its token and phone id (reminders), if you want reminders from day one.
+- A WhatsApp Cloud API number with its token, phone number id and app secret, if you want reminders from day one.
+  It is added in the Console once the API is up (WhatsApp → Add Account), not as a setting.
 
 Set these once in your shell, and the commands below can be copied as they are:
 
@@ -85,9 +86,9 @@ the API and the jobs run in. Nothing about Rackline is reachable from the intern
 
 ## 3. The settings a server must have
 
-The API refuses to start with `PRODUCTION=true` unless it has been told all four of `SECRET_KEY`,
-`ALLOWED_HOSTS`, `DATABASE_URL` and `CACHE_URL` (`api/config/env.py`), so a half-configured server fails
-loudly at boot instead of quietly serving with a default secret.
+The API refuses to start with `PRODUCTION=true` unless it has been told all five of `SECRET_KEY`,
+`ALLOWED_HOSTS`, `DATABASE_URL`, `CACHE_URL` and `FIELD_ENCRYPTION_KEY` (`api/config/env.py`), so a
+half-configured server fails loudly at boot instead of quietly serving with a default secret.
 
 | Setting | Value on the pilot server | Why |
 |---|---|---|
@@ -98,23 +99,37 @@ loudly at boot instead of quietly serving with a default secret.
 | `CACHE_URL` | from step 2, db 1 | Shared rate-limit counts |
 | `CELERY_BROKER_URL` | from step 2, db 0 | The job queue. Empty means jobs run inside the request: never on a server |
 | `CORS_ALLOWED_ORIGINS` | `https://app.rackline.in` | Which site may call the API from a browser. The default is localhost, so this must be set |
+| `FIELD_ENCRYPTION_KEY` | a Fernet key, this server's own (below) | Encrypts the WhatsApp credentials in the database. Losing it loses them |
 | `WHATSAPP_PROVIDER` | `whatsapp_cloud` | `fake` (the default) sends nothing |
-| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` | from the WhatsApp number | |
 | `DEBUG` | leave unset | `PRODUCTION=true` with `DEBUG=True` refuses to start |
 
-Optional, with sensible defaults in `api/config/settings.py`: `JWT_ACCESS_MINUTES` (30), `JWT_REFRESH_DAYS`
-(30), `THROTTLE_LOGIN`, `THROTTLE_LOGIN_IP`, `THROTTLE_REFRESH`, `THROTTLE_QR`, `THROTTLE_DEVICE`.
+Optional, with sensible defaults in `api/config/settings.py`: `WHATSAPP_API_VERSION` (Meta's Graph API version,
+`v23.0`), `JWT_ACCESS_MINUTES` (30), `JWT_REFRESH_DAYS` (30), `THROTTLE_LOGIN`, `THROTTLE_LOGIN_IP`, `THROTTLE_REFRESH`, `THROTTLE_QR`, `THROTTLE_DEVICE`.
 
-Keep the secret ones — `SECRET_KEY`, `DATABASE_URL`, `WHATSAPP_TOKEN`, and the Redis URLs if they carry a
-password — in Secrets Manager, one secret per value, and point the services at them. The rest are plain
+Keep the secret ones — `SECRET_KEY`, `DATABASE_URL`, `FIELD_ENCRYPTION_KEY`, and the Redis URLs if they carry
+a password — in Secrets Manager, one secret per value, and point the services at them. The rest are plain
 environment variables, readable by anyone who can open the service.
 
 ```bash
 aws secretsmanager create-secret --name rackline/secret-key \
   --secret-string "$(python -c 'import secrets; print(secrets.token_urlsafe(64))')"
 aws secretsmanager create-secret --name rackline/database-url --secret-string 'postgres://...'
-aws secretsmanager create-secret --name rackline/whatsapp-token --secret-string '...'
+aws secretsmanager create-secret --name rackline/field-encryption-key   --secret-string "$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
 ```
+
+The WhatsApp numbers' own credentials (access token, app secret) are not settings: a Rackline admin pastes them
+into the Console (WhatsApp → Add Account, or Replace Credentials), and they are kept encrypted with
+`FIELD_ENCRYPTION_KEY`. Nothing shows them again, only their last 4 characters. The API, the worker and beat
+all need the same key.
+
+### Rotating the encryption key
+
+`FIELD_ENCRYPTION_KEY` takes several keys, newest first: values are written with the first and read with any.
+
+1. Make a new key and set `FIELD_ENCRYPTION_KEY=<new>,<old>` on the API, the worker and beat. Deploy.
+2. Run `python manage.py rotate_credentials` once (a one-off task, like the migration in step 5). It writes every
+   credential again with the new key, or changes nothing if one can't be read.
+3. Set `FIELD_ENCRYPTION_KEY=<new>` and deploy again. The old key can go.
 
 ## 4. The image (ECR)
 

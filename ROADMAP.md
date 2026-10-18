@@ -44,7 +44,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] Rackline admins, the Console, gyms and their admin accounts, suspend and activate (session 9)
 - [x] Price list, each gym's Rackline plan, branch quota and buying more branches (session 10)
 - [x] Rackline invoices, payments, receipts and what each gym owes (session 11)
-- [ ] WhatsApp accounts and templates, credentials encrypted (session 12)
+- [x] WhatsApp accounts and templates, credentials encrypted (session 12)
 - [ ] Sending through Meta's Cloud API with templates, no duplicates, retries (session 13)
 - [ ] Meta webhook: delivery status, STOP replies, shared-number usage (session 14)
 - [ ] Message switches and schedules; payment received, task assigned, Rackline invoice messages (session 15)
