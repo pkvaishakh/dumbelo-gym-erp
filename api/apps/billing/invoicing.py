@@ -14,6 +14,8 @@ from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.core.queries import sum_of
 from apps.gyms.models import Gym
+from apps.messages.models import WhatsAppTemplate
+from apps.messages.usage import usage
 
 from .models import PAY_WITHIN_DAYS, GymBilling, Invoice, InvoiceLine, InvoicePayment, NumberSeries, financial_year
 from .services import branches_label, locked_plan
@@ -63,9 +65,16 @@ def _paid_until(plan: GymBilling) -> None:
 # Writing invoices
 
 def whatsapp_usage_lines(plan: GymBilling, starts: date) -> list[InvoiceLine]:
-    """The billing month before `starts`: delivered messages on Rackline's shared number, by category, at the rate
-    kept on each message. Messages aren't counted yet (session 14 counts them from Meta's webhook), so none."""
-    return []
+    """The billing month before `starts`: delivered messages on Rackline's shared number, one line for each Meta
+    category and rate kept on the messages (a rate that changed mid-month shows as two lines)."""
+    first, last = clock.add_months(starts, -1), starts - timedelta(days=1)
+    category = dict(WhatsAppTemplate.CATEGORIES)
+    return [
+        InvoiceLine(gym=plan.gym, kind=InvoiceLine.WHATSAPP_USAGE, starts=first, ends=last, quantity=row["messages"],
+                    rate_paise=row["rate_paise"], amount_paise=row["amount_paise"],
+                    description=f"WhatsApp messages delivered ({category.get(row['category'], 'other').lower()}), {_span(first, last)}")
+        for row in usage(plan.gym, first, last)
+    ]
 
 
 @transaction.atomic

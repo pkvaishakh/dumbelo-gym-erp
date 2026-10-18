@@ -216,12 +216,17 @@ What was decided, so code and screens stay consistent. Change this file when a d
   most: a plan ending today comes before money owed, which comes before the 3- and 7-day warnings.
 - Nothing is sent twice: every message has a key unique in its gym (a member's reminder for a day, a task's
   assignment, a payment's receipt), and its row is written before it is sent. Nothing goes to someone with no
-  number or who asked us to stop (the opt-out on their profile; replying STOP sets it too).
+  number or who asked us to stop (the opt-out on their profile; replying STOP sets it too). A STOP to a gym's own
+  number opts out that gym's member; a STOP to Rackline's shared number opts them out at every gym that has messaged
+  them from it, and not at gyms that never have. "Stop", "STOP ALL" and "Unsubscribe" count, in any case and with
+  any punctuation, as does a Stop button; a longer sentence doesn't. Every reply is kept; the opt-out is audited.
 - Delivery follows Meta's webhook: sent, delivered, read or failed, never going back. A failure keeps Meta's code
   and reason. Temporary failures (rate limits, Meta busy) are retried up to 3 times with growing waits; others are
   not. One failure never stops the rest. A message Meta may already have taken (it didn't answer, or our worker
   stopped mid-send) is never retried on its own: sending nothing beats sending twice. Shared-number usage is counted from delivered billable messages, so a
-  repeated webhook can't count one twice.
+  repeated webhook can't count one twice. A message counts in the billing month Meta says it was delivered (in the
+  gym's time zone), at the rate kept on it when it was sent; "read" without a "delivered" before it counts as
+  delivered at that time. Meta's word on a message is only taken from the account that sent it.
 - SMS and email are not in the MVP.
 
 ## Stack and hosting
