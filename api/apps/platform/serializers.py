@@ -267,3 +267,53 @@ class ServerStatusSerializer(serializers.Serializer):
     jobs = JobStatusSerializer(many=True, allow_null=True, help_text="Null while the database can't be read")
     messages = MessageCountsSerializer(allow_null=True)
     webhook = WebhookStatusSerializer(allow_null=True)
+
+
+class GymCountsSerializer(serializers.Serializer):
+    active = serializers.IntegerField()
+    trial = serializers.IntegerField()
+    suspended = serializers.IntegerField()
+    new_this_month = serializers.IntegerField(help_text="Gyms added since the 1st, whatever their status now")
+
+
+class OwedSerializer(serializers.Serializer):
+    owed_paise = serializers.IntegerField(help_text="What every gym owes Rackline on its open invoices")
+    gyms_owing = serializers.IntegerField()
+    overdue_paise = serializers.IntegerField(help_text="The part of it on invoices past their due day")
+    overdue_invoices = serializers.IntegerField()
+    gyms_overdue = serializers.IntegerField()
+
+
+class WaitingSerializer(serializers.Serializer):
+    waiting = serializers.IntegerField()
+
+
+class WhatsAppDaySerializer(serializers.Serializer):
+    delivered_today = serializers.IntegerField(help_text="On every number")
+    failed_today = serializers.IntegerField()
+    waiting_retry = serializers.IntegerField()
+    shared_messages = serializers.IntegerField(help_text="Billable messages on the shared number delivered this month")
+    shared_paise = serializers.IntegerField(help_text="What those come to, at the rate kept on each")
+
+
+class FailedJobSerializer(serializers.Serializer):
+    job = serializers.ChoiceField(choices=JobRun.JOBS)
+    label = serializers.CharField()
+    finished_at = serializers.DateTimeField(source="last_run.finished_at")
+    error = serializers.CharField(source="last_run.error")
+
+
+class ServerAttentionSerializer(serializers.Serializer):
+    down = CheckSerializer(many=True, help_text="Checks that are down, in the Server screen's order")
+    failed_jobs = FailedJobSerializer(many=True, help_text="Jobs whose last run failed")
+
+
+class PlatformSummarySerializer(serializers.Serializer):
+    """Console → Home. Counts and Rackline's own money only: nothing from inside a gym."""
+
+    checked_at = serializers.DateTimeField()
+    gyms = GymCountsSerializer()
+    money = OwedSerializer()
+    branch_requests = WaitingSerializer()
+    whatsapp = WhatsAppDaySerializer()
+    server = ServerAttentionSerializer()

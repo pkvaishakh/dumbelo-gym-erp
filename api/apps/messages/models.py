@@ -197,6 +197,7 @@ class Message(GymScoped):
             models.Index(fields=["gym", "delivered_at"], condition=Q(billable=True), name="message_billable_delivered"),
             models.Index(fields=["status", "updated_at"], name="message_status_changed"),  # Server: failed today
             models.Index(fields=["-created_at", "-id"], name="message_latest"),  # the Console's log, newest first
+            models.Index(fields=["delivered_at"], name="message_delivered"),  # Console Home: delivered today and this month
         ]
 
     def __str__(self):

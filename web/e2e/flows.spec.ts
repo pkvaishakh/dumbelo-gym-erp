@@ -273,3 +273,32 @@ test("receptionist: no Reports", async ({ page }) => {
   await page.goto("/reports");
   await expect(page.getByText("Reports are for admins")).toBeVisible();
 });
+
+test("rackline admin: lands on Console Home, and reaches the gyms that owe, Gyms and Prices", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Mobile number or email").fill("rackline@rackline.demo");
+  await page.getByLabel("Password", { exact: true }).fill("rackline-demo");
+  await page.getByRole("button", { name: "Sign In" }).click();
+  await page.waitForURL(/\/console$/);
+  const tabs = page.getByRole("navigation", { name: "Console" });
+  await expect(tabs.getByRole("link")).toHaveText(["Home", "Gyms", "Server", "More"]);
+  await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("Owed to Rackline")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Server" })).toBeVisible();
+
+  await page.getByRole("link", { name: /Overdue/ }).first().click();
+  await expect(page).toHaveURL(/\/console\/gyms\?owes=overdue$/);
+  await expect(page.getByRole("radio", { name: "Overdue" })).toBeChecked();
+
+  await tabs.getByRole("link", { name: "Gyms" }).click();
+  await expect(page).toHaveURL(/\/console\/gyms$/);
+  await page.locator("a.rl-mrow").first().click();
+  await expect(page).toHaveURL(/\/console\/gyms\/\d+$/);
+  await expect(tabs.getByRole("link", { name: "Gyms" })).toHaveAttribute("aria-current", "page");
+
+  await tabs.getByRole("link", { name: "More" }).click();
+  await page.getByRole("link", { name: /Prices/ }).click();
+  await expect(page).toHaveURL(/\/console\/prices$/);
+  await expect(tabs.getByRole("link", { name: "More" })).toHaveAttribute("aria-current", "page");
+});

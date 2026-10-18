@@ -12,7 +12,7 @@ from django.utils import timezone
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
-from apps.core.queries import sum_of
+from apps.core.queries import count_of, sum_of
 from apps.gyms.models import Gym
 from apps.messages.automation import is_invoice_hour
 from apps.messages.models import AutomationSchedule, WhatsAppTemplate
@@ -52,6 +52,20 @@ def owed_by_gym():
     billed = sum_of(Invoice.objects.filter(gym=OuterRef("pk"), status=Invoice.OPEN), "total_paise")
     paid = sum_of(InvoicePayment.objects.filter(gym=OuterRef("pk"), invoice__status=Invoice.OPEN, voided=False), "amount_paise")
     return billed - paid
+
+
+def overdue_by_gym(today: date):
+    """The part of `owed_by_gym` on invoices past their due day (an open invoice is due `PAY_WITHIN_DAYS` after it's
+    written), as an annotation on gyms."""
+    billed = sum_of(Invoice.objects.filter(gym=OuterRef("pk"), status=Invoice.OPEN, due_on__lt=today), "total_paise")
+    paid = sum_of(InvoicePayment.objects.filter(gym=OuterRef("pk"), invoice__status=Invoice.OPEN, invoice__due_on__lt=today,
+                                                voided=False), "amount_paise")
+    return billed - paid
+
+
+def overdue_invoices(today: date):
+    """How many of the gym's open invoices are past their due day, as an annotation on gyms."""
+    return count_of(Invoice.objects.filter(gym=OuterRef("pk"), status=Invoice.OPEN, due_on__lt=today))
 
 
 def owed(gym: Gym) -> int:

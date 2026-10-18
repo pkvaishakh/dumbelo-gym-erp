@@ -1,76 +1,151 @@
 "use client";
-import { AlertCircle, Building2, SearchX } from "lucide-react";
+import { AlarmClock, AlertCircle, Building2, ChevronRight, CircleCheck, CirclePause, Hourglass, IndianRupee, MessageCircle, RotateCw, Send } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
 
-import type { PlatformGymsListStatus } from "@/api/gen/model";
-import { usePlatformGymsListInfinite } from "@/api/gen/platform/platform";
-import { PageBar } from "@/components/shell";
-import { AddButton, Chips, Empty, LoadMore, Photo, SearchField, Section, SkeletonRows } from "@/components/ui";
-import { GymStatus } from "@/features/console/parts";
-import { plural, rupees } from "@/lib/format";
-import { paged, pages, useSearch } from "@/lib/hooks";
+import type { PlatformSummary } from "@/api/gen/model";
+import { usePlatformSummaryRetrieve } from "@/api/gen/platform/platform";
+import { HomeBar } from "@/components/shell";
+import { Details, Empty, Icon, Section, SkeletonRows } from "@/components/ui";
+import { CHECK_ICON, RunBadge, StateBadge } from "@/features/console/server";
+import { Attention, GlanceLoading } from "@/features/homes";
+import { consoleAttention } from "@/lib/console-home";
+import { ago, greeting, plural, rupees } from "@/lib/format";
+import { useWho } from "@/lib/session";
 
-const FILTERS = [
-  { value: "all", label: "All" }, { value: "active", label: "Active" }, { value: "trial", label: "Trial" }, { value: "suspended", label: "Suspended" },
-];
+const count = (n: number) => n.toLocaleString("en-IN");
 
-/** Every gym on Rackline: search, a status filter kept in the address, and Load More. */
-function GymsPage() {
-  const params = useSearchParams();
-  const router = useRouter();
-  const [status, setStatus] = useState(params.get("status") ?? "all");
-  const [text, setText] = useState("");
-  const q = useSearch(text);
-  const list = usePlatformGymsListInfinite({
-    ...(q ? { q } : {}), ...(status !== "all" ? { status: status as PlatformGymsListStatus } : {}),
-  }, { query: paged });
-  const { rows, count } = pages(list);
-  const pick = (v: string) => { setStatus(v); router.replace(v === "all" ? "/console" : `/console?status=${v}`, { scroll: false }); };
-
+/** Console → Home, where a Rackline admin lands: the gyms, what they owe Rackline, what needs you, today's WhatsApp
+ *  messages and the server, from one summary. Counts and Rackline's own money only, never inside a gym. */
+export default function ConsoleHome() {
+  const { me } = useWho();
+  const q = usePlatformSummaryRetrieve({ query: { refetchInterval: 60_000 } });
+  const s = q.data?.data;
+  const sub = s ? (s.gyms.new_this_month ? `${plural(s.gyms.new_this_month, "new gym")} this month` : "No new gyms this month") : "Rackline Console";
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Gyms" sub={list.data ? plural(count, "gym") : "Rackline Console"} action={<AddButton href="/console/gyms/new" label="New Gym" />} />
+      <HomeBar home="/console" />
       <main className="rl-app__main">
-        <div className="rl-searchbar rl-searchbar--filters">
-          <SearchField value={text} onChange={setText} placeholder="Gym name or short name" label="Search gym name or short name" />
-          <Chips name="gy-status" label="Filter by status" value={status} onChange={pick} options={FILTERS} />
+        <div className="rl-greeting">
+          <h1 className="rl-greeting__hello">{greeting(me.name, true)}</h1>
+          <p className="rl-appbar__branch" style={{ margin: 0 }}>{sub}</p>
         </div>
-        <Section label="Gyms">
-          {list.isLoading ? <SkeletonRows /> : list.isError ? (
-            <Empty icon={AlertCircle} title="Can't load the gyms" text={list.error instanceof Error ? list.error.message : "Check your connection and try again."}>
-              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => list.refetch()}>Try Again</button>
-            </Empty>
-          ) : rows.length ? (
-            <>
-              <ul className="rl-card rl-mlist rl-mlist--compact">
-                {rows.map((g) => (
-                  <li key={g.id}><Link className="rl-mrow" href={`/console/gyms/${g.id}`}>
-                    <Photo name={g.name} />
-                    <span className="rl-row__title rl-mrow__name">{g.name}</span>
-                    <span className="rl-row__meta rl-mrow__meta">
-                      {plural(g.branch_count, "branch", "branches")} • {g.owed_paise ? `Owes ${rupees(g.owed_paise)}` : plural(g.member_count, "member")}
-                    </span>
-                    <GymStatus status={g.status} />
-                  </Link></li>
-                ))}
-              </ul>
-              <LoadMore q={list} />
-            </>
-          ) : q || status !== "all" ? (
-            <Empty icon={SearchX} title={q ? `No gym matches “${q}”` : "No gyms here"} text={q ? "Check the spelling, or try its short name." : "No gym has this status right now."}>
-              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => { setText(""); pick("all"); }}>Show All Gyms</button>
-            </Empty>
-          ) : (
-            <Empty icon={Building2} title="No gyms yet" text="Add the first gym and its owner, and they can sign in at once.">
-              <Link className="rl-button rl-button--block" href="/console/gyms/new">New Gym</Link>
-            </Empty>
-          )}
-        </Section>
+        {q.isError ? (
+          <Empty icon={AlertCircle} title="Can't load Home" text={q.error instanceof Error ? q.error.message : "Check your connection and try again."}>
+            <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => q.refetch()}>Try Again</button>
+          </Empty>
+        ) : (
+          <>
+            <Section label="Rackline at a glance">
+              <div aria-busy={!s}>{s ? <Glance s={s} /> : <GlanceLoading />}</div>
+            </Section>
+            <div className="rl-app__cols">
+              <div className="rl-app__col">
+                <Section title="Needs attention">
+                  {s ? <Attention rows={consoleAttention(s)} /> : <SkeletonRows n={2} />}
+                </Section>
+                <Section title="WhatsApp today" aside={<Link className="rl-link" href="/console/messages"><span>Open Log</span></Link>}>
+                  {s ? (
+                    <Details rows={[
+                      { icon: Send, label: "Delivered", value: count(s.whatsapp.delivered_today) },
+                      { icon: AlertCircle, label: "Failed", value: count(s.whatsapp.failed_today) },
+                      { icon: RotateCw, label: "Waiting for a retry", value: count(s.whatsapp.waiting_retry) },
+                    ]} />
+                  ) : <SkeletonRows n={3} />}
+                </Section>
+              </div>
+              <div className="rl-app__col">
+                <Section title="Server" aside={<Link className="rl-link" href="/console/server"><span>Open Server</span></Link>}>
+                  {s ? <ServerCard s={s} /> : <SkeletonRows n={2} />}
+                </Section>
+              </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
 }
 
-export default function Page() { return <Suspense><GymsPage /></Suspense>; }
+/** What gyms owe Rackline on the ink card (overdue and the shared number's month beside it), then the gyms by status.
+ *  Each figure opens the gyms or messages it counts. */
+function Glance({ s }: { s: PlatformSummary }) {
+  const m = s.money;
+  const people = [
+    { n: s.gyms.active, label: "Active", note: "Billed monthly", icon: Building2, href: "/console/gyms?status=active" },
+    { n: s.gyms.trial, label: "On trial", note: "Not billed yet", icon: Hourglass, href: "/console/gyms?status=trial" },
+    { n: s.gyms.suspended, label: "Suspended", note: "App paused", icon: CirclePause, href: "/console/gyms?status=suspended" },
+  ];
+  return (
+    <div className="rl-glance">
+      <div className="rl-glance__money">
+        <Link className="rl-glance__hero rl-pressable" href="/console/gyms?owes=any">
+          <span className="rl-glance__head">
+            <span className="rl-glance__chip" aria-hidden="true"><Icon as={IndianRupee} size="sm" /></span>
+            <span className="rl-glance__kicker">Owed to Rackline</span>
+            <ChevronRight className="rl-icon rl-icon--sm rl-glance__chev" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="rl-glance__big">{rupees(m.owed_paise)}</span>
+          <span className="rl-glance__note">{m.gyms_owing ? `From ${plural(m.gyms_owing, "gym")}` : "Every invoice is paid"}</span>
+        </Link>
+        <div className="rl-glance__pair">
+          <Link className="rl-glance__cell rl-pressable" href="/console/gyms?owes=overdue">
+            <span className="rl-glance__label"><Icon as={AlarmClock} size="sm" />Overdue</span>
+            <span className="rl-glance__value">{rupees(m.overdue_paise)}</span>
+            <span className="rl-glance__note">{m.overdue_invoices ? plural(m.overdue_invoices, "invoice") : "Nothing late"}</span>
+          </Link>
+          <Link className="rl-glance__cell rl-pressable" href="/console/messages">
+            <span className="rl-glance__label"><Icon as={MessageCircle} size="sm" />Shared number</span>
+            <span className="rl-glance__value">{rupees(s.whatsapp.shared_paise)}</span>
+            <span className="rl-glance__note">{plural(s.whatsapp.shared_messages, "message")} this month</span>
+          </Link>
+        </div>
+      </div>
+      <div className="rl-glance__people">
+        {people.map((p) => (
+          <Link className="rl-glance__cell rl-pressable" href={p.href} key={p.label}>
+            <span className="rl-glance__label"><Icon as={p.icon} size="sm" />{p.label}</span>
+            <span className="rl-glance__value">{count(p.n)}</span>
+            <span className="rl-glance__note">{p.note}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The checks that are down and the jobs whose last run failed, each opening Server; one calm row when all is well. */
+function ServerCard({ s }: { s: PlatformSummary }) {
+  const { down, failed_jobs: failed } = s.server;
+  if (!down.length && !failed.length) {
+    return (
+      <ul className="rl-card rl-mlist rl-mlist--compact">
+        <li><Link className="rl-mrow" href="/console/server">
+          <span className="rl-chipicon" aria-hidden="true"><Icon as={CircleCheck} size="sm" /></span>
+          <span className="rl-row__title rl-mrow__name">Everything is answering</span>
+          <span className="rl-row__meta rl-mrow__meta">No job&apos;s last run failed</span>
+          <StateBadge state="up" />
+        </Link></li>
+      </ul>
+    );
+  }
+  return (
+    <ul className="rl-card rl-mlist rl-mlist--compact">
+      {down.map((c) => (
+        <li key={c.key}><Link className="rl-mrow" href="/console/server">
+          <span className="rl-chipicon" aria-hidden="true"><Icon as={CHECK_ICON[c.key] ?? AlertCircle} size="sm" /></span>
+          <span className="rl-row__title rl-mrow__name">{c.label}</span>
+          <span className="rl-row__meta rl-mrow__meta">{c.at ? `Last ticked ${ago(c.at)}` : c.detail}</span>
+          <StateBadge state={c.state} />
+        </Link></li>
+      ))}
+      {failed.map((j) => (
+        <li key={j.job}><Link className="rl-mrow" href="/console/server">
+          <span className="rl-chipicon" aria-hidden="true"><Icon as={AlertCircle} size="sm" /></span>
+          <span className="rl-row__title rl-mrow__name">{j.label}</span>
+          <span className="rl-row__meta rl-mrow__meta">Last run failed {ago(j.finished_at)}</span>
+          <RunBadge state="failed" />
+        </Link></li>
+      ))}
+    </ul>
+  );
+}

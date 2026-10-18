@@ -10,9 +10,11 @@ src/app/login                 shared sign-in
 src/app/(app)/layout.tsx      SessionProvider (who, which gym, which branch) + bottom TabBar
 src/app/(app)/<route>         one folder per screen; task screens are /…/new or /…/edit (no tab bar there).
                               A suspended gym shows features/paused everywhere but More (admins only)
-src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Gyms, Server, Prices,
-                              More); gyms list, a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests
-                              (More → Branch requests), price lists and Add Price List, a gym's invoices (gyms/[id]/invoices: pending charges, Add
+src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Home, Gyms, Server,
+                              More); Home (/console, where they land: /api/platform/summary/, its Needs attention rows from
+                              lib/console-home.ts), gyms list (/console/gyms, ?status= or ?owes=any|overdue in the address),
+                              a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests
+                              (More → Branch requests), price lists and Add Price List (More → Prices), a gym's invoices (gyms/[id]/invoices: pending charges, Add
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
                               print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
                               `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
@@ -24,7 +26,7 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
                               AddChargeSheet, ChargeSheet; whatsapp: WhereFields, SecretField, EditAccountSheet,
                               CredentialsSheet, TemplateSheet; messages: HourField, DaysField, AutomationSheet, GymMessages;
-                              server: RunBadge, jobLine, JobSheet with Run Now's confirm; message-log: LogFilterSheet,
+                              server: CHECK_ICON, StateBadge, RunBadge, jobLine, JobSheet with Run Now's confirm; message-log: LogFilterSheet,
                               MessageSheet, MessageBadge, logUrl)
 src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
@@ -32,7 +34,7 @@ src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskSta
                               Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
                               TabBar per role, CreateSheet, BranchSheet
-src/features/                 bigger parts shared by routes: homes, checkin (desk), self-checkin (QR), sell
+src/features/                 bigger parts shared by routes: homes (Attention, GlanceLoading: also Console Home), checkin (desk), self-checkin (QR), sell
                               (MemberPicker, PlanPicker, ActionBar, METHODS), staff-form, branch-form, members-ui,
                               money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, rateText),
                               recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), account-form, drawer (CountRow,
@@ -49,6 +51,7 @@ src/lib/session.tsx           useSession(): me, role, gym, paused, branch, setBr
 src/lib/hooks.ts              useGet (loosely typed GETs), useAction (writes + refresh), fieldError
 src/lib/format.ts             rupees, dates, clock times, greeting, STATUS_LABEL, gymToday (the gym's day, not the device's)
 src/lib/types.ts              shapes of endpoints the schema leaves loose (summary, collection…)
+src/lib/console-home.ts       Console Home's Needs attention rows from the summary (consoleAttention, serverMeta)
 src/lib/messages.ts           when each WhatsApp message goes out, in words (hourLabel, daysLabel, whenLabel, MESSAGE_TO)
 src/lib/reports.ts            report categories, periods, MAX_MONTHS (the API's) and the range check
 src/lib/report-rows.ts        each report as plain rows: its CSV (reportCsv) and its print page

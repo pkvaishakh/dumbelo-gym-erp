@@ -1,11 +1,11 @@
-"""The Console's gyms and their admin accounts (`/api/platform/gyms/`, `/api/platform/gyms/<id>/admins/`), and its
-Server screen (`/api/platform/status/`, `/api/platform/jobs/<job>/run/`).
+"""The Console's Home (`/api/platform/summary/`), gyms and their admin accounts (`/api/platform/gyms/`,
+`/api/platform/gyms/<id>/admins/`), and its Server screen (`/api/platform/status/`, `/api/platform/jobs/<job>/run/`).
 
 Rackline admins only (`RacklineViewMixin`), with no X-Gym: these views work across gyms. They never show what is
 inside a gym (members' details, payments, check-ins): only counts, branches and admin accounts. Every change is
 audited against the gym it belongs to.
 """
-from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
+from django.db.models import OuterRef, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -15,36 +15,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.audit.models import record
-from apps.billing.invoicing import owed_by_gym
 from apps.core.queries import count_of
 from apps.core.rackline import RacklineViewMixin
-from apps.gyms.models import Branch, Gym, GymRole
+from apps.gyms.models import Gym, GymRole
 from apps.gyms.serializers import StaffPasswordSerializer
-from apps.members.models import Member
 
-from . import server, services
+from . import server, services, summary
+from .queries import GymFilter, gyms, with_branches
 from .serializers import (
     GymAdminAddSerializer, GymAdminSerializer, GymCreateSerializer, GymDetailSerializer, GymEditSerializer, GymRowSerializer,
-    JobRunSerializer, NewGymSerializer, ServerStatusSerializer, StatusChangeSerializer,
+    JobRunSerializer, NewGymSerializer, PlatformSummarySerializer, ServerStatusSerializer, StatusChangeSerializer,
 )
-
-
-def gyms():
-    """Gyms with their counts, owner and what they owe Rackline, a fixed number of queries whatever the page size."""
-    owner = GymRole.objects.filter(gym=OuterRef("pk"), is_owner=True).select_related("user")
-    return Gym.objects.annotate(
-        branch_count=count_of(Branch.objects.filter(gym=OuterRef("pk"), is_active=True)),
-        member_count=count_of(Member.objects.filter(gym=OuterRef("pk"), is_archived=False)),
-        owner_name=Subquery(owner.values("user__name")[:1]),
-        owner_email=Subquery(owner.values("user__email")[:1]),
-        owed_paise=owed_by_gym(),
-    )
-
-
-def with_branches(qs):
-    """The gym's branches as `branch_rows`, each with its member count: two queries for the gym's screen."""
-    members = Count("members", filter=Q(members__is_archived=False))
-    return qs.prefetch_related(Prefetch("branches", Branch.objects.annotate(member_count=members).order_by("name"), to_attr="branch_rows"))
 
 
 def _audit_status(gym):
@@ -56,7 +37,7 @@ class GymViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelM
                  mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """Every gym on Rackline. Gyms are never deleted: a gym that stops paying is suspended."""
 
-    filterset_fields = ["status"]
+    filterset_class = GymFilter
     http_method_names = ["get", "post", "patch"]
 
     def get_queryset(self):
@@ -198,6 +179,16 @@ class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateMod
         before = services.make_owner(role)
         record(request, "admin.made_owner", role, {"owner": before.user.email if before else None}, {"owner": role.user.email}, gym=self.gym)
         return Response(self._row(role))
+
+
+@extend_schema(tags=["platform"])
+class PlatformSummaryView(RacklineViewMixin, APIView):
+    """Console → Home: gyms by status, what they owe Rackline, branch requests waiting, today's WhatsApp messages
+    and the shared number's month, and what on the server is down or failed. A fixed number of queries."""
+
+    @extend_schema(responses=PlatformSummarySerializer)
+    def get(self, request):
+        return Response(PlatformSummarySerializer(summary.summary()).data)
 
 
 @extend_schema(tags=["platform"])

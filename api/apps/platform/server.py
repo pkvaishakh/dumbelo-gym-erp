@@ -177,30 +177,43 @@ def _deployed_at() -> datetime | None:
         return None
 
 
+def _read(db: Check, what: str, fn):
+    """`fn()` when the database answers and the read works; None otherwise, so the screen shows it as unknown."""
+    if db.state != UP:
+        return None
+    try:
+        return fn()
+    except DatabaseError:
+        log.exception("The Server screen couldn't read %s", what)
+        return None
+
+
+def health(now: datetime) -> list[Check]:
+    """The database, Redis, the worker and beat, in that order. Console Home shows the ones that are down."""
+    db = check_database()
+    queue, queue_up = check_redis()
+    beat = _read(db, "beat's last tick", lambda: check_beat(now)) or Check("beat", "Beat", UNKNOWN, "Database is down")
+    return [db, queue, check_worker(queue_up), beat]
+
+
+def failed_jobs(rows: list[dict]) -> list[dict]:
+    """Jobs whose last run broke and that aren't running again now (as the Server screen counts them)."""
+    return [r for r in rows if r["current"] is None and r["last_run"] is not None and r["last_run"].error]
+
+
 def status(now: datetime | None = None) -> dict:
     """Everything the Server screen shows. What comes from the database is None when it can't be read."""
     now = now or timezone.now()
-    db = check_database()
-
-    def read(what, fn):
-        if db.state != UP:
-            return None
-        try:
-            return fn()
-        except DatabaseError:
-            log.exception("The Server screen couldn't read %s", what)
-            return None
-
-    queue, queue_up = check_redis()
-    beat = read("beat's last tick", lambda: check_beat(now)) or Check("beat", "Beat", UNKNOWN, "Database is down")
+    checks = health(now)
+    db = checks[0]
     return {
         "version": settings.APP_VERSION,
         "deployed_at": _deployed_at(),
         "checked_at": now,
-        "checks": [db, queue, check_worker(queue_up), beat],
-        "jobs": read("the jobs", job_rows),
-        "messages": read("the messages", lambda: message_counts(now)),
-        "webhook": read("the webhook", lambda: webhook_status(now)),
+        "checks": checks,
+        "jobs": _read(db, "the jobs", job_rows),
+        "messages": _read(db, "the messages", lambda: message_counts(now)),
+        "webhook": _read(db, "the webhook", lambda: webhook_status(now)),
     }
 
 

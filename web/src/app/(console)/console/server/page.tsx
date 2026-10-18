@@ -1,22 +1,16 @@
 "use client";
 import type { LucideIcon } from "lucide-react";
-import { AlertCircle, CalendarClock, Cpu, Database, FileText, Layers, MessageCircle, RefreshCw, RotateCw, Send, Timer, Webhook } from "lucide-react";
+import { AlertCircle, CalendarClock, Database, FileText, MessageCircle, RefreshCw, RotateCw, Send, Webhook } from "lucide-react";
 import { useState } from "react";
 
 import type { JobStatus, ServerStatus } from "@/api/gen/model";
 import { usePlatformStatusRetrieve } from "@/api/gen/platform/platform";
 import { PageBar } from "@/components/shell";
 import { Details, Empty, Icon, Section, SkeletonRows } from "@/components/ui";
-import { jobLine, JobSheet, RunBadge } from "@/features/console/server";
-import { ago, plural, SERVER_STATE } from "@/lib/format";
+import { CHECK_ICON, jobLine, JobSheet, RunBadge, StateBadge } from "@/features/console/server";
+import { ago, plural } from "@/lib/format";
 
-const CHECK_ICON: Record<string, LucideIcon> = { database: Database, redis: Layers, worker: Cpu, beat: Timer };
 const JOB_ICON: Record<string, LucideIcon> = { reminders: Send, invoices: FileText, retries: RotateCw, webhook_replay: Webhook };
-
-function StateBadge({ state }: { state: string }) {
-  const s = SERVER_STATE[state] ?? { label: state, badge: "frozen" };
-  return <span className={`rl-status rl-status--${s.badge}`}>{s.label}</span>;
-}
 
 /** While a run waits or runs, check every few seconds so its end shows; otherwise every half minute. */
 const every = (s: ServerStatus | undefined) => (s?.jobs?.some((j) => j.current) ? 3_000 : 30_000);

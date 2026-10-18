@@ -22,11 +22,11 @@ import type { BranchDay, CheckinSummary, Collection, MemberSelf, Page, SessionCo
 
 import { CheckInSheet } from "./checkin";
 
-type AttentionRow = { count: number; title: string; meta: string; href: string; dot?: "" | "ring" | "ink" | "muted" };
+export type AttentionRow = { count: number; title: string; meta: string; href: string; dot?: "" | "ring" | "ink" | "muted" };
 
 /** The Needs attention card. With four rows it carries the design's dots: filled for today, a ring for this week,
  *  ink for money; the label always says it too. */
-function Attention({ rows }: { rows: AttentionRow[] }) {
+export function Attention({ rows }: { rows: AttentionRow[] }) {
   const shown = rows.filter((r) => r.count > 0);
   if (!shown.length) return <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>Nothing needs you right now.</p></div>;
   const dots = shown.length >= 4;
@@ -167,7 +167,7 @@ function Glance({ sum }: { sum: Summary }) {
   );
 }
 
-function GlanceLoading() {
+export function GlanceLoading() {
   const cell = (i: number) => <div className="rl-glance__cell" key={i}><span className="rl-skel" style={{ height: 12, width: "60%" }} /><span className="rl-skel" style={{ height: 22, width: "80%", marginTop: 8 }} /></div>;
   return (
     <div className="rl-glance" aria-hidden="true">
