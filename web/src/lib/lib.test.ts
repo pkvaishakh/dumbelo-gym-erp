@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { branchesOf, countDifference, gymToday, lastDigits, monthLabel, moveLabel, ordinal, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, trend, until } from "./format";
+import { branchesOf, countDifference, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, trend, until } from "./format";
 import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
@@ -181,5 +181,17 @@ describe("Rackline plan", () => {
   it("says how much of the quota is in use", () => {
     expect(branchesOf(2, 3)).toBe("2 of 3 branches");
     expect(branchesOf(1, 1)).toBe("1 of 1 branch");
+  });
+});
+
+describe("Rackline invoices", () => {
+  it("calls an open invoice past its due day overdue", () => {
+    expect(invoiceState({ status: "open", overdue: true })).toBe("overdue");
+    expect(invoiceState({ status: "open", overdue: false })).toBe("open");
+    expect(invoiceState({ status: "paid", overdue: false })).toBe("paid");
+    expect(invoiceState({ status: "void", overdue: false })).toBe("void");
+  });
+  it("has a badge for every state", () => {
+    expect(Object.keys(INVOICE_STATUS).sort()).toEqual(["open", "overdue", "paid", "void"]);
   });
 });

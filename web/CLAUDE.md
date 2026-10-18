@@ -12,10 +12,13 @@ src/app/(app)/<route>         one folder per screen; task screens are /…/new o
                               A suspended gym shows features/paused everywhere but More (admins only)
 src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Gyms, Requests, Prices,
                               More); gyms list, a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests,
-                              price lists and Add Price List. Its parts are in src/features/console/ (requests:
-                              RequestRow, RequestSheet; plan-sheets: EditPlanSheet, MovePricesSheet)
-src/app/(app)/rackline-plan   the gym admin's Rackline plan and Add Branch to My Plan; open with More while the gym is
-                              paused
+                              price lists and Add Price List, a gym's invoices (gyms/[id]/invoices: pending charges, Add
+                              Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
+                              print pages. Its parts are in src/features/console/ (requests: RequestRow, RequestSheet;
+                              plan-sheets: EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
+                              AddChargeSheet, ChargeSheet)
+src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
+                              receipts/[pid]); open with More while the gym is paused, invoices and receipts too
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
                               Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
@@ -25,7 +28,9 @@ src/features/                 bigger parts shared by routes: homes, checkin (des
                               money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, rateText),
                               recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), account-form, drawer (CountRow,
                               CountSheet), refunds (RefundSheet, RefundRows), rackline-plan (PlanCard, BranchRoom,
-                              PlanPrices, AskStatus, proRataText: a gym's Rackline plan, for the gym and the Console)
+                              PlanPrices, AskStatus, proRataText: a gym's Rackline plan, for the gym and the Console),
+                              rackline-invoices (InvoiceRowLink, InvoiceCard, InvoiceLines, PaymentRows, PrintFrame,
+                              InvoicePaper, ReceiptPaper: the same invoice and receipt for the gym and the Console)
                               reports/ (range: useReportRange + ReportControls, period and branch in the URL; screen:
                               ReportScreen, ReportPrint, Download; parts: Lead, Trend, SeriesChart, BarList; one file per
                               category; categories: the registry)

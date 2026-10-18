@@ -6,18 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -26,10 +31,13 @@ import type {
 
 import type {
   BillingBranchRequestsListParams,
+  BillingInvoicesListParams,
   BranchAsk,
   BranchAskCreateRequest,
   GymPlan,
-  PaginatedBranchAskList
+  InvoiceDetail,
+  PaginatedBranchAskList,
+  PaginatedInvoiceRowList
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -333,6 +341,303 @@ export function useBillingBranchRequestsRetrieve<TData = Awaited<ReturnType<type
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getBillingBranchRequestsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+open while the gym is suspended: it's how they see what to settle.
+ */
+export type billingInvoicesListResponse200 = {
+  data: PaginatedInvoiceRowList
+  status: 200
+}
+    
+export type billingInvoicesListResponseSuccess = (billingInvoicesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type billingInvoicesListResponse = (billingInvoicesListResponseSuccess)
+
+export const getBillingInvoicesListUrl = (params?: BillingInvoicesListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/billing/invoices/?${stringifiedParams}` : `/api/billing/invoices/`
+}
+
+export const billingInvoicesList = async (params?: BillingInvoicesListParams, options?: RequestInit): Promise<billingInvoicesListResponse> => {
+  
+  return apiFetch<billingInvoicesListResponse>(getBillingInvoicesListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getBillingInvoicesListInfiniteQueryKey = (params?: BillingInvoicesListParams,) => {
+    return [
+    'infinite', `/api/billing/invoices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getBillingInvoicesListQueryKey = (params?: BillingInvoicesListParams,) => {
+    return [
+    `/api/billing/invoices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getBillingInvoicesListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof billingInvoicesList>>, BillingInvoicesListParams['offset']>, TError = unknown>(params?: BillingInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData, QueryKey, BillingInvoicesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBillingInvoicesListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof billingInvoicesList>>, QueryKey, BillingInvoicesListParams['offset']> = ({ signal, pageParam }) => billingInvoicesList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData, QueryKey, BillingInvoicesListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BillingInvoicesListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof billingInvoicesList>>>
+export type BillingInvoicesListInfiniteQueryError = unknown
+
+
+export function useBillingInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof billingInvoicesList>>, BillingInvoicesListParams['offset']>, TError = unknown>(
+ params: undefined |  BillingInvoicesListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData, QueryKey, BillingInvoicesListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof billingInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof billingInvoicesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBillingInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof billingInvoicesList>>, BillingInvoicesListParams['offset']>, TError = unknown>(
+ params?: BillingInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData, QueryKey, BillingInvoicesListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof billingInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof billingInvoicesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBillingInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof billingInvoicesList>>, BillingInvoicesListParams['offset']>, TError = unknown>(
+ params?: BillingInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData, QueryKey, BillingInvoicesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useBillingInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof billingInvoicesList>>, BillingInvoicesListParams['offset']>, TError = unknown>(
+ params?: BillingInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData, QueryKey, BillingInvoicesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBillingInvoicesListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getBillingInvoicesListQueryOptions = <TData = Awaited<ReturnType<typeof billingInvoicesList>>, TError = unknown>(params?: BillingInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBillingInvoicesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof billingInvoicesList>>> = ({ signal }) => billingInvoicesList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BillingInvoicesListQueryResult = NonNullable<Awaited<ReturnType<typeof billingInvoicesList>>>
+export type BillingInvoicesListQueryError = unknown
+
+
+export function useBillingInvoicesList<TData = Awaited<ReturnType<typeof billingInvoicesList>>, TError = unknown>(
+ params: undefined |  BillingInvoicesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof billingInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof billingInvoicesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBillingInvoicesList<TData = Awaited<ReturnType<typeof billingInvoicesList>>, TError = unknown>(
+ params?: BillingInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof billingInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof billingInvoicesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBillingInvoicesList<TData = Awaited<ReturnType<typeof billingInvoicesList>>, TError = unknown>(
+ params?: BillingInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useBillingInvoicesList<TData = Awaited<ReturnType<typeof billingInvoicesList>>, TError = unknown>(
+ params?: BillingInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBillingInvoicesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+open while the gym is suspended: it's how they see what to settle.
+ */
+export type billingInvoicesRetrieveResponse200 = {
+  data: InvoiceDetail
+  status: 200
+}
+    
+export type billingInvoicesRetrieveResponseSuccess = (billingInvoicesRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type billingInvoicesRetrieveResponse = (billingInvoicesRetrieveResponseSuccess)
+
+export const getBillingInvoicesRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/billing/invoices/${id}/`
+}
+
+export const billingInvoicesRetrieve = async (id: number, options?: RequestInit): Promise<billingInvoicesRetrieveResponse> => {
+  
+  return apiFetch<billingInvoicesRetrieveResponse>(getBillingInvoicesRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getBillingInvoicesRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/billing/invoices/${id}/`
+    ] as const;
+    }
+
+    
+export const getBillingInvoicesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBillingInvoicesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof billingInvoicesRetrieve>>> = ({ signal }) => billingInvoicesRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BillingInvoicesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof billingInvoicesRetrieve>>>
+export type BillingInvoicesRetrieveQueryError = unknown
+
+
+export function useBillingInvoicesRetrieve<TData = Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof billingInvoicesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof billingInvoicesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBillingInvoicesRetrieve<TData = Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof billingInvoicesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof billingInvoicesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBillingInvoicesRetrieve<TData = Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useBillingInvoicesRetrieve<TData = Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof billingInvoicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBillingInvoicesRetrieveQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

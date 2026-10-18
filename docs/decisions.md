@@ -170,6 +170,17 @@ What was decided, so code and screens stay consistent. Change this file when a d
   fees, and the previous month's shared WhatsApp usage (delivered billable messages × the rate kept on each
   message). Numbers run in one series per financial year (`RL/2026-27/0001`). No GST yet: every line carries tax
   fields set to zero, so turning GST on later changes no old invoice.
+- An invoice is due 7 days after it's written; an open one past that is overdue. Only active gyms are invoiced:
+  a gym on trial or suspended on its billing day gets none for that month. A billing month has one invoice, ever:
+  running the job again writes nothing, and a voided month isn't written again. An invoice that comes to ₹0 (a
+  plan at the starting prices) is paid as it's written. A new billing day takes effect from the next invoice.
+- What waits for the next invoice: setup fees and other charges a Rackline admin adds (Add Charge, at the gym's
+  own prices unless one is typed; taken back until billed) and the pro-rata cost of each approved request. A
+  request approved on or after the billing day of the month being invoiced is already in its quota, so that
+  month's branch line counts it once, on its own pro-rata line.
+- Voiding an invoice keeps its number and lines and bills nothing again by itself (Add Charge bills what should
+  be); an invoice with payments is voided once its payments are. `paid_until` is the last day the gym's paid
+  invoices cover, and follows every payment and void. Receipts number like invoices (`RLR/2026-27/0001`).
 - Payments to Rackline are recorded by Rackline admins (no payment gateway): part payments allowed, never more than
   the invoice owes, voided with a reason, never deleted. Each payment has a receipt that prints like the salary
   slip. Invoices are voided with a reason, never deleted. Everything here is audited.

@@ -161,6 +161,10 @@ SPECTACULAR_SETTINGS = {
         "GymStatusEnum": "apps.gyms.models.Gym.STATUS",
         "BranchAskStatusEnum": "apps.billing.models.BranchRequest.STATUS",
         "WhatsappModeEnum": "apps.billing.models.GymBilling.WHATSAPP_MODES",
+        "InvoiceStatusEnum": "apps.billing.models.Invoice.STATUS",
+        "InvoiceLineKindEnum": "apps.billing.models.InvoiceLine.KINDS",
+        "RacklinePayMethodEnum": "apps.billing.models.InvoicePayment.METHODS",
+        "MethodEnum": "apps.members.models.Payment.METHODS",  # named, now that Rackline payments have methods of their own
     },
 }
 # ---- Background jobs (see config/celery.py) ----
@@ -178,6 +182,12 @@ CELERY_BEAT_SCHEDULE = {
         # Every quarter hour, not every hour: India is UTC+5:30 and Nepal +5:45, so a tick on the hour would
         # reach them at 6:30 and 6:45 their own time. The sweep is safe to repeat, so the extra ticks cost nothing.
         "schedule": crontab(minute="*/15"),
+    },
+    "rackline-invoices": {
+        # Each gym's Rackline invoice on its billing day. Hourly: a gym's day turns at its own midnight, and the job
+        # skips a month already written, so the later ticks that day do nothing.
+        "task": "apps.billing.tasks.write_invoices",
+        "schedule": crontab(minute=5),
     },
 }
 

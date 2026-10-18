@@ -1,5 +1,5 @@
 "use client";
-import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, Mail, Pencil, UserRound } from "lucide-react";
+import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, FileText, Mail, Pencil, UserRound } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
@@ -68,6 +68,8 @@ export default function GymScreen() {
           <ul className="rl-card rl-remind">
             <MenuRow icon={BadgeIndianRupee} title={plan ? `${rupees(plan.monthly_paise)} a month` : "Rackline plan"} href={`/console/gyms/${g.id}/plan`}
               value={plan ? branchesOf(plan.branches_in_use, plan.branch_quota) : undefined} />
+            <MenuRow icon={FileText} title="Invoices and payments" href={`/console/gyms/${g.id}/invoices`}
+              value={g.owed_paise ? `${rupees(g.owed_paise)} owed` : "Nothing owed"} />
           </ul>
         </Section>
         <AdminsSection gymId={g.id} />

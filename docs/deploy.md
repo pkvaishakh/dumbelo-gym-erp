@@ -190,7 +190,10 @@ private subnets, no load balancer:
 
 Beat ticks every quarter hour and wakes each gym when its own clock strikes 6 AM, so keep **one** beat
 instance: two would hand out the same morning twice. (Nothing breaks if they do — a second sweep writes no new
-reminder rows and sends no second message — but there is no reason to pay for it.)
+reminder rows and sends no second message — but there is no reason to pay for it.) Beat also runs
+`apps.billing.tasks.write_invoices` at five past every hour: each active gym's Rackline invoice on its billing day,
+skipped once written. If the worker was down on a billing day, write it by hand:
+`python manage.py write_invoices --day 2026-11-01`.
 
 ### If you'd rather run the API on ECS too
 
