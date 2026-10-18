@@ -184,6 +184,9 @@ class Message(GymScoped):
     provider_id = models.CharField(max_length=128, blank=True, help_text="The provider's own id for the message")
     error_code = models.CharField(max_length=16, blank=True, help_text="Meta's error code, when it gave one")
     error = models.CharField(max_length=200, blank=True, help_text="Why it failed, in the provider's words")
+    # From Meta's webhook, in UTC. Read means delivered too, so a read message always has `delivered_at`.
+    delivered_at = models.DateTimeField(null=True, blank=True, help_text="When Meta says it reached their phone")
+    read_at = models.DateTimeField(null=True, blank=True, help_text="When Meta says they opened it")
     # Shared-number messages are billed per delivered message, at the gym's rate for the template's category
     billable = models.BooleanField(default=False, help_text="Sent from Rackline's shared number, so billed to the gym")
     rate_paise = models.PositiveIntegerField(default=0, help_text="What it costs the gym once delivered")
@@ -198,6 +201,8 @@ class Message(GymScoped):
         indexes = [
             models.Index(fields=["gym", "for_date"], name="message_gym_day"),
             models.Index(fields=["status", "next_retry_at"], name="message_retry_due"),
+            models.Index(fields=["account", "provider_id"], name="message_account_meta_id"),  # the webhook's lookup
+            models.Index(fields=["gym", "delivered_at"], condition=Q(billable=True), name="message_billable_delivered"),
         ]
 
     def __str__(self):
@@ -207,3 +212,59 @@ class Message(GymScoped):
     def reminder_key(member_id: int, for_date) -> str:
         """One reminder a member a day: the key every reminder for that day shares."""
         return f"member:{member_id}:reminder:{for_date.isoformat()}"
+
+    #: How far along a message is. Meta's word on it only ever moves it forward; failed is only possible before
+    #: it reached the phone.
+    PROGRESS = {QUEUED: 0, SENT: 1, DELIVERED: 2, READ: 3}
+
+    @classmethod
+    def moves_to(cls, status: str) -> list[str]:
+        """The statuses a message may be in for Meta's `status` to replace: only those behind it."""
+        if status == cls.FAILED:
+            return [cls.QUEUED, cls.SENT]
+        return [s for s, rank in cls.PROGRESS.items() if rank < cls.PROGRESS[status]]
+
+
+class WebhookEvent(TimeStamped):
+    """One call Meta made to the webhook, kept exactly as it came, before anything is done with it.
+
+    Only calls signed with the account's app secret are kept. `processed_at` and `error` say how handling it went,
+    so a call can be found and run again (`manage.py replay_webhook_events`). Meta is told 200 either way, or it
+    would keep sending the same call.
+    """
+
+    account = models.ForeignKey(WhatsAppAccount, on_delete=models.CASCADE, related_name="webhook_events")
+    body = models.TextField(help_text="What Meta sent, byte for byte as text")
+    processed_at = models.DateTimeField(null=True, blank=True)
+    error = models.CharField(max_length=200, blank=True, help_text="What went wrong handling it, if anything")
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["created_at"], name="webhook_event_created")]  # replaying calls since a time
+
+    def __str__(self):
+        return f"{self.account} · {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class InboundMessage(TimeStamped):
+    """A message someone sent to one of the numbers Rackline sends from: the only one acted on is STOP.
+
+    Kept once (Meta's id is unique), so Meta sending the same one twice changes nothing.
+    """
+
+    account = models.ForeignKey(WhatsAppAccount, on_delete=models.CASCADE, related_name="inbound_messages")
+    meta_id = models.CharField(max_length=128, unique=True, help_text="Meta's id for it (wamid.…)")
+    from_number = models.CharField(max_length=16, help_text="Who sent it, with the +")
+    kind = models.CharField(max_length=20, help_text="Meta's type: text, button, image…")
+    text = models.TextField(blank=True, help_text="Its words, or the button they pressed")
+    received_at = models.DateTimeField(help_text="When they sent it, by Meta's clock (UTC)")
+    is_stop = models.BooleanField(default=False, help_text="They asked us to stop sending them messages")
+    opted_out = models.ManyToManyField("members.Member", blank=True, related_name="+",
+                                       help_text="The members it opted out")
+
+    class Meta:
+        ordering = ["-received_at"]
+        indexes = [models.Index(fields=["account", "from_number"], name="inbound_account_from")]
+
+    def __str__(self):
+        return f"{self.from_number}: {self.text[:40]}"

@@ -24,7 +24,9 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Member: their own membership, visits, and self check-in.
 - Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).
 - Rackline admins (`User.is_superuser`) run the business side: gyms, their admin accounts, prices, Rackline
-  invoices and payments, WhatsApp accounts and templates. They use the same sign-in and the same app, landing on
+  invoices and payments, WhatsApp accounts and templates, when automation runs, and the server's status (health,
+  background jobs, messages and webhook, Run Now for the safe-to-repeat jobs). Only they see the server's status:
+  not gym admins, and not Rackline support. They use the same sign-in and the same app, landing on
   the Console (`/console`, mobile first, the design system's screens). They never see inside a gym (members,
   payments, check-ins) except through a support window like anyone else on Rackline's team. Their changes are
   audited.
@@ -209,19 +211,33 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Messages: plan ending in 7 and 3 days, plan ends today, payment due (to members); payment received, the member's
   receipt (**off by default** for each gym); task assigned (to the trainer or receptionist, when an admin assigns
   it); Rackline invoice due and Rackline payment received (to the gym's owner, controlled by Rackline admins).
-- Each gym switches each of its messages on or off (pause and resume) and sets when scheduled ones go out (default
-  6 AM, gym time) and how many days ahead. Pausing stops the messages, not the list, so the desk still sees who to
-  chase. `reminders_on` is replaced by these switches.
+- Each gym's admins switch each of its messages on or off (pause and resume). Pausing stops the messages, not the
+  list, so the desk still sees who to chase. `reminders_on` is replaced by these switches.
+- When automation runs is Rackline's to set, not the gym's: Rackline admins set one schedule for every gym (the
+  reminders' hour, default 6 AM in each gym's own time zone; how many days ahead, default 7 and 3; the hour the
+  invoice job runs on a billing day, default just after midnight) and can change the reminders' hour and days
+  ahead for one gym. Whole hours only. A gym's admins see when their messages go out but can't change it. Retry
+  waits (1, 5 and 15 minutes) are fixed in code: they follow Meta's limits, not a business choice. Changes take
+  effect on the next run, with no restart, and are audited.
 - The daily job writes who needs a nudge (`ReminderDue`) and then sends it. A member gets **one reminder a day** at
   most: a plan ending today comes before money owed, which comes before the 3- and 7-day warnings.
 - Nothing is sent twice: every message has a key unique in its gym (a member's reminder for a day, a task's
   assignment, a payment's receipt), and its row is written before it is sent. Nothing goes to someone with no
-  number or who asked us to stop (the opt-out on their profile; replying STOP sets it too).
+  number or who asked us to stop (the opt-out on their profile; replying STOP sets it too). A STOP to a gym's own
+  number opts out that gym's member; a STOP to Rackline's shared number opts them out at every gym that has messaged
+  them from it, and not at gyms that never have. "Stop", "STOP ALL" and "Unsubscribe" count, in any case and with
+  any punctuation, as does a Stop button; a longer sentence doesn't. Every reply is kept; the opt-out is audited.
 - Delivery follows Meta's webhook: sent, delivered, read or failed, never going back. A failure keeps Meta's code
   and reason. Temporary failures (rate limits, Meta busy) are retried up to 3 times with growing waits; others are
   not. One failure never stops the rest. A message Meta may already have taken (it didn't answer, or our worker
   stopped mid-send) is never retried on its own: sending nothing beats sending twice. Shared-number usage is counted from delivered billable messages, so a
-  repeated webhook can't count one twice.
+  repeated webhook can't count one twice. A message counts in the billing month Meta says it was delivered (in the
+  gym's time zone), at the rate kept on it when it was sent; "read" without a "delivered" before it counts as
+  delivered at that time. Meta's word on a message is only taken from the account that sent it. Meta's own
+  "billable" flag isn't used: every message delivered from the shared number is billed at the gym's rate, including
+  ones Meta doesn't charge Rackline for (such as a utility message inside the member's 24-hour chat window).
+  Every signed webhook call is kept, and `manage.py replay_webhook_events` runs kept calls again (a status that came
+  before the send saved Meta's id, or a call that broke).
 - SMS and email are not in the MVP.
 
 ## Stack and hosting

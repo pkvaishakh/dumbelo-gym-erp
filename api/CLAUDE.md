@@ -37,7 +37,11 @@ apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender po
                      FIELD_ENCRYPTION_KEY, MultiFernet; `manage.py rotate_credentials`); accounts.py (add_account,
                      change_account, replace_credentials, test_connection, account_for: the account a gym sends from,
                      save_template, approved_templates); meta.py (Graph API calls, errors scrubbed of credentials and sorted into
-                     temporary, permanent and "no answer", which is never retried); views/gym.py
+                     temporary, permanent and "no answer", which is never retried); webhook.py (Meta's webhook: signature
+                     check, WebhookEvent kept before handling, statuses that only move forward within the sending
+                     account, InboundMessage and STOP opt-outs, replay: `manage.py replay_webhook_events`); usage.py (delivered billable messages per gym and
+                     month, counted from the rows, for invoices); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
+                     no sign-in: the signature is the check); views/gym.py
                      (/api/messages/, /api/gym/whatsapp/) and views/console.py (/api/platform/whatsapp-accounts/,
                      /api/platform/whatsapp-templates/). Querysets that show an account defer SECRET_FIELDS.
                      App label "gym_messages": see apps.py
@@ -58,7 +62,7 @@ apps/billing/        A gym's Rackline plan: PriceList (never edited), GymBilling
                      views/console.py (/api/platform/prices/, /api/platform/gyms/<id>/plan/, /api/platform/branch-requests/).
                      Invoices: Invoice (open | paid | void, tax fields at zero), InvoiceLine (no invoice yet = pending),
                      InvoicePayment (receipt, voided with a reason), NumberSeries (RL/2026-27/0001 under a lock);
-                     invoicing.py (write_invoice, gyms_billed_on, whatsapp_usage_lines: the hook session 14 fills,
+                     invoicing.py (write_invoice, gyms_billed_on, whatsapp_usage_lines: last month's shared-number messages,
                      add_charge, remove_charge, record_payment, void_payment, void_invoice, owed_by_gym); tasks.py
                      (write_invoices: beat, hourly; `manage.py write_invoices --day` for a missed day); views/gym.py
                      (/api/billing/invoices/, open when suspended) and views/invoices.py (/api/platform/invoices/,

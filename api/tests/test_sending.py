@@ -399,8 +399,9 @@ def test_messages_already_on_record_get_their_reminders_key(w):
     from django.db import connection
     from django.db.migrations.executor import MigrationExecutor
 
-    before, after = [("gym_messages", "0002_whatsapp_accounts")], [("gym_messages", "0004_message_keys_required")]
     executor = MigrationExecutor(connection)
+    # Back to before the keys, then forward to the latest: the model below is today's, with every later column
+    before, after = [("gym_messages", "0002_whatsapp_accounts")], executor.loader.graph.leaf_nodes("gym_messages")
     executor.migrate(before)
     OldMessage = executor.loader.project_state(before).apps.get_model("gym_messages", "Message")
     OldMessage.objects.create(gym_id=w.gym.id, member_id=w.member.id, kind="dues", to=w.member.phone, text="Hi Asha",

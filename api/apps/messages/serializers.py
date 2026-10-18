@@ -1,5 +1,6 @@
 import re
 
+from django.urls import reverse
 from rest_framework import serializers
 
 from apps.billing.models import GymBilling
@@ -34,7 +35,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 def webhook_path(account: WhatsAppAccount) -> str:
     """Where Meta posts this number's delivery updates: one path for the shared number, one per gym's own."""
-    return "/api/whatsapp/webhook/" if account.is_shared else f"/api/whatsapp/webhook/{account.webhook_slug}/"
+    return reverse("whatsapp-webhook") if account.is_shared else reverse("whatsapp-webhook-own", args=[account.webhook_slug])
 
 
 class WhatsAppAccountSerializer(serializers.ModelSerializer):
