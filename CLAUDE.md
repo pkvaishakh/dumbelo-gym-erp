@@ -35,7 +35,8 @@ Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptio
 
 Rackline support: read-only, only while an admin-granted window is open, and logged.
 Rackline admins (`is_superuser`): the Console (`/console`, `/api/platform/`): gyms, their admins, prices, Rackline
-invoices, WhatsApp accounts. Never a gym's members or money without a support window.
+invoices, WhatsApp accounts, when automation runs (gym admins only pause and resume messages), server status.
+Never a gym's members or money without a support window.
 
 ## Don't touch
 

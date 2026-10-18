@@ -47,8 +47,9 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] WhatsApp accounts and templates, credentials encrypted (session 12)
 - [x] Sending through Meta's Cloud API with templates, no duplicates, retries (session 13)
 - [x] Meta webhook: delivery status, STOP replies, shared-number usage (session 14)
-- [ ] Message switches and schedules; payment received, task assigned, Rackline invoice messages (session 15)
-- [ ] Message log, usage screens, and end-to-end flows for all of it (session 16)
+- [ ] Message switches; automation times set by Rackline admins; payment received, task assigned, Rackline invoice messages (session 15)
+- [ ] Server status in the Console: health, background jobs, messages and webhook, Run Now (session 16)
+- [ ] Message log, usage screens, and end-to-end flows for all of it (session 17)
 
 ## Not in the MVP
 - Payment gateway (record payments only), check-out or time-in-gym, native apps, more languages.
@@ -152,7 +153,7 @@ honest.
 
 ---
 
-# Rackline billing and WhatsApp (sessions 9–16)
+# Rackline billing, WhatsApp and the server (sessions 9–17)
 
 Read `docs/decisions.md` (Roles: Rackline admins; Rackline billing; Messages) first. Rackline's own side lives in
 `apps/platform` (gyms, admin accounts) and `apps/billing` (prices, plans, invoices) under `/api/platform/`, with no
@@ -267,26 +268,56 @@ suspended or in mode off sends nothing.
 for another account's message changes nothing, a repeated "delivered" counts once, an out-of-order "delivered"
 after "read" is ignored, STOP opts out, usage on an invoice matches the delivered messages.
 
-## Session 15: Message switches and new messages
-- `NotificationRule` per gym and message kind: on or paused, and for scheduled ones the hour (default 6) and days
-  ahead (default 7 and 3). A data migration carries `reminders_on` over, then the field goes. `REMINDER_HOUR` comes
-  from the rule. Member receipts start off; the rest on.
+## Session 15: Message switches, automation times and new messages
+- Automation times are Rackline's (decisions.md, Messages): `AutomationSchedule`, one Rackline-wide row: the
+  reminders' hour (default 6, gym time), days ahead (default 7 and 3) and the invoice job's hour on a billing day
+  (default 0, the first run after the gym's midnight). Whole hours only.
+- `NotificationRule` per gym and message kind: on or paused (the gym's admins), and for scheduled ones an hour and
+  days ahead that override the Rackline-wide ones for that gym (Rackline admins only; empty means Rackline's). A
+  data migration carries `reminders_on` over, then the field goes; `REMINDER_HOUR` goes too. Member receipts start
+  off; the rest on.
+- Beat keeps ticking as now (reminders every 15 minutes, invoices hourly); each tick reads the times from the
+  database, so a change takes effect on the next tick without restarting anything.
 - Payment received: sent after a payment is recorded (after the transaction commits), not for a void. Task
   assigned: sent to the staff member when an admin assigns a task. Rackline invoice due (before and after the due
   day) and Rackline payment received go to the gym's owner from Rackline's shared number, set by Rackline admins.
-- Web: More → Settings → Messages, a switch per message (Pause / Resume) and the time and days ahead where they
-  apply; replaces the reminders switch.
+- Console: Automation (the Rackline-wide times), and on a gym's screen its message times with Use Rackline's Times
+  to clear an override. Every change is audited.
+- Gym admin: More → Settings → Messages, a switch per message (Pause / Resume), and when each one goes out,
+  read-only ("Set by Rackline"); replaces the reminders switch.
 
-**Done when:** `pytest` passes: each switch stops its message and only its message, schedules follow the gym's time
-zone, a payment's receipt and a task's message go once, the owner messages respect the invoice dates. Web checks
-pass at 390 px.
+**Done when:** `pytest` passes: each switch stops its message and only its message; a gym's admins can pause and
+resume but the API refuses them a time or days ahead; only Rackline admins change times, Rackline-wide and per gym,
+audited; a gym's override beats the Rackline-wide time and clearing it goes back; times follow the gym's time zone
+and a change applies on the next tick; a payment's receipt and a task's message go once; the owner messages respect
+the invoice dates. Web checks pass at 390 px.
 
-## Session 16: Message log, usage and end-to-end
+## Session 16: Server status
+- `JobRun` (job, started and finished, what it did as counts, the error if it failed), written by every scheduled
+  job: reminders, invoices, retries and the webhook replay. Runs that did nothing are kept only as each job's latest
+  tick; the rest for 30 days, pruned by the jobs themselves.
+- `/api/platform/status/` (Rackline admins only, no `X-Gym`): the API's version and deploy time (`APP_VERSION`,
+  `DEPLOYED_AT` from the deploy, in `.env.example` and `docs/deploy.md`); the database and Redis reachable; the
+  Celery worker answering a ping (2-second limit); beat's last tick; each job's last run, how long it took and what
+  it did; messages waiting for a retry and failed today; webhook calls that couldn't be handled in the last 7 days
+  and Meta's last call to each number. Anything down shows as down, never a 500.
+- Run Now (`/api/platform/jobs/<job>/run/`): reminders, invoices, and the webhook replay of the last 7 days' failed
+  calls. The same safe-to-repeat jobs, queued on the worker rather than run in the request, refused while that job
+  is running, audited.
+- `/api/health/` stays as it is for the load balancer: it says no more than it does now.
+- Console → Server: health, the jobs with their last run and Run Now (with a confirm), and messages and webhook.
+
+**Done when:** `pytest` passes: only Rackline admins reach the status and Run Now (gym admins, desks, trainers,
+members and support refused); a dead database, Redis or worker shows as down; Run Now queues once, is refused while
+the job runs, and is audited; every job writes its run; the status keeps a query budget. Web checks pass at 390 px.
+
+## Session 17: Message log, usage and end-to-end
 - `/api/messages/` gains filters (status, kind, recipient, from/to dates) and a Retry action for a failed message
   (admins; same dedupe key, so never twice). Console: usage per gym per month on the shared number, and a message
   log across gyms (recipient numbers partly hidden).
 - Gym admin: More → Messages, the log with Load More and filters, and this month's usage on the shared number.
 - `e2e/flows.spec.ts`: Rackline admin creates a gym, sets its quota, approves a branch request, records a payment;
-  a gym admin hits the branch limit, sees the invoice and receipt; a suspended gym's desk sees the paused screen.
+  a gym admin hits the branch limit, sees the invoice and receipt; a suspended gym's desk sees the paused screen;
+  a Rackline admin changes a gym's reminder time and opens Server.
 
 **Done when:** every check in the root `CLAUDE.md` passes, including `npm run e2e`, and every box above is ticked.

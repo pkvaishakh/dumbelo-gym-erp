@@ -24,7 +24,9 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Member: their own membership, visits, and self check-in.
 - Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).
 - Rackline admins (`User.is_superuser`) run the business side: gyms, their admin accounts, prices, Rackline
-  invoices and payments, WhatsApp accounts and templates. They use the same sign-in and the same app, landing on
+  invoices and payments, WhatsApp accounts and templates, when automation runs, and the server's status (health,
+  background jobs, messages and webhook, Run Now for the safe-to-repeat jobs). Only they see the server's status:
+  not gym admins, and not Rackline support. They use the same sign-in and the same app, landing on
   the Console (`/console`, mobile first, the design system's screens). They never see inside a gym (members,
   payments, check-ins) except through a support window like anyone else on Rackline's team. Their changes are
   audited.
@@ -209,9 +211,14 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Messages: plan ending in 7 and 3 days, plan ends today, payment due (to members); payment received, the member's
   receipt (**off by default** for each gym); task assigned (to the trainer or receptionist, when an admin assigns
   it); Rackline invoice due and Rackline payment received (to the gym's owner, controlled by Rackline admins).
-- Each gym switches each of its messages on or off (pause and resume) and sets when scheduled ones go out (default
-  6 AM, gym time) and how many days ahead. Pausing stops the messages, not the list, so the desk still sees who to
-  chase. `reminders_on` is replaced by these switches.
+- Each gym's admins switch each of its messages on or off (pause and resume). Pausing stops the messages, not the
+  list, so the desk still sees who to chase. `reminders_on` is replaced by these switches.
+- When automation runs is Rackline's to set, not the gym's: Rackline admins set one schedule for every gym (the
+  reminders' hour, default 6 AM in each gym's own time zone; how many days ahead, default 7 and 3; the hour the
+  invoice job runs on a billing day, default just after midnight) and can change the reminders' hour and days
+  ahead for one gym. Whole hours only. A gym's admins see when their messages go out but can't change it. Retry
+  waits (1, 5 and 15 minutes) are fixed in code: they follow Meta's limits, not a business choice. Changes take
+  effect on the next run, with no restart, and are audited.
 - The daily job writes who needs a nudge (`ReminderDue`) and then sends it. A member gets **one reminder a day** at
   most: a plan ending today comes before money owed, which comes before the 3- and 7-day warnings.
 - Nothing is sent twice: every message has a key unique in its gym (a member's reminder for a day, a task's
