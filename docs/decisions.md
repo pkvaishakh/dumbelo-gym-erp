@@ -107,6 +107,22 @@ What was decided, so code and screens stay consistent. Change this file when a d
   sheet (plain rupees with two decimals, no ₹ or grouping, out as negative, opening and closing balance rows), made
   in the browser from the statement shown, and prints (or saves as a PDF) from a print page like the salary slip.
 
+## Reports (admins; Rackline support may read and download inside its window)
+- Reports is a list of categories, each its own screen fetching only its own figures: Revenue, Expenses (salaries
+  and bills paid are expenses, so payroll lives here, with what is still owed), Cash and bank, Members, Attendance and
+  Tasks. The list shows each category's lead figure and its trend (`GET /api/reports/overview/`).
+- One period and one branch for every screen, kept in the URL: 7 days, 30 days, this month, 3 months or custom days.
+  A range is at most 3 calendar months (19 Jul to 18 Oct, never 18 Jul; `MAX_MONTHS`) and ends on the gym's today
+  or earlier. Default: the last 7 days.
+- Trends compare the same number of days just before. Refunds always reduce revenue, on the day they are given.
+  Cash and bank compares balances with what they held before the first day; a shared bank account counts once and,
+  for one branch, shows whole with the branches it is shared with.
+- Statuses on a report's last day follow plan dates and freezes then, but what is owed is as of now. Dues (members'
+  and the gym's) are always as of now. Reports only read: they never write expense due dates.
+- Each category downloads as a CSV made in the browser from the figures on screen (what it is in the first lines, one
+  header row, plain rupees with two decimals; named `<Category> <from> to <to>.csv`) and prints or saves as a PDF from
+  a print page, like the statement.
+
 ## Attendance
 - Check-in sources: front desk, a fixed wall QR per branch (members/staff scan it), and turnstile/biometric
   (ZKTeco/eSSL pushing punches to `/api/devices/punch/`).

@@ -39,21 +39,3 @@ export type MemberSelf = TrainerMember & {
 };
 
 export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
-
-/** Revenue is what was taken less what was refunded in the same days. */
-type PeriodTotals = { revenue_paise: number; refunds_paise: number; new_members: number; renewals: number; checkins: number; tasks_done: number };
-
-/** /api/reports/period/: one range of days, and the same number of days just before it. */
-export type PeriodReport = {
-  from: string; to: string; days: number;
-  totals: PeriodTotals & { expenses_paise: number };
-  previous: PeriodTotals & { from: string; to: string };
-  series: { date: string; revenue_paise: number; new_members: number; checkins: number }[];
-  revenue_by_plan: { name: string; paise: number }[];
-  expenses_by_category: { category: string; label: string; paise: number }[];
-  tasks: {
-    total: number; todo: number; doing: number; done: number; overdue: number;
-    people: { id: number; name: string; role: "trainer" | "receptionist"; total: number; done: number; overdue: number }[];
-    late: { id: number; title: string; assignee_name: string; due_date: string; due_time: string | null }[];
-  };
-};

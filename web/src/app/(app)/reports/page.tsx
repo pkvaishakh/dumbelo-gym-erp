@@ -1,106 +1,80 @@
 "use client";
-import { addDays, differenceInCalendarDays, parseISO, subMonths } from "date-fns";
-import { BarChart3, CalendarCheck, ClipboardCheck, IndianRupee, UserPlus } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
+import { useReportsOverviewRetrieve } from "@/api/gen/reports/reports";
+import type { ReportsOverview } from "@/api/gen/model";
 import { BranchChip, PageBar } from "@/components/shell";
-import { Empty, Field, Section, Seg, SkeletonRows, Stat } from "@/components/ui";
-import { AttendanceCard, LateTasks, MembersCard, MoneyCard, RevenueCard, TasksCard, Trend } from "@/features/reports";
-import { isoDate, rangeLabel, rupees } from "@/lib/format";
-import { useGet } from "@/lib/hooks";
-import { useSession } from "@/lib/session";
-import type { PeriodReport, Summary } from "@/lib/types";
+import { Icon, SkeletonRows } from "@/components/ui";
+import { REPORTS } from "@/features/reports/categories";
+import { TrendText } from "@/features/reports/parts";
+import { ReportControls, useReportRange, type ReportRange } from "@/features/reports/range";
+import { ReportBody } from "@/features/reports/screen";
+import { ApiError } from "@/lib/api";
+import { dayShort, rangeLabel, rupees, trend } from "@/lib/format";
+import { CATEGORIES, changeSince, type Category } from "@/lib/reports";
 
-type Period = "7d" | "30d" | "3m" | "custom";
-const PERIODS: { value: Period; label: string }[] = [
-  { value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }, { value: "3m", label: "3 months" }, { value: "custom", label: "Custom" },
-];
-const MAX_DAYS = 366; // the API's limit too
+type Headline = { value: string; label: string; change: { dir: "up" | "down" | "flat"; text: string } };
 
-/** The first and last day a period covers, ending today unless the range is custom. */
-function rangeOf(period: Period, today: string, from: string | null, to: string | null): [string, string] {
-  const t = parseISO(today);
-  if (period === "30d") return [isoDate(addDays(t, -29)), today];
-  if (period === "3m") return [isoDate(addDays(subMonths(t, 3), 1)), today];
-  if (period === "custom") return [from || isoDate(addDays(t, -6)), to || today];
-  return [isoDate(addDays(t, -6)), today];
+/** Each category's lead figure, the same one its screen opens with. */
+function headline(slug: Category, o: ReportsOverview): Headline {
+  const vs = (now: number, before: number) => trend(now, before, o.days);
+  const n = (x: number) => x.toLocaleString("en-IN");
+  switch (slug) {
+    case "revenue": return { value: rupees(o.revenue.value), label: "Collected less refunds", change: vs(o.revenue.value, o.revenue.before) };
+    case "expenses": return { value: rupees(o.expenses.value), label: "Spent, salaries and bills included", change: vs(o.expenses.value, o.expenses.before) };
+    case "money": return { value: rupees(o.money.value), label: `Cash and bank on ${dayShort(o.to)}`, change: changeSince(o.money.value, o.money.before, o.from) };
+    case "members": return { value: n(o.members.value), label: "New members", change: vs(o.members.value, o.members.before) };
+    case "attendance": return { value: n(o.attendance.value), label: "Member check-ins", change: vs(o.attendance.value, o.attendance.before) };
+    case "tasks": return { value: `${n(o.tasks.value)} of ${n(o.tasks.total)}`, label: "Tasks done", change: vs(o.tasks.value, o.tasks.before) };
+  }
 }
 
-function rangeError(from: string, to: string) {
-  if (from > to) return "Pick a start date on or before the end date";
-  if (differenceInCalendarDays(parseISO(to), parseISO(from)) >= MAX_DAYS) return "Pick a range of a year or less";
-  return undefined;
+/** One category as a card: a link to its screen, carrying no buttons. */
+function CategoryCard({ slug, name, o, search }: { slug: Category; name: string; o: ReportsOverview; search: string }) {
+  const h = headline(slug, o);
+  return (
+    <Link className="rl-card rl-card--pad rl-report rl-pressable" href={`/reports/${slug}${search ? `?${search}` : ""}`}>
+      <span style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+        <span className="rl-chipicon" aria-hidden="true"><Icon as={REPORTS[slug].icon} size="sm" /></span>
+        <span className="rl-section__title" style={{ flex: "1 1 auto", minWidth: 0 }}>{name}</span>
+        <Icon as={ChevronRight} size="sm" />
+      </span>
+      <span className="rl-report__value" style={{ display: "block", marginTop: "var(--space-3)" }}>{h.value}</span>
+      <span className="rl-perf__label" style={{ display: "block" }}>{h.label}</span>
+      <span className="rl-trend"><TrendText t={h.change} /></span>
+    </Link>
+  );
+}
+
+function Categories({ r }: { r: ReportRange }) {
+  const q = useReportsOverviewRetrieve(r.api, { query: { enabled: r.isAdmin && !r.invalid } });
+  const o = q.data?.data;
+  const cards = (list: typeof CATEGORIES[number][]) => o && list.map((c) => <CategoryCard key={c.slug} slug={c.slug} name={c.name} o={o} search={r.search} />);
+  return (
+    <ReportBody r={r} q={q} error={q.error instanceof ApiError ? q.error : null}>
+      <div className="rl-app__cols">
+        <div className="rl-app__col">{cards(CATEGORIES.slice(0, 3))}</div>
+        <div className="rl-app__col">{cards(CATEGORIES.slice(3))}</div>
+      </div>
+    </ReportBody>
+  );
 }
 
 function ReportsPage() {
-  const params = useSearchParams();
-  const router = useRouter();
-  const { branch } = useSession();
-  const today = isoDate(new Date());
-  const period = (PERIODS.some((p) => p.value === params.get("period")) ? params.get("period") : "7d") as Period;
-  const [from, to] = rangeOf(period, today, params.get("from"), params.get("to"));
-  const error = rangeError(from, to);
-
-  // Filters live in the URL, so Back and a shared link keep them.
-  const go = (next: Record<string, string>) => router.replace(`/reports?${new URLSearchParams(next)}`, { scroll: false });
-  const pick = (p: Period) => go(p === "custom" ? { period: p, from, to } : p === "7d" ? {} : { period: p });
-
-  const r = useGet<PeriodReport>("/api/reports/period/", { from, to, branch }, !error);
-  const s = useGet<Summary>("/api/reports/summary/", { date: to, branch }, !error).data;
-  const rep = r.data;
-
+  const r = useReportRange();
   return (
-    <div className="rl-app rl-root">
-      <PageBar title="Reports" sub={rangeLabel(from, to)} action={<BranchChip />} />
+    <div className="rl-app rl-root" data-rscreen="reports">
+      <PageBar title="Reports" sub={rangeLabel(r.from, r.to)} action={r.isAdmin ? <BranchChip value={r.branch} onPick={r.pickBranch} /> : undefined} />
       <main className="rl-app__main">
-        <div className="rl-searchbar rl-searchbar--period">
-          <Seg label="Period" value={period} onChange={pick} options={PERIODS} onSurface />
-        </div>
-        {period === "custom" && (
-          <div className="rl-pair" style={{ marginTop: "var(--space-4)" }}>
-            <Field label="From" error={error}>{(id, desc) => (
-              <input className="rl-field__input" id={id} type="date" max={today} value={from} aria-describedby={desc} aria-invalid={!!error}
-                onChange={(e) => e.target.value && go({ period, from: e.target.value, to })} />
-            )}</Field>
-            <Field label="To">{(id) => (
-              <input className="rl-field__input" id={id} type="date" max={today} value={to}
-                onChange={(e) => e.target.value && go({ period, from, to: e.target.value })} />
-            )}</Field>
-          </div>
-        )}
-
-        {error ? null : r.error ? (
-          <Empty icon={BarChart3} title="This report didn't load" text={r.error.message}>
-            <button className="rl-button rl-button--secondary" type="button" onClick={() => r.refetch()}>Try Again</button>
-          </Empty>
-        ) : !rep ? <SkeletonRows n={6} /> : (
-          <>
-            <Section label="Summary">
-              <div className="rl-kpis">
-                <Stat icon={IndianRupee} accent value={rupees(rep.totals.revenue_paise)} label="Revenue" note={<Trend now={rep.totals.revenue_paise} before={rep.previous.revenue_paise} days={rep.days} />} />
-                <Stat icon={UserPlus} value={rep.totals.new_members.toLocaleString("en-IN")} label="New members" note={<Trend now={rep.totals.new_members} before={rep.previous.new_members} days={rep.days} />} />
-                <Stat icon={CalendarCheck} value={rep.totals.checkins.toLocaleString("en-IN")} label="Check-ins" note={<Trend now={rep.totals.checkins} before={rep.previous.checkins} days={rep.days} />} />
-                <Stat icon={ClipboardCheck} value={`${rep.tasks.done} of ${rep.tasks.total}`} label="Tasks done" note={<Trend now={rep.totals.tasks_done} before={rep.previous.tasks_done} days={rep.days} />} />
-              </div>
-            </Section>
-            <div className="rl-app__cols">
-              <div className="rl-app__col">
-                <RevenueCard r={rep} today={today} />
-                <MoneyCard r={rep} />
-                <TasksCard r={rep} />
-              </div>
-              <div className="rl-app__col">
-                <MembersCard r={rep} s={s} today={today} />
-                <AttendanceCard r={rep} today={today} />
-                <LateTasks r={rep} />
-              </div>
-            </div>
-          </>
-        )}
+        <ReportControls r={r} />
+        <Categories r={r} />
       </main>
     </div>
   );
 }
 
-export default function Page() { return <Suspense><ReportsPage /></Suspense>; }
+export default function Page() {
+  return <Suspense fallback={<SkeletonRows n={6} />}><ReportsPage /></Suspense>;
+}
