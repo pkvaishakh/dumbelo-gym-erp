@@ -34,10 +34,10 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * The reminders a gym has sent its members, newest first.
+ * The messages a gym has sent, newest first.
 
-Read-only everywhere: messages go out with the daily job, so there is nothing for a screen to post.
-Trainers and members are out because a dues reminder says the amount.
+Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
+members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
  */
 export type messagesListResponse200 = {
   data: PaginatedMessageList
@@ -153,10 +153,10 @@ export function useMessagesList<TData = Awaited<ReturnType<typeof messagesList>>
 
 
 /**
- * The reminders a gym has sent its members, newest first.
+ * The messages a gym has sent, newest first.
 
-Read-only everywhere: messages go out with the daily job, so there is nothing for a screen to post.
-Trainers and members are out because a dues reminder says the amount.
+Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
+members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
  */
 export type messagesRetrieveResponse200 = {
   data: Message

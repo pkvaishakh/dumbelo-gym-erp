@@ -261,8 +261,8 @@ def test_two_runs_writing_the_same_message_send_it_once(w, cloud):
     member = w.plan_ending_on(w.today + timedelta(days=7), "Raced", "9811111117")
     queue_for(w.gym, w.today)
     key = Message.reminder_key(member.id, w.today)
-    first = Message(gym=w.gym, member=member, kind="expiring_7", dedupe_key=key, to=member.phone, for_date=w.today, provider="x")
-    second = Message(gym=w.gym, member=member, kind="expiring_7", dedupe_key=key, to=member.phone, for_date=w.today, provider="x")
+    first = Message(gym=w.gym, member=member, kind="plan_ending", dedupe_key=key, to=member.phone, for_date=w.today, provider="x")
+    second = Message(gym=w.gym, member=member, kind="plan_ending", dedupe_key=key, to=member.phone, for_date=w.today, provider="x")
 
     assert services.queue([first]) is True
     assert services.queue([second]) is False
@@ -384,7 +384,7 @@ def test_reminders_read_the_same_as_before(w, shared_number):
     member = w.plan_ending_on(w.today + timedelta(days=1), "Tomorrow Person", "9811111117")
     queue_for(w.gym, w.today)
     # 1 day ahead isn't a reminder day; write one by hand to see the "tomorrow" wording
-    ReminderDue.objects.create(gym=w.gym, member=member, kind=ReminderDue.EXPIRING_3, for_date=w.today)
+    ReminderDue.objects.create(gym=w.gym, member=member, kind=ReminderDue.PLAN_ENDING, days_left=1, for_date=w.today)
     send_due(fresh(w.gym), w.today)
     assert ", tomorrow. Renew it at the front desk" in Message.objects.get(member=member).text
 
@@ -400,8 +400,9 @@ def test_messages_already_on_record_get_their_reminders_key(w):
     from django.db.migrations.executor import MigrationExecutor
 
     executor = MigrationExecutor(connection)
-    # Back to before the keys, then forward to the latest: the model below is today's, with every later column
-    before, after = [("gym_messages", "0002_whatsapp_accounts")], executor.loader.graph.leaf_nodes("gym_messages")
+    # Back to before the keys, then forward to the latest of every app (going back undoes the gyms migration that
+    # needs the messages' latest): the model below is today's, with every later column
+    before, after = [("gym_messages", "0002_whatsapp_accounts")], executor.loader.graph.leaf_nodes()
     executor.migrate(before)
     OldMessage = executor.loader.project_state(before).apps.get_model("gym_messages", "Message")
     OldMessage.objects.create(gym_id=w.gym.id, member_id=w.member.id, kind="dues", to=w.member.phone, text="Hi Asha",
@@ -413,3 +414,4 @@ def test_messages_already_on_record_get_their_reminders_key(w):
     assert row.dedupe_key == Message.reminder_key(w.member.id, date(2026, 5, 4)) == f"member:{w.member.id}:reminder:2026-05-04"
     assert row.status == Message.SENT and row.attempts == 1 and row.text == "Hi Asha" and row.parameters == []
     assert row.account is None and not row.billable
+    assert row.kind == "payment_due"  # the reminder kinds became their messages' kinds

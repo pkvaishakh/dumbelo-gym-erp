@@ -14,7 +14,10 @@ from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpe
 from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, MoneyMoveViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
-from apps.messages.views import GymWhatsAppView, MessageViewSet, WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView
+from apps.messages.views import (
+    AutomationView, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
+    WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView,
+)
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
 from apps.platform.views import GymAdminViewSet, GymViewSet
 from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
@@ -75,12 +78,17 @@ urlpatterns = [
     path("api/reports/tasks/", TasksView.as_view(), name="report-tasks"),
     path("api/gym/settings/", GymSettingsView.as_view(), name="gym-settings"),
     path("api/gym/whatsapp/", GymWhatsAppView.as_view(), name="gym-whatsapp"),
+    path("api/gym/messages/", GymMessagesView.as_view(), name="gym-messages"),
+    path("api/gym/messages/<slug:kind>/", GymMessageView.as_view(), name="gym-message"),
     path("api/whatsapp/webhook/", WhatsAppWebhookView.as_view(), name="whatsapp-webhook"),  # Rackline's shared number
     path("api/whatsapp/webhook/<slug:slug>/", WhatsAppWebhookView.as_view(), name="whatsapp-webhook-own"),  # a gym's own
     path("api/cash/", CashView.as_view(), name="cash"),
     path("api/billing/plan/", RacklinePlanView.as_view(), name="rackline-plan"),
     path("api/platform/gyms/<int:gym_id>/plan/", GymPlanView.as_view(), name="platform-gym-plan"),
     path("api/platform/gyms/<int:gym_id>/plan/current-prices/", GymPlanPricesView.as_view(), name="platform-gym-plan-prices"),
+    path("api/platform/gyms/<int:gym_id>/messages/", GymMessageTimesView.as_view(), name="platform-gym-messages"),
+    path("api/platform/gyms/<int:gym_id>/messages/<slug:kind>/", GymMessageTimeView.as_view(), name="platform-gym-message"),
+    path("api/platform/automation/", AutomationView.as_view(), name="platform-automation"),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),

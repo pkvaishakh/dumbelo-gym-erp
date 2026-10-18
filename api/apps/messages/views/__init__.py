@@ -1,3 +1,4 @@
+from .automation import AutomationView, GymMessageTimesView, GymMessageTimeView
 from .console import WhatsAppAccountViewSet, WhatsAppTemplateViewSet
-from .gym import GymWhatsAppView, MessageViewSet
+from .gym import GymMessagesView, GymMessageView, GymWhatsAppView, MessageViewSet
 from .webhook import WhatsAppWebhookView

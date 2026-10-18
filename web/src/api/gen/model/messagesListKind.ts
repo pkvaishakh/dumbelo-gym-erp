@@ -11,11 +11,10 @@ export type MessagesListKind = typeof MessagesListKind[keyof typeof MessagesList
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MessagesListKind = {
-  dues: 'dues',
-  expiring_0: 'expiring_0',
-  expiring_3: 'expiring_3',
-  expiring_7: 'expiring_7',
+  payment_due: 'payment_due',
   payment_received: 'payment_received',
+  plan_ending: 'plan_ending',
+  plan_ends_today: 'plan_ends_today',
   rackline_invoice_due: 'rackline_invoice_due',
   rackline_payment_received: 'rackline_payment_received',
   task_assigned: 'task_assigned',

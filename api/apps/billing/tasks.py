@@ -1,6 +1,6 @@
 """The scheduled side of Rackline billing: writing each gym's invoice on its billing day. The rules live in invoicing.py."""
 import logging
-from datetime import date
+from datetime import date, datetime
 
 from celery import shared_task
 
@@ -11,11 +11,12 @@ from . import invoicing
 log = logging.getLogger(__name__)
 
 
-def write_due(day: date | None = None) -> int:
-    """Write the invoice of every active gym whose billing day it is, on its own clock (or `day`). Safe to repeat:
-    a month with an invoice is skipped. One gym's failure is logged and never stops the rest."""
+def write_due(day: date | None = None, now: datetime | None = None) -> int:
+    """Write the invoice of every active gym whose billing day it is, on its own clock from Rackline's invoice hour
+    (or `day`). Safe to repeat: a month with an invoice is skipped. One gym's failure is logged and never stops
+    the rest."""
     written = 0
-    for gym, on in invoicing.gyms_billed_on(day):
+    for gym, on in invoicing.gyms_billed_on(day, now):
         try:
             inv = invoicing.write_invoice(gym, on)
         except Exception:
@@ -29,7 +30,8 @@ def write_due(day: date | None = None) -> int:
 
 @shared_task
 def write_invoices(day: str | None = None):
-    """The job beat runs every hour (`CELERY_BEAT_SCHEDULE`): each gym's day turns at its own midnight, and the ticks
-    after the first find the invoice written. `day` (YYYY-MM-DD) writes a billing day the worker missed. Returns how
-    many invoices were written, for the worker's log."""
+    """The job beat runs every hour (`CELERY_BEAT_SCHEDULE`): each gym's billing day starts at its own midnight, the
+    invoice is written from Rackline's invoice hour (read on every tick), and the ticks after that find it written.
+    `day` (YYYY-MM-DD) writes a billing day the worker missed. Returns how many invoices were written, for the
+    worker's log."""
     return write_due(date.fromisoformat(day) if day else None)

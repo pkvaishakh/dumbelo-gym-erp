@@ -7,7 +7,7 @@
  */
 
 /**
- * The gym's own rules. Only the switches can be changed here; the name, slug and time zone are Rackline's.
+ * The gym as Rackline set it up: its name, slug and time zone. Its message switches are /api/gym/messages/.
  */
 export interface GymSettings {
   readonly name: string;
@@ -17,6 +17,4 @@ export interface GymSettings {
    */
   readonly slug: string;
   readonly timezone: string;
-  /** Send members their renewal and dues reminders */
-  reminders_on?: boolean;
 }

@@ -212,11 +212,13 @@ private subnets, no load balancer:
 | `rackline-worker` | `celery -A config worker --loglevel=info` | Runs the jobs |
 | `rackline-beat` | `celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule` | The clock. Exactly one |
 
-Beat ticks every quarter hour and wakes each gym when its own clock strikes 6 AM, so keep **one** beat
-instance: two would hand out the same morning twice. (Nothing breaks if they do — a second sweep writes no new
-reminder rows and sends no second message — but there is no reason to pay for it.) Beat also runs
+Beat ticks every quarter hour and wakes each gym when its own clock reaches its reminder hours (6 AM unless a
+Rackline admin set others in Console → Automation, read from the database on every tick, so a change needs no
+restart), so keep **one** beat instance: two would hand out the same morning twice. (Nothing breaks if they do — a
+second sweep writes no new reminder rows and sends no second message — but there is no reason to pay for it.) The
+same tick reminds gyms' owners about Rackline invoices coming due or late. Beat also runs
 `apps.billing.tasks.write_invoices` at five past every hour: each active gym's Rackline invoice on its billing day,
-skipped once written. If the worker was down on a billing day, write it by hand:
+from Rackline's invoice hour (midnight by default) on the gym's clock, skipped once written. If the worker was down on a billing day, write it by hand:
 `python manage.py write_invoices --day 2026-11-01`. And every minute, `apps.messages.tasks.retry_messages` tries
 again the WhatsApp messages Meta turned away for now (rate limits, Meta busy), up to 3 times with growing waits.
 A message Meta may already have taken (it didn't answer, or the worker died mid-send) is never sent again on its

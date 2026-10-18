@@ -10,6 +10,8 @@ from apps.core.errors import RuleBroken
 from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, STAFF, GymViewMixin
 from apps.gyms.models import GymRole
+from apps.messages.notify import after_commit
+from apps.messages.tasks import send_task_assigned
 
 from .models import Task, TaskUpdate
 from .services import overdue
@@ -90,6 +92,16 @@ class TaskViewSet(GymViewMixin, viewsets.ModelViewSet):
         if q := p.get("q", "").strip():
             qs = qs.filter(Q(title__icontains=q) | Q(details__icontains=q) | Q(assignee__user__name__icontains=q))
         return qs
+
+    def perform_create(self, serializer):
+        task = serializer.save()
+        after_commit(send_task_assigned, task.pk)  # tell them on WhatsApp, if the gym sends task messages
+
+    def perform_update(self, serializer):
+        before = serializer.instance.assignee_id
+        task = serializer.save()
+        if task.assignee_id != before:  # handed to someone else: they hear about it too
+            after_commit(send_task_assigned, task.pk)
 
     def get_queryset(self):
         qs = self._mine().select_related("assignee__user", "created_by__user").prefetch_related("updates__author__user")

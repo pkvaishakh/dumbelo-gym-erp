@@ -2,12 +2,12 @@ import re
 import secrets
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q, Value
 from django.db.models.functions import Coalesce
 
 from apps.core.models import GymScoped, TimeStamped
-from apps.reminders.models import ReminderDue
 
 from .crypto import EncryptedTextField
 
@@ -150,16 +150,8 @@ class Message(GymScoped):
     them, filled in from the template, so the desk can see exactly what went.
     """
 
-    #: What a message is about. Reminders keep their own kinds (the desk sees "Plan ends in 3 days", not just
-    #: "Plan ending soon"); every other kind is the template's.
-    KINDS = [*ReminderDue.KINDS, *[(k, label) for k, label in WhatsAppTemplate.KINDS if k not in {
-        WhatsAppTemplate.PLAN_ENDING, WhatsAppTemplate.PLAN_ENDS_TODAY, WhatsAppTemplate.PAYMENT_DUE}]]
-    #: The template each kind goes out on
-    TEMPLATE_KIND = {
-        ReminderDue.EXPIRING_7: WhatsAppTemplate.PLAN_ENDING, ReminderDue.EXPIRING_3: WhatsAppTemplate.PLAN_ENDING,
-        ReminderDue.EXPIRING_0: WhatsAppTemplate.PLAN_ENDS_TODAY, ReminderDue.DUES: WhatsAppTemplate.PAYMENT_DUE,
-        **{k: k for k, _ in WhatsAppTemplate.KINDS},
-    }
+    #: What a message is about: the template it goes out on. A plan ending soon says how soon in its words.
+    KINDS = WhatsAppTemplate.KINDS
 
     QUEUED, SENT, DELIVERED, READ, FAILED = "queued", "sent", "delivered", "read", "failed"
     STATUSES = [(QUEUED, "Sending"), (SENT, "Sent"), (DELIVERED, "Delivered"), (READ, "Read"), (FAILED, "Failed")]
@@ -268,3 +260,71 @@ class InboundMessage(TimeStamped):
 
     def __str__(self):
         return f"{self.from_number}: {self.text[:40]}"
+
+
+HOURS = [MinValueValidator(0), MaxValueValidator(23)]  # whole hours on a 24-hour clock: 0 is midnight, 18 is 6 PM
+
+
+def _days_ahead() -> list[int]:
+    return [7, 3]
+
+
+class AutomationSchedule(TimeStamped):
+    """When Rackline's automation runs, for every gym: one row, set by Rackline admins (the Console's Automation).
+
+    The reminders go out at `reminder_hour` on each gym's own clock, warning members `days_ahead` days before a
+    plan ends; a gym's Rackline invoice is written on its billing day at `invoice_hour`. A gym's own times, where a
+    Rackline admin set them, are on its `NotificationRule` rows. The jobs read this on every tick, so a change
+    applies on the next one without restarting anything.
+    """
+
+    reminder_hour = models.PositiveSmallIntegerField(default=6, validators=HOURS, help_text="The hour reminders go out, on each gym's clock")
+    days_ahead = models.JSONField(default=_days_ahead, help_text="How many days before a plan ends members are warned")
+    invoice_hour = models.PositiveSmallIntegerField(default=0, validators=HOURS,
+                                                    help_text="The hour on a gym's billing day its Rackline invoice is written")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=Q(pk=1), name="one_automation_schedule")]
+
+    def __str__(self):
+        return f"Reminders at {self.reminder_hour}:00, {self.days_ahead} days ahead; invoices at {self.invoice_hour}:00"
+
+    @classmethod
+    def current(cls) -> "AutomationSchedule":
+        """The schedule in force. Before a Rackline admin first saves one, the defaults (unsaved): reading it on
+        every tick never writes."""
+        return cls.objects.filter(pk=1).first() or cls(pk=1)
+
+
+class NotificationRule(GymScoped):
+    """One gym's word on one of its messages: on or paused, and (for the ones sent at an hour) the times a
+    Rackline admin set for this gym in place of Rackline's.
+
+    No row means the defaults: on, except the member's receipt, which a gym turns on itself; and Rackline's times.
+    The gym's admins pause and resume their own messages; Rackline admins the messages Rackline sends the gym's
+    owner, and every time. Pausing stops the messages, never the desk's reminder list.
+    """
+
+    PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE = WhatsAppTemplate.PLAN_ENDING, WhatsAppTemplate.PLAN_ENDS_TODAY, WhatsAppTemplate.PAYMENT_DUE
+    PAYMENT_RECEIVED, TASK_ASSIGNED = WhatsAppTemplate.PAYMENT_RECEIVED, WhatsAppTemplate.TASK_ASSIGNED
+    RACKLINE_INVOICE_DUE, RACKLINE_PAYMENT_RECEIVED = WhatsAppTemplate.RACKLINE_INVOICE_DUE, WhatsAppTemplate.RACKLINE_PAYMENT_RECEIVED
+
+    REMINDERS = (PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE)  # the daily list's messages, one a member a day
+    GYM_KINDS = (*REMINDERS, PAYMENT_RECEIVED, TASK_ASSIGNED)  # the gym's own messages: its admins switch them
+    RACKLINE_KINDS = (RACKLINE_INVOICE_DUE, RACKLINE_PAYMENT_RECEIVED)  # Rackline's to the owner: Rackline admins switch them
+    SCHEDULED = (*REMINDERS, RACKLINE_INVOICE_DUE)  # sent at an hour, rather than when something happens
+    OFF_BY_DEFAULT = (PAYMENT_RECEIVED,)
+
+    kind = models.CharField(max_length=32, choices=WhatsAppTemplate.KINDS)
+    is_on = models.BooleanField(default=True)
+    hour = models.PositiveSmallIntegerField(null=True, blank=True, validators=HOURS,
+                                            help_text="This gym's hour in place of Rackline's; empty means Rackline's")
+    days_ahead = models.JSONField(null=True, blank=True, help_text="A plan ending soon: this gym's days in place of Rackline's")
+
+    class Meta:
+        ordering = ["gym", "kind"]
+        constraints = [models.UniqueConstraint(fields=["gym", "kind"], name="one_rule_per_gym_message")]
+
+    def __str__(self):
+        return f"{self.gym_id} · {self.kind} · {'on' if self.is_on else 'paused'}"

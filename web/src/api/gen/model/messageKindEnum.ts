@@ -7,10 +7,9 @@
  */
 
 /**
- * * `expiring_7` - Plan ends in 7 days
-* `expiring_3` - Plan ends in 3 days
-* `expiring_0` - Plan ends today
-* `dues` - Payment due
+ * * `plan_ending` - Plan ending soon
+* `plan_ends_today` - Plan ends today
+* `payment_due` - Payment due
 * `payment_received` - Payment received
 * `task_assigned` - Task assigned
 * `rackline_invoice_due` - Rackline invoice due
@@ -21,10 +20,9 @@ export type MessageKindEnum = typeof MessageKindEnum[keyof typeof MessageKindEnu
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MessageKindEnum = {
-  expiring_7: 'expiring_7',
-  expiring_3: 'expiring_3',
-  expiring_0: 'expiring_0',
-  dues: 'dues',
+  plan_ending: 'plan_ending',
+  plan_ends_today: 'plan_ends_today',
+  payment_due: 'payment_due',
   payment_received: 'payment_received',
   task_assigned: 'task_assigned',
   rackline_invoice_due: 'rackline_invoice_due',

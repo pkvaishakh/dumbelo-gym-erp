@@ -8,10 +8,12 @@ import { DetailBar } from "@/components/shell";
 import { Details, Empty, Icon, MenuRow, Photo, Section, SkeletonRows, Status } from "@/components/ui";
 import { AdminsSection } from "@/features/console/admins";
 import { EditGymSheet, StatusSheet } from "@/features/console/gym-sheets";
+import { GymMessages } from "@/features/console/messages";
 import { GymStatus } from "@/features/console/parts";
 import { branchesOf, day, GYM_STATUS, plural, rupees, WHATSAPP_STATUS } from "@/lib/format";
 
-/** One gym, as Rackline sees it: status, branches and admins. Never what is inside it (members, money, visits). */
+/** One gym, as Rackline sees it: status, branches, its Rackline plan, when its messages go out and its admins. Never
+ *  what is inside it (members, money, visits). */
 export default function GymScreen() {
   const { id } = useParams<{ id: string }>();
   const q = usePlatformGymsRetrieve(Number(id));
@@ -76,6 +78,7 @@ export default function GymScreen() {
               value={whatsapp ? `${whatsapp.display_number} • ${WHATSAPP_STATUS[whatsapp.status]?.label ?? whatsapp.status}` : "Add Own Number"} />
           </ul>
         </Section>
+        <GymMessages gymId={g.id} />
         <AdminsSection gymId={g.id} />
         <Section label="Account">
           {suspended || g.status === "trial" ? (

@@ -1,9 +1,8 @@
 """The reminders that reach members: who gets one, how often, and what is written down when one fails."""
 from datetime import timedelta
 
-from apps.audit.models import AuditLog
 from apps.members.models import Member
-from apps.messages.models import Message
+from apps.messages.models import Message, NotificationRule
 from apps.messages.senders import FakeSender, SendFailed
 from apps.messages.services import send_due
 from apps.messages.tasks import send_reminders
@@ -26,7 +25,7 @@ def test_a_plan_ending_in_a_week_is_asked_to_renew(w):
     assert nudge(w) == {"sent": 1, "failed": 0, "skipped": 0}
 
     message = Message.objects.get(gym=w.gym, member=member)
-    assert message.status == Message.SENT and message.kind == ReminderDue.EXPIRING_7
+    assert message.status == Message.SENT and message.kind == ReminderDue.PLAN_ENDING
     assert message.to == member.phone and message.provider == "fake" and message.provider_id and message.error == ""
     assert message.text.startswith("Hi Asha,")  # their first name, not "Dear Member"
     assert "Monthly plan" in message.text and "in 7 days" in message.text and "front desk" in message.text
@@ -39,7 +38,7 @@ def test_a_member_who_owes_money_is_told_how_much(w):
     assert nudge(w)["sent"] == 1
 
     message = Message.objects.get(member=member)
-    assert message.kind == ReminderDue.DUES
+    assert message.kind == ReminderDue.PAYMENT_DUE
     assert "₹1,500 is still to pay" in message.text and "Monthly plan" in message.text
 
 
@@ -47,11 +46,11 @@ def test_a_member_hears_once_a_day(w):
     """A plan ending today and money owed is two reminders and one message: the more pressing one."""
     member = w.plan_ending_on(w.today, "Karthik Iyer", "9811111100", paid=False)
     queue_for(w.gym, w.today)
-    assert sorted(ReminderDue.objects.filter(member=member).values_list("kind", flat=True)) == ["dues", "expiring_0"]
+    assert sorted(ReminderDue.objects.filter(member=member).values_list("kind", flat=True)) == ["payment_due", "plan_ends_today"]
 
     assert send_due(w.gym, w.today)["sent"] == 1
     message = Message.objects.get(member=member)
-    assert message.kind == ReminderDue.EXPIRING_0 and "ends today" in message.text
+    assert message.kind == ReminderDue.PLAN_ENDS_TODAY and "ends today" in message.text
 
     assert send_due(w.gym, w.today) == {"sent": 0, "failed": 0, "skipped": 0}  # run again: nothing to send
     assert Message.objects.filter(member=member).count() == 1 and len(FakeSender.outbox) == 1
@@ -117,9 +116,8 @@ def test_a_provider_that_breaks_doesnt_stop_the_morning(w, monkeypatch):
     assert Message.objects.get(member=member).error == "Connection reset by peer"
 
 
-def test_a_gym_with_reminders_off_sends_nothing(w):
-    w.gym.reminders_on = False
-    w.gym.save(update_fields=["reminders_on"])
+def test_a_gym_with_its_reminders_paused_sends_nothing(w):
+    NotificationRule.objects.bulk_create([NotificationRule(gym=w.gym, kind=k, is_on=False) for k in NotificationRule.REMINDERS])
     w.plan_ending_on(w.today + timedelta(days=7), "Not Messaged", "9811111110")
 
     assert nudge(w) == {"sent": 0, "failed": 0, "skipped": 0}
@@ -153,7 +151,7 @@ def test_the_morning_job_lists_and_sends_in_one_go(w, other):
     assert send_reminders.apply(kwargs={"at": at}).get() == 1
 
     message = Message.objects.get(member=member)
-    assert message.for_date == sweep_day and message.kind == ReminderDue.EXPIRING_3
+    assert message.for_date == sweep_day and message.kind == ReminderDue.PLAN_ENDING
     assert not Message.objects.filter(gym=other.gym).exists()  # London is still asleep
 
 
@@ -162,7 +160,7 @@ def test_the_reads_dont_grow_with_the_number_of_members(w, django_assert_max_num
     for i in range(2):
         w.plan_ending_on(w.today + timedelta(days=7), f"Two {i}", f"97{6000 + i:08d}")
     queue_for(w.gym, w.today)
-    with django_assert_max_num_queries(10) as few:
+    with django_assert_max_num_queries(12) as few:  # 2 of them the gym's switches and Rackline's schedule
         send_due(w.gym, w.today)
     reads = len(few.captured_queries) - 2  # two members, two inserts
 
@@ -184,7 +182,7 @@ def test_the_desk_reads_the_reminders_a_member_got(w):
     assert len(rows) == 1
     row = rows[0]
     assert row["member"] == member.id and row["member_name"] == "Asha Rao"
-    assert row["kind"] == "expiring_7" and row["kind_label"] == "Plan ends in 7 days" and row["status"] == "sent"
+    assert row["kind"] == "plan_ending" and row["kind_label"] == "Plan ending soon" and row["status"] == "sent"
     assert row["for_date"] == str(w.today) and "Hi Asha," in row["text"] and row["to"] == member.phone
 
 
@@ -234,43 +232,19 @@ def test_the_reminder_list_costs_the_same_however_many_rows(w, django_assert_max
         assert c.get("/api/messages/").json()["count"] == 12
 
 
-# ---- the gym's switch ----
+# ---- the gym's settings ----
 
-def test_an_admin_turns_reminders_off_and_it_is_audited(w):
+def test_the_settings_say_how_rackline_set_the_gym_up_and_change_nothing(w):
     c = w.client(w.admin)
-    assert c.get(SETTINGS).json() == {"name": w.gym.name, "slug": "iron", "timezone": "Asia/Kolkata", "reminders_on": True}
-
-    r = c.patch(SETTINGS, {"reminders_on": False}, format="json")
-    assert r.status_code == 200 and r.json()["reminders_on"] is False
+    assert c.get(SETTINGS).json() == {"name": w.gym.name, "slug": "iron", "timezone": "Asia/Kolkata"}
+    assert c.patch(SETTINGS, {"name": "Not My Gym", "timezone": "Europe/London"}, format="json").status_code == 405
     w.gym.refresh_from_db()
-    assert w.gym.reminders_on is False
-
-    log = AuditLog.objects.get(gym=w.gym, action="gym.settings_changed")
-    assert log.actor == w.admin.user and log.before == {"reminders_on": True} and log.after == {"reminders_on": False}
-
-    assert c.patch(SETTINGS, {"reminders_on": False}, format="json").status_code == 200
-    assert AuditLog.objects.filter(action="gym.settings_changed").count() == 1  # nothing changed, nothing logged
+    assert w.gym.name != "Not My Gym" and w.gym.timezone == "Asia/Kolkata"
 
 
-def test_only_admins_see_or_change_the_settings(w):
+def test_only_admins_see_the_settings(w, other):
     for c in (w.client(w.desk), w.client(w.trainer), w.member_client()):
         assert c.get(SETTINGS).status_code == 403
-        assert c.patch(SETTINGS, {"reminders_on": False}, format="json").status_code == 403
-    w.gym.refresh_from_db()
-    assert w.gym.reminders_on is True
-
-
-def test_the_settings_of_a_gym_you_have_no_role_in_are_not_found(w, other):
     c = w.client(w.admin)
     c.credentials(HTTP_X_GYM=other.gym.slug)
     assert c.get(SETTINGS).status_code == 404
-    assert c.patch(SETTINGS, {"reminders_on": False}, format="json").status_code == 404
-    other.gym.refresh_from_db()
-    assert other.gym.reminders_on is True
-
-
-def test_the_gyms_name_and_time_zone_cant_be_changed_from_here(w):
-    r = w.client(w.admin).patch(SETTINGS, {"name": "Not My Gym", "timezone": "Europe/London"}, format="json")
-    assert r.status_code == 200 and r.json()["name"] == w.gym.name
-    w.gym.refresh_from_db()
-    assert w.gym.name != "Not My Gym" and w.gym.timezone == "Asia/Kolkata"

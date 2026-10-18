@@ -7,9 +7,11 @@ saying "not now" (rate limits, Meta busy) is tried again up to 3 times, with gro
 minute); anything else fails at once. One failure never stops the rest.
 
 `apps.reminders` works out who has earned a nudge; `send_due` sends it. The rules are the gym's: one message a
-member a day, nothing to someone who asked us to stop, nothing while the gym has reminders off, WhatsApp off, or
-its account paused.
+member a day, nothing to someone who asked us to stop, nothing while that message is paused (`automation.py`),
+WhatsApp is off, or the gym's account is paused. `send_one` sends a single message about something that just
+happened (`notify.py`).
 """
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 
 from django.db import IntegrityError, transaction
@@ -23,13 +25,14 @@ from apps.gyms.models import Gym
 from apps.members.models import Member
 from apps.reminders.models import ReminderDue
 
+from . import automation
 from .accounts import account_for, approved_templates, whatsapp_mode
-from .models import Message, WhatsAppAccount, WhatsAppTemplate
+from .models import Message, NotificationRule, WhatsAppAccount, WhatsAppTemplate
 from .senders import Sender, SendFailed, get_sender
 
 #: Which reminder a member hears about when they have earned more than one: the plan that runs out today
 #: first, then money owed, then the earlier warnings. Everything else can wait for tomorrow's message.
-PRIORITY = [ReminderDue.EXPIRING_0, ReminderDue.DUES, ReminderDue.EXPIRING_3, ReminderDue.EXPIRING_7]
+PRIORITY = [ReminderDue.PLAN_ENDS_TODAY, ReminderDue.PAYMENT_DUE, ReminderDue.PLAN_ENDING]
 
 #: How long to wait before trying again after each temporary failure: 3 retries, then it has failed.
 RETRY_WAITS = (timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=15))
@@ -57,16 +60,18 @@ def stop_reason(gym: Gym, member: Member | None = None) -> str | None:
 
 class Route:
     """The number a gym's messages go from (by its WhatsApp mode) and that number's approved templates, read once
-    for a whole run."""
+    for a whole run. `rackline`: Rackline's own messages to the gym's owner, from the shared number, never billed
+    to the gym."""
 
-    def __init__(self, gym: Gym):
-        approved = approved_templates(gym)
+    def __init__(self, gym: Gym, rackline: bool = False):
+        where = None if rackline else gym
+        approved = approved_templates(where)
         # Usually one query: the account comes with its templates. Only a number without any is looked up alone.
-        self.account: WhatsAppAccount | None = approved[0].account if approved else account_for(gym)
+        self.account: WhatsAppAccount | None = approved[0].account if approved else account_for(where)
         self.templates: dict[str, WhatsAppTemplate] = {}
         for template in approved:
             self.templates.setdefault(template.kind, template)  # one language a kind for now: the first
-        self.billing = getattr(gym, "billing", None)
+        self.billing = None if rackline else getattr(gym, "billing", None)
 
     def fill_in(self, row: Message, values: dict[str, str]) -> None:
         """Put the number, the template and the words on an unsaved row, ready to send. When it can't go, mark it
@@ -74,7 +79,7 @@ class Route:
         if self.account is None:
             return _cant(row, NOT_SET_UP)
         row.account = self.account
-        kind = Message.TEMPLATE_KIND[row.kind]
+        kind = row.kind
         template = self.templates.get(kind)
         if template is None:
             label = dict(WhatsAppTemplate.KINDS)[kind].lower()
@@ -84,7 +89,7 @@ class Route:
             return _cant(row, f"Not sent: it's missing {', '.join(labels.get(m, m).lower() for m in missing)}."[:200])
         row.template, row.parameters = template, [values[name] for name in template.parameters]
         row.text = template.fill(row.parameters)
-        if self.account.is_shared:  # the gym's own number is paid to Meta by the gym, not through Rackline
+        if self.account.is_shared and self.billing is not None:  # a gym's own number is paid to Meta by the gym
             row.billable = True
             row.rate_paise = getattr(self.billing, f"{template.category}_message_paise", 0)
         row.attempts = 1  # claimed by whoever writes it: see the module's docstring
@@ -147,7 +152,7 @@ def reminder_values(gym: Gym, member: Member, kind: str, for_date: date) -> dict
     first = member.name.split()[0] if member.name.split() else member.name
     sub = member.current_subscription(for_date)
     values = {"first_name": first, "plan": plan_label(sub), "gym": gym.name}
-    if kind == ReminderDue.DUES:
+    if kind == ReminderDue.PAYMENT_DUE:
         values["amount"] = rupees(member.balance_paise())
     elif sub is not None:
         days = (sub.ends - for_date).days
@@ -156,26 +161,32 @@ def reminder_values(gym: Gym, member: Member, kind: str, for_date: date) -> dict
     return values
 
 
-def _one_kind_per_member(gym: Gym, for_date: date) -> dict[int, str]:
-    """The single reminder each member is owed today, by member id (see PRIORITY)."""
+def _one_kind_per_member(gym: Gym, for_date: date, on: set[str]) -> dict[int, str]:
+    """The single reminder each member is owed today, by member id (see PRIORITY), among the reminders switched
+    on: pausing one never stops another."""
     rank = {kind: i for i, kind in enumerate(PRIORITY)}
     best: dict[int, str] = {}
-    for member_id, kind in ReminderDue.objects.filter(gym=gym, for_date=for_date).values_list("member_id", "kind"):
+    rows = ReminderDue.objects.filter(gym=gym, for_date=for_date, kind__in=on).values_list("member_id", "kind")
+    for member_id, kind in rows:
         if member_id not in best or rank.get(kind, len(rank)) < rank.get(best[member_id], len(rank)):
             best[member_id] = kind
     return best
 
 
-def send_due(gym: Gym, for_date: date) -> dict[str, int]:
-    """Send the gym's reminders for one local day. Says how many went and how many didn't ("failed" includes
-    any waiting to be tried again).
+def send_due(gym: Gym, for_date: date, kinds: Iterable[str] | None = None) -> dict[str, int]:
+    """Send the gym's reminders for one local day: those of `kinds` (the ones whose hour it is; all when None).
+    Says how many went and how many didn't ("failed" includes any waiting to be tried again).
 
-    Safe to run again: the day's messages are already on record, so a second run sends nothing.
+    Each member's one reminder for the day is chosen among all the reminders switched on, and goes at its own
+    hour. Safe to run again: the day's messages are already on record, so a second run sends nothing.
     """
     counts = {"sent": 0, "failed": 0, "skipped": 0}
-    if not gym.reminders_on or stop_reason(gym):
+    rules = automation.rules_for(gym)
+    on = {kind for kind, _ in ReminderDue.KINDS if rules[kind].is_on}
+    if not on or stop_reason(gym):
         return counts
-    wanted = _one_kind_per_member(gym, for_date)
+    going = set(on if kinds is None else kinds)
+    wanted = {m: kind for m, kind in _one_kind_per_member(gym, for_date, on).items() if kind in going}
     keys = {member_id: Message.reminder_key(member_id, for_date) for member_id in wanted}
     already = set(Message.objects.filter(gym=gym, dedupe_key__in=keys.values()).values_list("dedupe_key", flat=True)) if keys else set()
     todo = {member_id: kind for member_id, kind in wanted.items() if keys[member_id] not in already}
@@ -200,6 +211,21 @@ def send_due(gym: Gym, for_date: date) -> dict[str, int]:
             deliver(row, sender)
         counts["sent" if row.status == Message.SENT else "failed"] += 1
     return counts
+
+
+def send_one(gym: Gym, row: Message, values: dict[str, str], route: Route) -> Message | None:
+    """Send a single message about something that just happened, on `route`. None when it was already on record
+    (its key is taken), so a second call sends nothing."""
+    if Message.objects.filter(gym=gym, dedupe_key=row.dedupe_key).exists():
+        return None
+    sender = get_sender()
+    row.provider = sender.name
+    route.fill_in(row, values)
+    if not queue([row]):
+        return None
+    if row.status == Message.QUEUED:
+        deliver(row, sender)
+    return row
 
 
 # ---- Retries ----
@@ -230,7 +256,9 @@ def send_retries(now: datetime | None = None) -> dict[str, int]:
            .select_related("gym__billing", "member", "template").order_by("next_retry_at")[:RETRY_BATCH])
     sender = get_sender()
     for row in due:
-        if reason := stop_reason(row.gym, row.member):
+        # Rackline's own messages to the owner go from its number whatever the gym's account or WhatsApp mode
+        reason = None if row.kind in NotificationRule.RACKLINE_KINDS else stop_reason(row.gym, row.member)
+        if reason:
             # Paused, switched off or opted out since it was queued: it doesn't go, and the row says why.
             if Message.objects.filter(pk=row.pk, status=Message.QUEUED, attempts=row.attempts).update(
                     status=Message.FAILED, error=reason, error_code="", next_retry_at=None, updated_at=now):

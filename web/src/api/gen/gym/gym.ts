@@ -27,7 +27,8 @@ import type {
 import type {
   GymSettings,
   GymWhatsApp,
-  PatchedGymSettingsRequest
+  PatchedSwitchRequest,
+  Rule
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -38,11 +39,200 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * The gym's own rules, in one place. Admins only, and everything here holds at every branch.
+ * More → Settings → Messages: each of the gym's messages, on or paused, and when it goes out. Admins only.
+When is Rackline's to set, so it is only shown here.
+ */
+export type gymMessagesListResponse200 = {
+  data: Rule[]
+  status: 200
+}
+    
+export type gymMessagesListResponseSuccess = (gymMessagesListResponse200) & {
+  headers: Headers;
+};
+;
 
-One switch so far: whether members are sent their renewal and dues reminders. Turning it off stops the
-messages, not the daily list, so the desk still sees who needs chasing and nothing is lost by turning it
-back on. The change is audited: it decides what thousands of members do or don't hear from the gym.
+export type gymMessagesListResponse = (gymMessagesListResponseSuccess)
+
+export const getGymMessagesListUrl = () => {
+
+
+  
+
+  return `/api/gym/messages/`
+}
+
+export const gymMessagesList = async ( options?: RequestInit): Promise<gymMessagesListResponse> => {
+  
+  return apiFetch<gymMessagesListResponse>(getGymMessagesListUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGymMessagesListQueryKey = () => {
+    return [
+    `/api/gym/messages/`
+    ] as const;
+    }
+
+    
+export const getGymMessagesListQueryOptions = <TData = Awaited<ReturnType<typeof gymMessagesList>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymMessagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGymMessagesListQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof gymMessagesList>>> = ({ signal }) => gymMessagesList({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof gymMessagesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GymMessagesListQueryResult = NonNullable<Awaited<ReturnType<typeof gymMessagesList>>>
+export type GymMessagesListQueryError = unknown
+
+
+export function useGymMessagesList<TData = Awaited<ReturnType<typeof gymMessagesList>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymMessagesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof gymMessagesList>>,
+          TError,
+          Awaited<ReturnType<typeof gymMessagesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGymMessagesList<TData = Awaited<ReturnType<typeof gymMessagesList>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymMessagesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof gymMessagesList>>,
+          TError,
+          Awaited<ReturnType<typeof gymMessagesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGymMessagesList<TData = Awaited<ReturnType<typeof gymMessagesList>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymMessagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGymMessagesList<TData = Awaited<ReturnType<typeof gymMessagesList>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof gymMessagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGymMessagesListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Pause or Resume one of the gym's messages, at every branch. Pausing stops the messages, not the desk's
+reminder list. Audited: it decides what members and staff hear from the gym.
+ */
+export type gymMessagesPartialUpdateResponse200 = {
+  data: Rule
+  status: 200
+}
+    
+export type gymMessagesPartialUpdateResponseSuccess = (gymMessagesPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type gymMessagesPartialUpdateResponse = (gymMessagesPartialUpdateResponseSuccess)
+
+export const getGymMessagesPartialUpdateUrl = (kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned',) => {
+
+
+  
+
+  return `/api/gym/messages/${kind}/`
+}
+
+export const gymMessagesPartialUpdate = async (kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned',
+    patchedSwitchRequest: PatchedSwitchRequest, options?: RequestInit): Promise<gymMessagesPartialUpdateResponse> => {
+  
+  return apiFetch<gymMessagesPartialUpdateResponse>(getGymMessagesPartialUpdateUrl(kind),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedSwitchRequest,)
+  }
+);}
+
+
+
+
+export const getGymMessagesPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gymMessagesPartialUpdate>>, TError,{kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned';data: PatchedSwitchRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gymMessagesPartialUpdate>>, TError,{kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned';data: PatchedSwitchRequest}, TContext> => {
+
+const mutationKey = ['gymMessagesPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gymMessagesPartialUpdate>>, {kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned';data: PatchedSwitchRequest}> = (props) => {
+          const {kind,data} = props ?? {};
+
+          return  gymMessagesPartialUpdate(kind,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GymMessagesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof gymMessagesPartialUpdate>>>
+    export type GymMessagesPartialUpdateMutationBody = PatchedSwitchRequest
+    export type GymMessagesPartialUpdateMutationError = unknown
+
+    export const useGymMessagesPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gymMessagesPartialUpdate>>, TError,{kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned';data: PatchedSwitchRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof gymMessagesPartialUpdate>>,
+        TError,
+        {kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'task_assigned';data: PatchedSwitchRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getGymMessagesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The gym as Rackline set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
+changes: the gym's message switches are `/api/gym/messages/`.
  */
 export type gymSettingsRetrieveResponse200 = {
   data: GymSettings
@@ -151,90 +341,6 @@ export function useGymSettingsRetrieve<TData = Awaited<ReturnType<typeof gymSett
 
 
 /**
- * The gym's own rules, in one place. Admins only, and everything here holds at every branch.
-
-One switch so far: whether members are sent their renewal and dues reminders. Turning it off stops the
-messages, not the daily list, so the desk still sees who needs chasing and nothing is lost by turning it
-back on. The change is audited: it decides what thousands of members do or don't hear from the gym.
- */
-export type gymSettingsPartialUpdateResponse200 = {
-  data: GymSettings
-  status: 200
-}
-    
-export type gymSettingsPartialUpdateResponseSuccess = (gymSettingsPartialUpdateResponse200) & {
-  headers: Headers;
-};
-;
-
-export type gymSettingsPartialUpdateResponse = (gymSettingsPartialUpdateResponseSuccess)
-
-export const getGymSettingsPartialUpdateUrl = () => {
-
-
-  
-
-  return `/api/gym/settings/`
-}
-
-export const gymSettingsPartialUpdate = async (patchedGymSettingsRequest: PatchedGymSettingsRequest, options?: RequestInit): Promise<gymSettingsPartialUpdateResponse> => {
-  
-  return apiFetch<gymSettingsPartialUpdateResponse>(getGymSettingsPartialUpdateUrl(),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      patchedGymSettingsRequest,)
-  }
-);}
-
-
-
-
-export const getGymSettingsPartialUpdateMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, TError,{data: PatchedGymSettingsRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, TError,{data: PatchedGymSettingsRequest}, TContext> => {
-
-const mutationKey = ['gymSettingsPartialUpdate'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, {data: PatchedGymSettingsRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  gymSettingsPartialUpdate(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GymSettingsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>>
-    export type GymSettingsPartialUpdateMutationBody = PatchedGymSettingsRequest
-    export type GymSettingsPartialUpdateMutationError = unknown
-
-    export const useGymSettingsPartialUpdate = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, TError,{data: PatchedGymSettingsRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof gymSettingsPartialUpdate>>,
-        TError,
-        {data: PatchedGymSettingsRequest},
-        TContext
-      > => {
-
-      const mutationOptions = getGymSettingsPartialUpdateMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
  * More → Settings → WhatsApp: whether messages go from Rackline's number, the gym's own or not at all, the
 number, and whether it works. Admins only; set up by Rackline, so there is nothing here to change.
  */
