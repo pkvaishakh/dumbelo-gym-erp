@@ -10,7 +10,7 @@ from apps.finance.models import Account
 from apps.gyms.models import Branch, GymRole
 
 from . import services
-from .models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Subscription
+from .models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Refund, Subscription
 
 User = get_user_model()
 
@@ -105,11 +105,13 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     plan_name = serializers.CharField(source="plan.name", read_only=True)
     offer_name = serializers.CharField(source="offer.name", read_only=True, default=None)
     paid_paise = serializers.SerializerMethodField()
+    refunded_paise = serializers.SerializerMethodField(help_text="Given back: the price and what was paid are both that much lower")
     starts = serializers.DateField(required=False)
 
     class Meta:
         model = Subscription
-        fields = ["id", "member", "plan", "plan_name", "offer", "offer_name", "starts", "ends", "list_price_paise", "price_paise", "paid_paise", "frozen_from", "frozen_until", "cancelled"]
+        fields = ["id", "member", "plan", "plan_name", "offer", "offer_name", "starts", "ends", "list_price_paise", "price_paise", "paid_paise",
+                  "refunded_paise", "frozen_from", "frozen_until", "cancelled"]
         read_only_fields = ["ends", "list_price_paise", "price_paise", "frozen_from", "frozen_until", "cancelled"]
 
     def create(self, data):
@@ -117,6 +119,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def get_paid_paise(self, sub) -> int:
         return sub.paid_paise()
+
+    def get_refunded_paise(self, sub) -> int:
+        return sub.refunded_paise()
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -330,10 +335,38 @@ class PaymentCorrectSerializer(serializers.ModelSerializer):
         model = Payment
         fields = ["amount_paise", "method", "note", "reason"]
 
+    @transaction.atomic  # for_money holds the account until the payment is saved
     def update(self, p, data):
         if "method" in data and data["method"] != p.method:  # cash corrected to UPI leaves the drawer for the bank
             data["account"] = Account.objects.for_money(p.branch_id, data["method"], on=clock.local(self.context["request"].gym, p.taken_at).date())
         return super().update(p, data)
+
+
+class RefundSerializer(serializers.ModelSerializer):
+    member_name = serializers.CharField(source="member.name", read_only=True)
+    plan_name = serializers.CharField(source="subscription.plan.name", read_only=True)
+    refunded_by_name = serializers.CharField(source="refunded_by.user.name", read_only=True)
+
+    class Meta:
+        model = Refund
+        fields = ["id", "member", "member_name", "subscription", "plan_name", "branch", "amount_paise", "method", "reason", "ended_plan", "cancelled_plan",
+                  "refunded_by_name", "refunded_at", "voided", "void_reason"]
+        read_only_fields = fields
+
+
+class RefundCreateSerializer(serializers.Serializer):
+    subscription = serializers.PrimaryKeyRelatedField(queryset=Subscription.objects.none(), help_text="The plan the money was paid for")
+    amount_paise = serializers.IntegerField(min_value=1, max_value=10_00_00_000_00)
+    method = serializers.ChoiceField(choices=Payment.METHODS, help_text="How the money goes back: cash from the drawer, or from the bank")
+    reason = serializers.CharField(max_length=200)
+    end_plan = serializers.BooleanField(help_text="End the plan today (cancel it if it hasn't started), or keep it")
+    branch = GymPK(Branch, required=False, help_text="Where it's given back; the member's home branch when left out")
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        req = self.context.get("request")
+        if req is not None and hasattr(req, "gym"):
+            self.fields["subscription"].queryset = Subscription.objects.filter(member__gym=req.gym)
 
 
 class VoidSerializer(serializers.Serializer):

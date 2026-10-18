@@ -16,6 +16,10 @@ export const d = (iso: string) => parseISO(iso);
 export const day = (iso: string) => format(parseISO(iso), "d MMM yyyy");
 export const dayShort = (iso: string) => format(parseISO(iso), "d MMM");
 export const isoDate = (date: Date) => format(date, "yyyy-MM-dd");
+/** The gym's own day ("2026-10-18") in its time zone: what the API calls today, wherever this device is set. */
+export function gymToday(timeZone: string, now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
 export const ago = (iso: string) => formatDistanceToNowStrict(parseISO(iso), { addSuffix: true });
 /** When a device last spoke to us: "2 hours ago", or "Never" for one that never has. */
 export const seen = (iso: string | null | undefined) => (iso ? ago(iso) : "Never");
@@ -123,6 +127,11 @@ export const RATE_PER: Record<string, string> = { fixed: "a month", attendance: 
 export const LINE_KIND: Record<string, string> = { allowance: "Allowance", incentive: "Incentive", referral: "Referral bonus", deduction: "Deduction" };
 
 /** What a money move did, in the words on its row: "Cash to bank", "Deposit". */
+/** A cash count against what the drawer should hold: "₹200 short", "₹50 over", or "Matches". */
+export function countDifference(paise: number) {
+  return paise === 0 ? "Matches" : paise < 0 ? `${rupees(-paise)} short` : `${rupees(paise)} over`;
+}
+
 export function moveLabel(m: { kind: string; from_kind?: string | null; to_kind?: string | null }) {
   if (m.kind === "deposit") return "Deposit";
   if (m.kind === "withdrawal") return "Withdrawal";

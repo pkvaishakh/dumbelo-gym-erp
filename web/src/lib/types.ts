@@ -40,7 +40,8 @@ export type MemberSelf = TrainerMember & {
 
 export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
 
-type PeriodTotals = { revenue_paise: number; new_members: number; renewals: number; checkins: number; tasks_done: number };
+/** Revenue is what was taken less what was refunded in the same days. */
+type PeriodTotals = { revenue_paise: number; refunds_paise: number; new_members: number; renewals: number; checkins: number; tasks_done: number };
 
 /** /api/reports/period/: one range of days, and the same number of days just before it. */
 export type PeriodReport = {

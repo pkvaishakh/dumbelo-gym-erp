@@ -15,7 +15,10 @@ What was decided, so code and screens stay consistent. Change this file when a d
   checks people in, adds members and sells plans. Expenses work like the day's payments: they see and add their
   branches' expenses one day at a time (today's total is on Home, `GET /api/expenses/today/`), so the desk can
   record cash paid out and square it at close. Only admins see longer spans or edit and remove expenses.
-  No revenue totals, reports or staff data.
+  They see their branches' cash in hand, read-only: what each drawer should hold now and today's cash in and out
+  (`GET /api/cash/`, on Home and in More), and count it at close. Never the bank: a bank account several branches
+  share would show other branches' takings. No revenue totals, reports or staff data, no money moves, refunds or
+  settling a count.
 - Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks.
 - Member: their own membership, visits, and self check-in.
 - Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).
@@ -29,6 +32,14 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Record payments only (no payment gateway in the MVP). Part payments allowed; never more than what's owed.
 - Discounts only through offers (percent or amount off, date range, optional plans). Admins correct or void
   payments, with a reason, audited. Nothing is deleted.
+- Refunds are money given back to a member for a plan, unlike a void ("the payment never happened"). Admins only,
+  audited. A refund names the plan, the amount (never more than was paid for that plan and not refunded yet), how
+  it's given back and why; it comes out of the account its branch and method choose, like an expense, and is never
+  refused for a low balance. The admin chooses each time: keep the plan (a goodwill refund) or end it today (a plan
+  that hasn't started is cancelled, and then all of it must be refunded). Either way the refund lowers what the plan
+  costs as much as what was paid, so a refund never makes anyone "payment due". Reports count it as negative
+  revenue on the day it's given. A wrong refund is voided with a reason: the money counts as paid again and the plan
+  gets its dates back. A plan can be cancelled once what was paid for it is refunded or voided.
 - Plans and offers are one list for the gym, made by admins. Each is given to some branches, or to none, which
   means every branch (including ones opened later). The desk sees and sells only what its branches have; a sale
   checks the plan and the offer against the member's home branch.
@@ -53,7 +64,7 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Home's "Expense dues" counts bills inside their reminder days and approved salaries not paid in full.
 - Referral bonuses are entered on the payslip by hand: members don't record who referred them yet.
 
-## Cash and bank (admins only)
+## Cash and bank (admins; the desk sees and counts its own branches' cash)
 - The gym's money sits in accounts: each branch's cash in hand (one per branch, set up by counting the drawer) and
   bank accounts. A branch uses one bank account; several branches can share one, and an account no branch uses (the
   owner's reserve) is still the gym's money. Admins change which account a branch uses from the account or the branch.
@@ -71,10 +82,30 @@ What was decided, so code and screens stay consistent. Change this file when a d
   is voided with a reason, and voiding can't leave the account it filled below zero or touch a deactivated one. Payments and expenses are never refused for a low balance: the desk's work goes on.
 - Totals count each account once, however many branches share it. A branch shows its bank account's whole balance,
   with the branches it shares it with; a shared balance isn't split between branches.
+- An opening balance can be corrected later (audited), but lowering it can't leave the account below zero: the
+  money already spent or moved out of it was really there. Raising it is always allowed.
 - Accounts are never deleted. One is deactivated only when it holds nothing; its branches are left with no bank
   account until given another. Deactivated accounts stay in the totals: a payment voided later still moves them.
-- Each account has a monthly statement (payments, expenses and moves, oldest first, with the balance after each)
-  to check against the bank's statement or the counted drawer.
+  A payment or expense recorded at the moment an admin deactivates its account is never refused: either it lands
+  first and the account isn't empty, or the deactivation goes first and the money is in no balance (checked under
+  a lock that the desk's own payments don't wait on).
+- Closing the drawer: at the end of the day the desk counts each of its branches' cash (Count Cash) and the app
+  shows what it should hold (its balance at that moment) and the difference. One count per branch per day: counting
+  again the same day replaces it (audited) until an admin settles it. The desk only counts; an admin settles a
+  difference as a deposit (extra cash) or a withdrawal (cash short) with a reason, dated the day counted, so the
+  balance stays the sum of what was recorded and is what was counted. Voiding that move opens the difference again.
+  A branch's cash must be set up before it can be counted.
+- Bank reconciliation: on a bank account's statement an admin ticks each entry that is on the bank's statement too
+  (a transfer between two bank accounts is ticked on each side apart), then marks it reconciled up to the last day
+  shown at the bank's balance. That balance must equal the balance the account was added with plus every ticked
+  entry up to that day; unticked entries are still on their way to the bank. Reconciling locks the ticked entries:
+  a reconciled payment, expense or money move can't be corrected (amount, method, branch, date), voided or removed
+  until an admin un-reconciles it with a reason (audited). Notes and names can still change. Changing an entry that
+  is ticked but not reconciled drops its tick. Each reconciliation is kept (up to, bank balance, who, when).
+- Each account has a monthly statement (payments, expenses, refunds and moves, oldest first, with the balance after
+  each) to check against the bank's statement or the counted drawer. It downloads as a CSV for the accountant's
+  sheet (plain rupees with two decimals, no ₹ or grouping, out as negative, opening and closing balance rows), made
+  in the browser from the statement shown, and prints (or saves as a PDF) from a print page like the salary slip.
 
 ## Attendance
 - Check-in sources: front desk, a fixed wall QR per branch (members/staff scan it), and turnstile/biometric

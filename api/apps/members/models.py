@@ -107,8 +107,14 @@ class MemberQuerySet(models.QuerySet):
         for a single member loaded without it."""
         owed = _total(Subscription.objects.filter(member=OuterRef("pk"), cancelled=False), "member", "price_paise")
         paid = _total(Payment.objects.filter(member=OuterRef("pk"), voided=False), "member", "amount_paise")
+        # A refund lowers what its plan costs as much as what was paid, so it never leaves anything owing. A cancelled
+        # plan's price isn't owed, so only refunds on live plans come off the price; all of them come off the paid.
+        refunds = Refund.objects.filter(member=OuterRef("pk"), voided=False)
+        refunded_live = _total(refunds.filter(subscription__cancelled=False), "member", "amount_paise")
+        refunded = _total(refunds, "member", "amount_paise")
         live = Subscription.objects.filter(cancelled=False).select_related("plan").order_by("-ends")
-        return self.annotate(owed_total=owed, paid_total=paid).prefetch_related(Prefetch("subscriptions", queryset=live, to_attr="live_subs"))
+        return self.annotate(owed_total=owed - refunded_live, paid_total=paid - refunded).prefetch_related(
+            Prefetch("subscriptions", queryset=live, to_attr="live_subs"))
 
 
 class Member(GymScoped):
@@ -173,6 +179,9 @@ class Member(GymScoped):
             return max(0, self.owed_total - self.paid_total)
         owed = self.subscriptions.filter(cancelled=False).aggregate(t=Sum("price_paise"))["t"] or 0
         paid = Payment.objects.filter(member=self, voided=False).aggregate(t=Sum("amount_paise"))["t"] or 0
+        refunds = Refund.objects.filter(member=self, voided=False)
+        owed -= refunds.filter(subscription__cancelled=False).aggregate(t=Sum("amount_paise"))["t"] or 0
+        paid -= refunds.aggregate(t=Sum("amount_paise"))["t"] or 0
         return max(0, owed - paid)
 
 
@@ -188,7 +197,8 @@ class MemberNote(TimeStamped):
 class SubscriptionQuerySet(models.QuerySet):
     def with_paid(self):
         """What has been paid toward each subscription, so a list doesn't sum payments row by row."""
-        return self.annotate(paid_total=_total(Payment.objects.filter(subscription=OuterRef("pk"), voided=False), "subscription", "amount_paise"))
+        return self.annotate(paid_total=_total(Payment.objects.filter(subscription=OuterRef("pk"), voided=False), "subscription", "amount_paise"),
+                             refunded_total=_total(Refund.objects.filter(subscription=OuterRef("pk"), voided=False), "subscription", "amount_paise"))
 
 
 class Subscription(TimeStamped):
@@ -219,6 +229,12 @@ class Subscription(TimeStamped):
             return self.paid_total
         return self.payments.filter(voided=False).aggregate(t=Sum("amount_paise"))["t"] or 0
 
+    def refunded_paise(self):
+        """Given back for this plan. What it costs and what was paid for it are both that much lower."""
+        if hasattr(self, "refunded_total"):
+            return self.refunded_total
+        return self.refunds.filter(voided=False).aggregate(t=Sum("amount_paise"))["t"] or 0
+
 
 class Payment(GymScoped):
     """Recorded at the desk (no gateway in the MVP). Admins may correct or void one; both are audited, never deleted."""
@@ -240,3 +256,31 @@ class Payment(GymScoped):
     class Meta:
         ordering = ["-taken_at"]
         constraints = [models.CheckConstraint(condition=models.Q(amount_paise__gt=0), name="payment_positive")]
+
+
+class Refund(GymScoped):
+    """Money given back to a member for a plan they paid for: never more than was paid for it and not refunded yet.
+    It comes out of the account its branch and method choose, counts against revenue in reports, and lowers what the
+    plan costs as much as what was paid, so a refund never makes anyone "payment due". It can end the plan today (or
+    cancel one that hasn't started). Admins only; voided with a reason (which puts the plan back), never deleted."""
+
+    member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="refunds")
+    subscription = models.ForeignKey(Subscription, on_delete=models.PROTECT, related_name="refunds")
+    branch = models.ForeignKey("gyms.Branch", on_delete=models.PROTECT, related_name="refunds")
+    amount_paise = models.PositiveIntegerField()
+    method = models.CharField(max_length=8, choices=Payment.METHODS)
+    account = models.ForeignKey("finance.Account", null=True, blank=True, on_delete=models.PROTECT, related_name="refunds",
+                                help_text="Where the money came out of: the branch's cash, or its bank account")
+    reason = models.CharField(max_length=200)
+    ended_plan = models.BooleanField(default=False, help_text="The plan ended today because of it")
+    plan_ended_from = models.DateField(null=True, blank=True, help_text="When the plan would have ended, to put it back if voided")
+    cancelled_plan = models.BooleanField(default=False, help_text="The plan hadn't started, so it was cancelled")
+    refunded_by = models.ForeignKey("gyms.GymRole", on_delete=models.PROTECT, related_name="+")
+    refunded_at = models.DateTimeField(default=timezone.now)
+    voided = models.BooleanField(default=False)
+    void_reason = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["-refunded_at"]
+        constraints = [models.CheckConstraint(condition=models.Q(amount_paise__gt=0), name="refund_positive")]
+        indexes = [models.Index(fields=["gym", "refunded_at"], name="refund_gym_refunded_at")]

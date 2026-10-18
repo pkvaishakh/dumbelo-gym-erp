@@ -12,7 +12,8 @@ apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMi
 apps/accounts/       User (email for staff, +91 phone for members), login/refresh/me
 apps/gyms/           Gym, Branch, BranchSession (named opening hours), GymRole (one role per user per gym,
                      branches M2M, is_owner), SupportAccess
-apps/members/        Plan, Offer, Member, MemberNote, Subscription, Payment; services.py (sell, take_payment)
+apps/members/        Plan, Offer, Member, MemberNote, Subscription, Payment, Refund; services.py (sell, take_payment, refund,
+                     void_refund); views/ (members.py, refunds.py)
 apps/attendance/     CheckIn (member XOR staff), Device; services.py (check_in: the one rule book)
 apps/tasks/          Task, TaskUpdate (note | status)
 apps/expenses/       Expense, RecurringExpense + ExpenseDue (each date a bill is due); services.py (sync_dues,
@@ -20,8 +21,12 @@ apps/expenses/       Expense, RecurringExpense + ExpenseDue (each date a bill is
 apps/payroll/        SalaryRule (+ SalaryItem), Payslip (+ PayslipLine), SalaryPayment; services.py (generate,
                      pay_for, approve, pay, salaries_owed). Paying a bill or salary writes an Expense
 apps/finance/        Account (branch cash or bank; BranchAccount: the one bank account a branch uses), MoneyMove (deposit,
-                     withdrawal, transfer); services.py (with_balance, set_branches, move, void, overview, statement). Payments
-                     and expenses carry the account they hit: `Account.objects.for_money(branch_id, method)`
+                     withdrawal, transfer), DrawerClose (the desk's cash count), Reconciliation + StatementTick (bank
+                     reconciliation); services.py (with_balance, set_branches, move, void, overview, statement, close_drawer,
+                     settle_close, cash_today, before_change), reconcile.py (tick, reconcile, unreconcile). Payments, refunds
+                     and expenses carry the account they hit: `Account.objects.for_money(branch_id, method, on=day)`, called
+                     inside the transaction that records them. Anything that corrects, voids or removes one calls
+                     `before_change(kind, id)` first (reconciled entries are locked)
 apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
 apps/messages/       WhatsApp reminders: senders.py (FakeSender by default), Message, and the 6 AM job that
                      writes the day's list and sends it (tasks.py). App label "gym_messages": see apps.py

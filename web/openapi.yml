@@ -204,6 +204,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
           description: ''
+  /api/accounts/{id}/reconcile/:
+    post:
+      operationId: accounts_reconcile_create
+      description: 'The bank''s statement agrees up to a day: the ticked entries up
+        to then are locked.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+          description: ''
   /api/accounts/{id}/statement/:
     get:
       operationId: accounts_statement_retrieve
@@ -233,6 +268,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountStatement'
           description: ''
+  /api/accounts/{id}/tick/:
+    post:
+      operationId: accounts_tick_create
+      description: Tick entries on this bank account's statement as on the bank's
+        statement too, or untick them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TickRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TickRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TickRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/accounts/{id}/unreconcile/:
+    post:
+      operationId: accounts_unreconcile_create
+      description: Unlock one reconciled entry, with the reason, so it can be corrected
+        or voided.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnreconcileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UnreconcileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UnreconcileRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/accounts/branch/:
     post:
       operationId: accounts_branch_create
@@ -519,6 +616,30 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/cash/:
+    get:
+      operationId: cash_list
+      description: |-
+        Each of the caller's branches' cash in hand: what it should hold now and today's count. The desk sees its own
+        branches' cash only (never the bank: a shared account would show other branches' takings). Admins pass ?branch=.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      tags:
+      - cash
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BranchCash'
+          description: ''
   /api/checkins/:
     get:
       operationId: checkins_list
@@ -947,6 +1068,151 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/drawer-closes/:
+    get:
+      operationId: drawer_closes_list
+      description: |-
+        The desk's end-of-day cash counts: counted, expected and the difference. The desk counts its branches' cash
+        and sees one day at a time (today by default), like the day's payments; only admins settle a difference.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+        description: 'YYYY-MM-DD: counts for that local day'
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. Admins only when it spans more than
+          a day
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - to_settle
+        description: 'to_settle: counts that didn''t match and aren''t settled yet'
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last local day, YYYY-MM-DD
+      tags:
+      - drawer-closes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDrawerCloseList'
+          description: ''
+    post:
+      operationId: drawer_closes_create
+      description: |-
+        Count the drawer: today's count for the branch, against what its cash in hand holds now. Counting again
+        the same day replaces it, until an admin settles the difference.
+      tags:
+      - drawer-closes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrawerCountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DrawerCountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DrawerCountRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrawerClose'
+          description: ''
+  /api/drawer-closes/{id}/:
+    get:
+      operationId: drawer_closes_retrieve
+      description: |-
+        The desk's end-of-day cash counts: counted, expected and the difference. The desk counts its branches' cash
+        and sees one day at a time (today by default), like the day's payments; only admins settle a difference.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this drawer close.
+        required: true
+      tags:
+      - drawer-closes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrawerClose'
+          description: ''
+  /api/drawer-closes/{id}/settle/:
+    post:
+      operationId: drawer_closes_settle_create
+      description: |-
+        Square a count that didn't match: the extra cash goes in as a deposit, the missing cash out as a withdrawal,
+        with the reason, so the cash in hand holds what was counted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this drawer close.
+        required: true
+      tags:
+      - drawer-closes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrawerClose'
           description: ''
   /api/expense-dues/:
     get:
@@ -3283,6 +3549,134 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecurringExpense'
           description: ''
+  /api/refunds/:
+    get:
+      operationId: refunds_list
+      description: |-
+        Money given back to members for plans they paid for. Admins give and void refunds; the desk sees its
+        branches' refunds on a member's profile (`?member=`).
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: subscription
+        schema:
+          type: integer
+      - in: query
+        name: voided
+        schema:
+          type: boolean
+      tags:
+      - refunds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRefundList'
+          description: ''
+    post:
+      operationId: refunds_create
+      description: 'Give money back for a plan: never more than was paid for it. It
+        can end the plan today, or keep it.'
+      tags:
+      - refunds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+          description: ''
+  /api/refunds/{id}/:
+    get:
+      operationId: refunds_retrieve
+      description: |-
+        Money given back to members for plans they paid for. Admins give and void refunds; the desk sees its
+        branches' refunds on a member's profile (`?member=`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this refund.
+        required: true
+      tags:
+      - refunds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+          description: ''
+  /api/refunds/{id}/void/:
+    post:
+      operationId: refunds_void_create
+      description: 'It was wrong: the money counts as paid again, and a plan it ended
+        or cancelled is put back.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this refund.
+        required: true
+      tags:
+      - refunds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+          description: ''
   /api/reports/period/:
     get:
       operationId: reports_period_retrieve
@@ -4442,6 +4836,10 @@ components:
           type: integer
           readOnly: true
           description: Expenses paid from it since it was added
+        refunded_paise:
+          type: integer
+          readOnly: true
+          description: Refunds given from it since it was added
         moved_in_paise:
           type: integer
           readOnly: true
@@ -4460,6 +4858,7 @@ components:
       - moved_in_paise
       - moved_out_paise
       - opened_on
+      - refunded_paise
       - spent_paise
     AccountBrief:
       type: object
@@ -4545,17 +4944,28 @@ components:
           type: integer
         out_paise:
           type: integer
+        cleared_paise:
+          type: integer
+          description: 'Bank accounts: the opening balance and the ticked entries
+            up to the last day shown'
+        reconciled:
+          allOf:
+          - $ref: '#/components/schemas/Reconciliation'
+          nullable: true
+          description: The latest check against the bank's statement
         entries:
           type: array
           items:
             $ref: '#/components/schemas/StatementEntry'
       required:
+      - cleared_paise
       - closing_paise
       - entries
       - from
       - in_paise
       - opening_paise
       - out_paise
+      - reconciled
       - to
     BillsDue:
       type: object
@@ -4615,6 +5025,43 @@ components:
       required:
       - account
       - branch
+    BranchCash:
+      type: object
+      description: 'A branch''s cash in hand, as the desk sees it: what it holds now
+        and today''s count.'
+      properties:
+        branch:
+          type: integer
+        branch_name:
+          type: string
+        account:
+          type: integer
+          nullable: true
+          description: Its cash in hand; null when it isn't set up
+        balance_paise:
+          type: integer
+          nullable: true
+          description: What the drawer should hold now
+        in_paise:
+          type: integer
+          description: 'Cash that came in today: payments and money moved in'
+        out_paise:
+          type: integer
+          description: 'Cash that went out today: expenses, refunds and money moved
+            out'
+        close:
+          allOf:
+          - $ref: '#/components/schemas/DrawerClose'
+          nullable: true
+          description: Today's count, if the desk has counted
+      required:
+      - account
+      - balance_paise
+      - branch
+      - branch_name
+      - close
+      - in_paise
+      - out_paise
     BranchMoney:
       type: object
       properties:
@@ -4956,6 +5403,110 @@ components:
         note:
           type: string
           description: A last update, posted before it's marked done
+    DrawerClose:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        branch_name:
+          type: string
+          readOnly: true
+        account:
+          type: integer
+          readOnly: true
+          description: The branch's cash in hand, as counted
+        day:
+          type: string
+          format: date
+          readOnly: true
+          description: The gym's local day it closes
+        counted_paise:
+          type: integer
+          readOnly: true
+        expected_paise:
+          type: integer
+          readOnly: true
+          description: The cash in hand's balance when it was counted
+        difference_paise:
+          type: integer
+          readOnly: true
+          description: 'Counted less expected: above zero is extra cash, below zero
+            is short'
+        note:
+          type: string
+          readOnly: true
+        counted_by_name:
+          type: string
+          readOnly: true
+        counted_at:
+          type: string
+          format: date-time
+          readOnly: true
+        settled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        settled_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        settle_reason:
+          type: string
+          readOnly: true
+        settle_move:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: The deposit or withdrawal that settled the difference
+      required:
+      - account
+      - branch
+      - branch_name
+      - counted_at
+      - counted_by_name
+      - counted_paise
+      - day
+      - difference_paise
+      - expected_paise
+      - id
+      - note
+      - settle_move
+      - settle_reason
+      - settled_at
+      - settled_by_name
+    DrawerCountRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        counted_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 0
+          format: int64
+          description: The cash counted in the drawer
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - branch
+      - counted_paise
+    EntryRefRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/StatementEntryKindEnum'
+        id:
+          type: integer
+          minimum: 1
+      required:
+      - id
+      - kind
     Expense:
       type: object
       properties:
@@ -5768,6 +6319,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Device'
+    PaginatedDrawerCloseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DrawerClose'
     PaginatedExpenseDueList:
       type: object
       required:
@@ -5998,6 +6572,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RecurringExpense'
+    PaginatedRefundList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
     PaginatedStaffList:
       type: object
       required:
@@ -7080,6 +7677,40 @@ components:
           description: The code printed on the branch's wall QR
       required:
       - code
+    ReconcileRequest:
+      type: object
+      properties:
+        up_to:
+          type: string
+          format: date
+          description: The last day of the bank's statement
+        bank_balance_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: -100000000000
+          format: int64
+          description: The bank's balance at the end of that day
+      required:
+      - bank_balance_paise
+      - up_to
+    Reconciliation:
+      type: object
+      properties:
+        up_to:
+          type: string
+          format: date
+        bank_balance_paise:
+          type: integer
+        by_name:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - bank_balance_paise
+      - by_name
+      - up_to
     RecurringExpense:
       type: object
       properties:
@@ -7240,6 +7871,112 @@ components:
           minLength: 1
       required:
       - refresh
+    Refund:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        member:
+          type: integer
+          readOnly: true
+        member_name:
+          type: string
+          readOnly: true
+        subscription:
+          type: integer
+          readOnly: true
+        plan_name:
+          type: string
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        ended_plan:
+          type: boolean
+          readOnly: true
+          description: The plan ended today because of it
+        cancelled_plan:
+          type: boolean
+          readOnly: true
+          description: The plan hadn't started, so it was cancelled
+        refunded_by_name:
+          type: string
+          readOnly: true
+        refunded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+      required:
+      - amount_paise
+      - branch
+      - cancelled_plan
+      - ended_plan
+      - id
+      - member
+      - member_name
+      - method
+      - plan_name
+      - reason
+      - refunded_at
+      - refunded_by_name
+      - subscription
+      - void_reason
+      - voided
+    RefundCreateRequest:
+      type: object
+      properties:
+        subscription:
+          type: integer
+          description: The plan the money was paid for
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            How the money goes back: cash from the drawer, or from the bank
+
+            * `cash` - Cash
+            * `upi` - UPI
+            * `card` - Card
+            * `bank` - Bank transfer
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        end_plan:
+          type: boolean
+          description: End the plan today (cancel it if it hasn't started), or keep
+            it
+        branch:
+          type: integer
+          description: Where it's given back; the member's home branch when left out
+      required:
+      - amount_paise
+      - end_plan
+      - method
+      - reason
+      - subscription
     RemoveLineRequest:
       type: object
       properties:
@@ -7257,6 +7994,11 @@ components:
         gym_name:
           type: string
           readOnly: true
+        timezone:
+          type: string
+          readOnly: true
+          description: 'The gym''s time zone, like Asia/Kolkata: its days start and
+            end there'
         role:
           $ref: '#/components/schemas/RoleEnum'
         is_owner:
@@ -7273,6 +8015,7 @@ components:
       - gym
       - gym_name
       - role
+      - timezone
     RoleEnum:
       enum:
       - admin
@@ -7623,6 +8366,13 @@ components:
         balance_paise:
           type: integer
           description: The balance after this entry
+        ticked:
+          type: boolean
+          description: Matched with the bank's statement
+        reconciled:
+          type: boolean
+          description: 'Locked by a reconciliation: un-reconcile it to correct or
+            void it'
       required:
       - amount_paise
       - balance_paise
@@ -7631,17 +8381,21 @@ components:
       - member
       - meta
       - 'on'
+      - reconciled
+      - ticked
       - title
     StatementEntryKindEnum:
       enum:
       - payment
       - expense
       - move
+      - refund
       type: string
       description: |-
-        * `payment` - payment
-        * `expense` - expense
-        * `move` - move
+        * `payment` - Payment
+        * `expense` - Expense
+        * `move` - Money move
+        * `refund` - Refund
     Subscription:
       type: object
       properties:
@@ -7679,6 +8433,11 @@ components:
         paid_paise:
           type: integer
           readOnly: true
+        refunded_paise:
+          type: integer
+          readOnly: true
+          description: 'Given back: the price and what was paid are both that much
+            lower'
         frozen_from:
           type: string
           format: date
@@ -7705,6 +8464,7 @@ components:
       - plan
       - plan_name
       - price_paise
+      - refunded_paise
     SubscriptionRequest:
       type: object
       properties:
@@ -7898,6 +8658,19 @@ components:
           minLength: 1
       required:
       - text
+    TickRequest:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryRefRequest'
+        ticked:
+          type: boolean
+          description: 'True: on the bank''s statement too. False: not (yet)'
+      required:
+      - entries
+      - ticked
     TokenBlacklistRequest:
       type: object
       properties:
@@ -7917,6 +8690,22 @@ components:
       required:
       - access
       - refresh
+    UnreconcileRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/StatementEntryKindEnum'
+        id:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - id
+      - kind
+      - reason
     VoidRequest:
       type: object
       properties:

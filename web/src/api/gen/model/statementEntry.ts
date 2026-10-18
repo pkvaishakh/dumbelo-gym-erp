@@ -22,4 +22,8 @@ export interface StatementEntry {
   amount_paise: number;
   /** The balance after this entry */
   balance_paise: number;
+  /** Matched with the bank's statement */
+  ticked: boolean;
+  /** Locked by a reconciliation: un-reconcile it to correct or void it */
+  reconciled: boolean;
 }

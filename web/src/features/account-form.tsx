@@ -37,7 +37,8 @@ export function AccountForm({ account, kind: startKind, branch: startBranch }: {
   const a = useAction();
   const cash = f.kind === "cash";
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => { setF({ ...f, [k]: e.target.value }); setErrs({ ...errs, [k]: "" }); };
-  const err = (k: string) => errs[k] || fieldError(a.error, k === "opening" ? "opening_balance_paise" : k);
+  const belowZero = a.error?.code === "below_zero" ? a.error.message : undefined; // a lower opening balance than was spent
+  const err = (k: string) => errs[k] || (k === "opening" && belowZero) || fieldError(a.error, k === "opening" ? "opening_balance_paise" : k);
 
   // Who uses which bank account now, so the form can say when picking a branch moves it from another one.
   const usedBy = new Map(all.filter((x) => x.kind === "bank" && x.id !== account?.id).flatMap((x) => (x.branches ?? []).map((b) => [b, x.label] as const)));
@@ -123,7 +124,7 @@ export function AccountForm({ account, kind: startKind, branch: startBranch }: {
             </label>
             {err("opening") ? <ErrorText>{err("opening")}</ErrorText> : <p className="rl-field__hint">{openingHint}</p>}
           </fieldset>
-          <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
+          <ErrorText>{a.error && !a.error.fields && !belowZero ? a.error.message : undefined}</ErrorText>
         </form>
       </main>
       <ActionBar label={editing ? "Save Changes" : title} onClick={save} busy={a.busy} />

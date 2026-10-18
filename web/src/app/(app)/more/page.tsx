@@ -1,10 +1,11 @@
 "use client";
 import {
-  Banknote, Building2, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Banknote, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
 import { useAccountsOverviewRetrieve } from "@/api/gen/accounts/accounts";
+import { useCashList } from "@/api/gen/cash/cash";
 import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
 import { PageBar } from "@/components/shell";
 import { Details, Icon, MenuRow, Section } from "@/components/ui";
@@ -23,6 +24,8 @@ export default function MorePage() {
   const col = useGet<Collection>("/api/payments/collection/", undefined, r === "admin" || desk);
   const spent = useExpensesTodayRetrieve(undefined, { query: { enabled: desk } }).data?.data;
   const funds = useAccountsOverviewRetrieve({ query: { enabled: r === "admin" } }).data?.data.totals;
+  const drawers = useCashList(undefined, { query: { enabled: desk } }).data?.data;
+  const cashIn = drawers?.filter((d) => d.balance_paise !== null).reduce((t, d) => t + (d.balance_paise ?? 0), 0);
   const [sheet, setSheet] = useState<"details" | "password" | null>(null);
   const staff = r !== "member"; // a member's details are changed by the desk
   return (
@@ -54,6 +57,7 @@ export default function MorePage() {
             <ul className="rl-card rl-remind">
               <MenuRow icon={Wallet} title="Payments" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
               <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={spent ? `${rupees(spent.total_paise)} today` : undefined} />
+              <MenuRow icon={Calculator} title="Cash in hand" href="/cash" value={cashIn !== undefined ? rupees(cashIn) : undefined} />
               <MenuRow icon={ClipboardList} title="My Tasks" href="/tasks" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
             </ul>

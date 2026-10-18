@@ -6,9 +6,10 @@ from django.db import transaction
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
-from apps.finance.models import Account
+from apps.finance.models import Account, StatementTick
+from apps.finance.services import before_change
 
-from .models import Member, Payment, Subscription, sold_at
+from .models import Member, Payment, Refund, Subscription, sold_at
 
 
 def next_start(member: Member, today):
@@ -72,6 +73,63 @@ def take_payment(member, amount_paise, method, by, branch=None, subscription=Non
         note=note,
         account=Account.objects.for_money(branch.id, method, on=clock.today(member.gym)),
     )
+
+
+@transaction.atomic
+def refund(sub: Subscription, *, amount_paise: int, method: str, reason: str, end_plan: bool, by, branch=None) -> Refund:
+    """Give money back for a plan: never more than was paid for it and not refunded yet. With `end_plan` the plan ends
+    today, or is cancelled when it hasn't started (then all of it must be refunded, since nothing of it is used).
+    The money comes out of the account the branch and method choose; a low balance never stops it."""
+    member = sub.member
+    Member.objects.select_for_update().filter(pk=member.pk).first()  # one desk at a time per member, as take_payment
+    sub = Subscription.objects.select_for_update().get(pk=sub.pk)
+    if sub.cancelled:
+        raise RuleBroken("cancelled", "This plan is cancelled")
+    if amount_paise <= 0:
+        raise RuleBroken("amount_invalid", "Enter an amount above zero")
+    left = sub.paid_paise() - sub.refunded_paise()
+    if left <= 0:
+        raise RuleBroken("nothing_paid", "Nothing paid for this plan is left to refund")
+    if amount_paise > left:
+        raise RuleBroken("more_than_paid", f"{rupees(left)} was paid for this plan and isn't refunded yet. Refund that or less.")
+    today = clock.today(member.gym)
+    r = Refund(gym=member.gym, member=member, subscription=sub, branch=branch or member.home_branch, amount_paise=amount_paise, method=method,
+               reason=reason, refunded_by=by)
+    if end_plan and sub.starts > today:
+        if amount_paise != left:
+            raise RuleBroken("not_started", f"This plan hasn't started. Refund all {rupees(left)} to end it, or keep it.")
+        sub.cancelled = r.cancelled_plan = True
+        sub.save(update_fields=["cancelled", "updated_at"])
+    elif end_plan and sub.ends > today:
+        r.ended_plan, r.plan_ended_from = True, sub.ends
+        sub.ends = today
+        if sub.frozen_from and sub.frozen_from > today:  # a freeze that hadn't started never will
+            sub.frozen_from = sub.frozen_until = None
+        elif sub.frozen_until and sub.frozen_until > today:
+            sub.frozen_until = today
+        sub.save(update_fields=["ends", "frozen_from", "frozen_until", "updated_at"])
+    r.account = Account.objects.for_money(r.branch_id, method, on=today)
+    r.save()
+    return r
+
+
+@transaction.atomic
+def void_refund(r: Refund, reason: str) -> Refund:
+    """The refund was wrong: the money counts as paid again, and a plan it ended or cancelled is put back."""
+    r = Refund.objects.select_for_update().select_related("subscription").get(pk=r.pk)
+    if r.voided:
+        raise RuleBroken("voided", "This refund is already voided")
+    before_change(StatementTick.REFUND, r.pk)
+    sub = r.subscription
+    if r.cancelled_plan:
+        sub.cancelled = False
+        sub.save(update_fields=["cancelled", "updated_at"])
+    elif r.ended_plan and r.plan_ended_from:
+        sub.ends = r.plan_ended_from
+        sub.save(update_fields=["ends", "updated_at"])
+    r.voided, r.void_reason = True, reason
+    r.save(update_fields=["voided", "void_reason", "updated_at"])
+    return r
 
 
 def next_code(gym):

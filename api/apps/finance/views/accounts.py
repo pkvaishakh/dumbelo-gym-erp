@@ -12,9 +12,11 @@ from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, GymViewMixin
 from apps.members.serializers import VoidSerializer
 
-from . import services
-from .models import Account, MoneyMove
-from .serializers import AccountSerializer, BranchAccountSerializer, MoneyMoveSerializer
+from .. import reconcile, services
+from ..models import Account, MoneyMove, StatementTick
+from ..serializers import (
+    AccountSerializer, BranchAccountSerializer, MoneyMoveSerializer, ReconcileSerializer, ReconciliationSerializer, TickSerializer, UnreconcileSerializer,
+)
 
 
 def _snapshot(a: Account) -> dict:
@@ -44,12 +46,16 @@ Statement = inline_serializer("AccountStatement", {
     "opening_paise": serializers.IntegerField(help_text="The balance before the first day"),
     "closing_paise": serializers.IntegerField(help_text="The balance after the last day"),
     "in_paise": serializers.IntegerField(), "out_paise": serializers.IntegerField(),
+    "cleared_paise": serializers.IntegerField(help_text="Bank accounts: the opening balance and the ticked entries up to the last day shown"),
+    "reconciled": ReconciliationSerializer(allow_null=True, help_text="The latest check against the bank's statement"),
     "entries": inline_serializer("StatementEntry", {
-        "kind": serializers.ChoiceField(choices=["payment", "expense", "move"]), "id": serializers.IntegerField(),
+        "kind": serializers.ChoiceField(choices=StatementTick.KINDS), "id": serializers.IntegerField(),
         "member": serializers.IntegerField(allow_null=True, help_text="Payments: the member who paid"),
         "on": serializers.DateField(), "title": serializers.CharField(), "meta": serializers.CharField(),
         "amount_paise": serializers.IntegerField(help_text="Signed: above zero came in, below zero went out"),
         "balance_paise": serializers.IntegerField(help_text="The balance after this entry"),
+        "ticked": serializers.BooleanField(help_text="Matched with the bank's statement"),
+        "reconciled": serializers.BooleanField(help_text="Locked by a reconciliation: un-reconcile it to correct or void it"),
     }, many=True),
 })
 
@@ -85,6 +91,8 @@ class AccountViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
     def perform_update(self, serializer):
         before = _snapshot(serializer.instance)
         branches = serializer.validated_data.pop("branches", None)
+        if (opening := serializer.validated_data.get("opening_balance_paise")) is not None:
+            services.check_opening(serializer.instance, opening)
         account = serializer.save()
         if (after := _snapshot(account)) != before:
             record(self.request, "account.changed", account, before, after)
@@ -132,6 +140,42 @@ class AccountViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         month = request.query_params.get("month")
         first = clock.parse_date(f"{month}-01", None, field="month") if month else clock.today(self.gym).replace(day=1)
         return Response(services.statement(account, first))
+
+    @extend_schema(request=TickSerializer, responses={204: None})
+    @action(detail=True, methods=["post"])
+    def tick(self, request, pk=None):
+        """Tick entries on this bank account's statement as on the bank's statement too, or untick them."""
+        body = TickSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        d = body.validated_data
+        reconcile.tick(self.get_object(), [(e["kind"], e["id"]) for e in d["entries"]], ticked=d["ticked"], by=self.me)
+        return Response(status=204)
+
+    @extend_schema(request=ReconcileSerializer, responses=ReconciliationSerializer)
+    @action(detail=True, methods=["post"])
+    def reconcile(self, request, pk=None):
+        """The bank's statement agrees up to a day: the ticked entries up to then are locked."""
+        body = ReconcileSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        account = self.get_object()
+        rec = reconcile.reconcile(account, by=self.me, **body.validated_data)
+        n = rec.ticks.count()
+        record(request, "account.reconciled", account, None, {"up_to": str(rec.up_to), "bank_balance_paise": rec.bank_balance_paise, "entries": n})
+        return Response(ReconciliationSerializer({"up_to": rec.up_to, "bank_balance_paise": rec.bank_balance_paise, "by_name": self.me.user.name,
+                                                  "at": rec.created_at}).data)
+
+    @extend_schema(request=UnreconcileSerializer, responses={204: None})
+    @action(detail=True, methods=["post"])
+    def unreconcile(self, request, pk=None):
+        """Unlock one reconciled entry, with the reason, so it can be corrected or voided."""
+        body = UnreconcileSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        d = body.validated_data
+        account = self.get_object()
+        t = reconcile.unreconcile(account, d["kind"], d["id"])
+        record(request, "account.unreconciled", account, {"kind": t.kind, "entry": t.entry_id, "reconciled": True},
+               {"kind": t.kind, "entry": t.entry_id, "reconciled": False, "reason": d["reason"]})
+        return Response(status=204)
 
     @extend_schema(responses=Overview)
     @action(detail=False, methods=["get"])

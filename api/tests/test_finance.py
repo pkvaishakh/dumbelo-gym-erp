@@ -1,9 +1,10 @@
 """Cash in hand, bank accounts shared by branches, balances, and moving money between them."""
 import threading
+import time
 from datetime import timedelta
 
 import pytest
-from django.db import connection
+from django.db import connection, transaction
 
 from apps.audit.models import AuditLog
 from apps.core.errors import RuleBroken
@@ -246,6 +247,59 @@ def test_two_withdrawals_at_once_cant_spend_the_same_money():
     assert sorted(out) == ["not_enough", "ok"] and services.balance_of(drawer) == 200_00
 
 
+def _overlap(first, second):
+    """Run `first` in a transaction that stays open a moment after it's done, and `second` while it's open: the
+    worst timing for two desks at once."""
+    started, out = threading.Event(), {}
+
+    def run(name, fn, hold):
+        try:
+            with transaction.atomic():
+                out[name] = fn()
+                if hold:
+                    started.set()
+                    time.sleep(0.3)
+        except RuleBroken as e:
+            out[name] = e.rule_code
+        finally:
+            started.set()
+            connection.close()
+
+    one = threading.Thread(target=run, args=("first", first, True))
+    two = threading.Thread(target=lambda: (started.wait(), run("second", second, False)))
+    for t in (one, two):
+        t.start()
+    for t in (one, two):
+        t.join()
+    return out["first"], out["second"]
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.skipif(connection.vendor != "postgresql", reason="SQLite has no row locks to race over")
+def test_a_payment_while_its_drawer_is_deactivated_never_lands_in_it():
+    w = World("race")
+    drawer = cash(w, w.a)
+    m = w.new_member("Ravi", "9811111111", w.a)
+    sell(m, w.monthly, by=w.desk)
+    deactivated, p = _overlap(lambda: services.deactivate(drawer), lambda: take_payment(m, 1_500_00, "cash", by=w.desk))
+    assert deactivated == [] and Payment.objects.get(pk=p.pk).account is None  # the desk's payment still went through
+    drawer.refresh_from_db()
+    assert not drawer.is_active and services.balance_of(drawer) == 0
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.skipif(connection.vendor != "postgresql", reason="SQLite has no row locks to race over")
+def test_deactivating_a_drawer_while_a_payment_lands_in_it_is_refused():
+    w = World("race")
+    drawer = cash(w, w.a)
+    m = w.new_member("Ravi", "9811111111", w.a)
+    sell(m, w.monthly, by=w.desk)
+    p, deactivated = _overlap(lambda: take_payment(m, 1_500_00, "cash", by=w.desk), lambda: services.deactivate(drawer))
+    assert deactivated == "not_empty" and Payment.objects.get(pk=p.pk).account == drawer
+    drawer.refresh_from_db()
+    assert drawer.is_active and services.balance_of(drawer) == 1_500_00
+
+
 def test_an_account_is_deactivated_only_once_empty(w):
     hdfc, other_bank = bank(w, branches=[w.a, w.b], opening=1_000_00), bank(w, name="ICICI", number="000401234567", opening=0)
     c = w.client(w.admin)
@@ -384,3 +438,21 @@ def test_a_statement_lists_the_month_with_a_running_balance(w):
 def test_a_statement_from_another_gym_is_not_found(w, other):
     theirs = cash(other, other.a)
     assert w.client(w.admin).get(f"{ACCOUNTS}{theirs.id}/statement/").status_code == 404
+
+
+def test_lowering_an_opening_balance_cant_leave_the_account_below_zero(w):
+    drawer = cash(w, w.a, opening=1_000_00)
+    c = w.client(w.admin)
+    c.post("/api/expenses/", {"branch": w.a.id, "category": "supplies", "amount_paise": 700_00, "method": "cash", "spent_on": w.today.isoformat()}, format="json")
+    r = c.patch(f"{ACCOUNTS}{drawer.id}/", {"opening_balance_paise": 500_00}, format="json")
+    assert (r.status_code, r.json()["error"]["code"]) == (409, "below_zero")
+    assert r.json()["error"]["message"] == "That would leave A cash at −₹200. Enter ₹700 or more."
+    drawer.refresh_from_db()
+    assert drawer.opening_balance_paise == 1_000_00 and not AuditLog.objects.filter(action="account.changed").exists()
+    r = c.patch(f"{ACCOUNTS}{drawer.id}/", {"opening_balance_paise": 700_00}, format="json")
+    assert (r.status_code, r.json()["balance_paise"]) == (200, 0)
+    log = AuditLog.objects.get(action="account.changed")
+    assert (log.before["opening_balance_paise"], log.after["opening_balance_paise"]) == (1_000_00, 700_00)
+    # Already below zero from the desk's expenses: raising it is still allowed, even when it stays below.
+    c.post("/api/expenses/", {"branch": w.a.id, "category": "supplies", "amount_paise": 500_00, "method": "cash", "spent_on": w.today.isoformat()}, format="json")
+    assert c.patch(f"{ACCOUNTS}{drawer.id}/", {"opening_balance_paise": 800_00}, format="json").json()["balance_paise"] == -400_00

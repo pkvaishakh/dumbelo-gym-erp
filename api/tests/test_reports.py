@@ -85,5 +85,5 @@ def test_period_query_budget(w, django_assert_max_num_queries):
     for i in range(6):
         task(w, w.trainer if i % 2 else w.desk, w.today - timedelta(days=i % 3), title=f"Task {i}")
         w.new_member(f"New {i}", f"97000011{i:02d}", w.a)
-    with django_assert_max_num_queries(24):
+    with django_assert_max_num_queries(26):  # refunds: one sum per period, and by plan and by day
         assert w.client(w.admin).get(URL, {"from": (w.today - timedelta(days=89)).isoformat()}).status_code == 200

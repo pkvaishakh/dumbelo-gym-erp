@@ -18,7 +18,7 @@ from apps.expenses.models import Expense
 from apps.expenses.services import bills_due, sync_dues
 from apps.payroll.services import salaries_owed
 from apps.gyms.models import Branch
-from apps.members.models import STATUSES, Member, Payment, Subscription
+from apps.members.models import STATUSES, Member, Payment, Refund, Subscription
 from apps.tasks.models import Task
 from apps.tasks.services import overdue
 
@@ -39,11 +39,13 @@ class SummaryView(APIView):
         month_start, _ = clock.day_bounds(gym, day.replace(day=1))
 
         pays = Payment.objects.filter(gym=gym, voided=False)
+        refunds = Refund.objects.filter(gym=gym, voided=False)  # money given back: revenue less
         members = Member.objects.filter(gym=gym, is_archived=False).with_totals()
         checkins = CheckIn.objects.filter(gym=gym, local_date=day).select_related("branch", "staff", "gym").prefetch_related("branch__sessions")
         expenses = Expense.objects.filter(gym=gym, spent_on__gte=day.replace(day=1), spent_on__lte=day)
         if branch is not None:
             pays, members, checkins, expenses = pays.filter(branch_id=branch), members.filter(home_branch_id=branch), checkins.filter(branch_id=branch), expenses.filter(branch_id=branch)
+            refunds = refunds.filter(branch_id=branch)
 
         statuses, dues_paise, dues_count = Counter(), 0, 0
         active_by_branch = Counter()
@@ -63,10 +65,13 @@ class SummaryView(APIView):
         total = lambda qs: qs.aggregate(t=Sum("amount_paise"))["t"] or 0  # noqa: E731
         by_branch = lambda qs: dict(qs.values_list("branch_id").annotate(t=Sum("amount_paise")).order_by())  # noqa: E731
         revenue = by_branch(pays.filter(taken_at__gte=start, taken_at__lt=end))
+        for b, t in by_branch(refunds.filter(refunded_at__gte=start, refunded_at__lt=end)).items():
+            revenue[b] = revenue.get(b, 0) - t
         spent = by_branch(expenses.filter(spent_on=day))
+        month = total(pays.filter(taken_at__gte=month_start, taken_at__lt=end)) - total(refunds.filter(refunded_at__gte=month_start, refunded_at__lt=end))
         body = {
             "date": day,
-            "revenue": {"today_paise": sum(revenue.values()), "month_paise": total(pays.filter(taken_at__gte=month_start, taken_at__lt=end))},
+            "revenue": {"today_paise": sum(revenue.values()), "month_paise": month},
             "expenses_today_paise": sum(spent.values()),
             "expenses_month_paise": total(expenses),
             "members": {"total": sum(statuses.values()), **{s: statuses.get(s, 0) for s in STATUSES}},
@@ -116,6 +121,7 @@ class _Period:
         _, hi = clock.day_bounds(gym, last)
         at = lambda field: {} if branch is None else {field: branch}  # noqa: E731
         self.payments = Payment.objects.filter(gym=gym, voided=False, taken_at__gte=lo, taken_at__lt=hi, **at("branch_id"))
+        self.refunds = Refund.objects.filter(gym=gym, voided=False, refunded_at__gte=lo, refunded_at__lt=hi, **at("branch_id"))
         self.expenses = Expense.objects.filter(gym=gym, spent_on__range=(first, last), **at("branch_id"))
         self.joined = Member.objects.filter(gym=gym, is_archived=False, joined_on__range=(first, last), **at("home_branch_id"))
         self.checkins = CheckIn.objects.filter(gym=gym, member__isnull=False, local_date__range=(first, last), **at("branch_id"))
@@ -127,9 +133,14 @@ class _Period:
             member__gym=gym, cancelled=False, created_at__gte=lo, created_at__lt=hi, **at("member__home_branch_id"),
         ).filter(Exists(earlier))
 
+    def refunded(self) -> int:
+        return self.refunds.aggregate(t=Sum("amount_paise"))["t"] or 0
+
     def totals(self):
         return {
-            "revenue_paise": self.payments.aggregate(t=Sum("amount_paise"))["t"] or 0,
+            # Revenue is what was taken less what was given back in the same days.
+            "revenue_paise": (self.payments.aggregate(t=Sum("amount_paise"))["t"] or 0) - (refunded := self.refunded()),
+            "refunds_paise": refunded,
             "new_members": self.joined.count(),
             "renewals": self.renewals.count(),
             "checkins": self.checkins.count(),
@@ -160,10 +171,7 @@ class PeriodView(APIView):
             "totals": totals,
             "previous": {"from": first - timedelta(days=span), "to": first - timedelta(days=1), **before.totals()},
             "series": self._series(gym, now, first, last),
-            "revenue_by_plan": [
-                {"name": name or "Other payments", "paise": t}
-                for name, t in now.payments.values_list("subscription__plan__name").annotate(t=Sum("amount_paise")).order_by("-t")
-            ],
+            "revenue_by_plan": self._by_plan(now),
             "expenses_by_category": [
                 {"category": c, "label": dict(Expense.CATEGORIES).get(c, c), "paise": t}
                 for c, t in now.expenses.values_list("category").annotate(t=Sum("amount_paise")).order_by("-t")
@@ -172,9 +180,20 @@ class PeriodView(APIView):
         })
 
     @staticmethod
+    def _by_plan(p):
+        """Each plan's revenue, less what was refunded for it in the same days, largest first."""
+        net = dict(p.payments.values_list("subscription__plan__name").annotate(t=Sum("amount_paise")).order_by())
+        for name, t in p.refunds.values_list("subscription__plan__name").annotate(t=Sum("amount_paise")).order_by():
+            net[name] = net.get(name, 0) - t
+        return [{"name": name or "Other payments", "paise": t} for name, t in sorted(net.items(), key=lambda x: -x[1])]
+
+    @staticmethod
     def _series(gym, p, first, last):
         """Each day's revenue, new members and check-ins, with the empty days filled in."""
         revenue = dict(p.payments.annotate(d=TruncDate("taken_at", tzinfo=clock.tz(gym))).values_list("d").annotate(t=Sum("amount_paise")).order_by())
+        given = p.refunds.annotate(d=TruncDate("refunded_at", tzinfo=clock.tz(gym))).values_list("d").annotate(t=Sum("amount_paise")).order_by()
+        for d, t in given:
+            revenue[d] = revenue.get(d, 0) - t
         joined = dict(p.joined.values_list("joined_on").annotate(n=Count("id")).order_by())
         visits = dict(p.checkins.values_list("local_date").annotate(n=Count("id")).order_by())
         return [

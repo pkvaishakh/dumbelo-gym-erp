@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { lastDigits, monthLabel, moveLabel, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
+import { countDifference, gymToday, lastDigits, monthLabel, moveLabel, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, toPaise, trend, until } from "./format";
+import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
 
@@ -18,6 +19,22 @@ describe("money", () => {
   it("counts in words", () => {
     expect(plural(1, "member")).toBe("1 member");
     expect(plural(1200, "member")).toBe("1,200 members");
+  });
+});
+
+describe("cash counts", () => {
+  it("says how far the drawer is from what it should hold", () => {
+    expect(countDifference(-20000)).toBe("₹200 short");
+    expect(countDifference(5000)).toBe("₹50 over");
+    expect(countDifference(0)).toBe("Matches");
+  });
+});
+
+describe("the gym's day", () => {
+  it("is the date in the gym's time zone, not the device's", () => {
+    const lateUtc = new Date("2026-10-18T20:00:00Z"); // 1:30 AM on the 19th in India
+    expect(gymToday("Asia/Kolkata", lateUtc)).toBe("2026-10-19");
+    expect(gymToday("UTC", lateUtc)).toBe("2026-10-18");
   });
 });
 
@@ -117,5 +134,27 @@ describe("recentMonths", () => {
       { value: "2025-12", label: "Dec 2025" },
       { value: "2025-11", label: "Nov 2025" },
     ]);
+  });
+});
+
+describe("statement CSV", () => {
+  it("writes plain rupees the sheet can add up, and quotes what needs it", () => {
+    expect(plainRupees(150000)).toBe("1500.00");
+    expect(plainRupees(-8500050)).toBe("-85000.50");
+    expect(plainRupees(5)).toBe("0.05");
+    expect(toCsv([["a,b", 'say "hi"', 3]])).toBe('"a,b","say ""hi""",3\r\n');
+  });
+  it("opens and closes with the balances, each entry with the balance after it", () => {
+    const csv = statementCsv("HDFC current", {
+      from: "2026-10-01", to: "2026-10-18", opening_paise: 100000, closing_paise: 230000, in_paise: 150000, out_paise: 20000, cleared_paise: 0, reconciled: null,
+      entries: [
+        { kind: "payment", id: 1, member: 4, on: "2026-10-02", title: "Ravi", meta: "Payment by UPI", amount_paise: 150000, balance_paise: 250000, ticked: true, reconciled: true },
+        { kind: "expense", id: 2, member: null, on: "2026-10-03", title: "BESCOM", meta: "Utilities by UPI", amount_paise: -20000, balance_paise: 230000, ticked: false, reconciled: false },
+      ],
+    }).split("\r\n");
+    expect(csv[1]).toBe("HDFC current,2026-10-01,,Opening balance,,,1000.00,");
+    expect(csv[2]).toBe("HDFC current,2026-10-02,Payment,Ravi,Payment by UPI,1500.00,2500.00,Yes");
+    expect(csv[3]).toBe("HDFC current,2026-10-03,Expense,BESCOM,Utilities by UPI,-200.00,2300.00,");
+    expect(csv[4]).toBe("HDFC current,2026-10-18,,Closing balance,,,2300.00,");
   });
 });

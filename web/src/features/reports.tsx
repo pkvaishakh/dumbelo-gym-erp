@@ -65,13 +65,13 @@ export function RevenueCard({ r, today }: { r: PeriodReport; today: string }) {
     <Section title="Revenue">
       <div className="rl-card rl-card--pad rl-report">
         <p className="rl-report__value">{rupees(r.totals.revenue_paise)}</p>
-        <p className="rl-perf__label">Collected, {lastDays(r)}</p>
+        <p className="rl-perf__label">Collected, {lastDays(r)}{r.totals.refunds_paise > 0 ? `, after ${rupees(r.totals.refunds_paise)} refunded` : ""}</p>
         <p className="rl-trend"><Trend now={r.totals.revenue_paise} before={r.previous.revenue_paise} days={r.days} /></p>
         <SeriesChart r={r} today={today} label={`Revenue, ${lastDays(r)}`} value={(d) => d.revenue_paise} text={rupees} axis={rupeesShort} cap={rupeesShort} />
         {r.revenue_by_plan.length > 0 && (
           <>
             <p className="rl-report__sub">By plan</p>
-            <BarList rows={r.revenue_by_plan.map((p) => ({ key: p.name, label: p.name, value: p.paise, text: rupees(p.paise) }))} />
+            <BarList rows={r.revenue_by_plan.map((p) => ({ key: p.name, label: p.name, value: Math.max(0, p.paise), text: `${p.paise < 0 ? "−" : ""}${rupees(Math.abs(p.paise))}` }))} />
           </>
         )}
       </div>

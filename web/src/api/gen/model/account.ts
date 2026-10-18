@@ -46,6 +46,8 @@ export interface Account {
   readonly collected_paise: number;
   /** Expenses paid from it since it was added */
   readonly spent_paise: number;
+  /** Refunds given from it since it was added */
+  readonly refunded_paise: number;
   readonly moved_in_paise: number;
   readonly moved_out_paise: number;
 }
