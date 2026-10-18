@@ -229,8 +229,8 @@ class WebhookEvent(TimeStamped):
     """One call Meta made to the webhook, kept exactly as it came, before anything is done with it.
 
     Only calls signed with the account's app secret are kept. `processed_at` and `error` say how handling it went,
-    so a call that broke something can be found; Meta is told 200 either way, or it would keep
-    sending the same call.
+    so a call can be found and run again (`manage.py replay_webhook_events`). Meta is told 200 either way, or it
+    would keep sending the same call.
     """
 
     account = models.ForeignKey(WhatsAppAccount, on_delete=models.CASCADE, related_name="webhook_events")
@@ -240,6 +240,7 @@ class WebhookEvent(TimeStamped):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["created_at"], name="webhook_event_created")]  # replaying calls since a time
 
     def __str__(self):
         return f"{self.account} · {self.created_at:%Y-%m-%d %H:%M}"

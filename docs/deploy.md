@@ -127,7 +127,9 @@ usage can be billed). In the Meta app's WhatsApp → Configuration, set the Call
 Console shows on the account (Rackline's shared number: `https://<api host>/api/whatsapp/webhook/`; a gym's own:
 `.../api/whatsapp/webhook/<slug>/`), then subscribe to the `messages` field. Meta signs every call with the app
 secret, so the account's app secret in the Console must be that app's. Every signed call is kept in the database
-(`WebhookEvent`), with an error if handling it failed.
+(`WebhookEvent`), with an error if handling it failed. To run calls again (a status that came before the send
+saved Meta's id, or a call that broke on a bug since fixed): `python manage.py replay_webhook_events --since
+2026-10-18T09:00+05:30` (add `--failed` for only the broken ones, or `--id N`). Running one again is always safe.
 
 ### Rotating the encryption key
 

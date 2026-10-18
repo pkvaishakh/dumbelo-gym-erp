@@ -46,18 +46,36 @@ def verified(account: WhatsAppAccount, mode: str, token: str) -> bool:
 
 
 def receive(account: WhatsAppAccount, body: bytes) -> WebhookEvent:
-    """Keep a signed call as it came, then handle it. A call that can't be handled is kept with the reason, and
-    never raises: Meta must still hear 200, or it sends the same call again for days."""
+    """Keep a signed call as it came, then handle it."""
     event = WebhookEvent.objects.create(account=account, body=body.decode("utf-8", errors="replace"))
+    return process(event)
+
+
+def process(event: WebhookEvent) -> WebhookEvent:
+    """Handle a kept call, the first time or again. A call that can't be handled keeps the reason, and this never
+    raises: Meta must still hear 200, or it sends the same call again for days.
+
+    Safe to repeat: statuses only move forward and a reply is kept (and acted on) once, so running a call again
+    only does what it couldn't do the first time, such as a status that came before the send saved Meta's id."""
+    event.error = ""
     try:
         with transaction.atomic():
-            handle(account, json.loads(event.body))
+            handle(event.account, json.loads(event.body))
     except Exception as e:
-        log.exception("Webhook event %s for account %s couldn't be handled", event.pk, account.pk)
+        log.exception("Webhook event %s for account %s couldn't be handled", event.pk, event.account_id)
         event.error = (f"{e.__class__.__name__}: {e}")[:200]
     event.processed_at = timezone.now()
     event.save(update_fields=["processed_at", "error", "updated_at"])
     return event
+
+
+def replay(events) -> dict[str, int]:
+    """Handle kept calls again, oldest first (`manage.py replay_webhook_events`). Says how many went through and
+    how many still couldn't be handled."""
+    counts = {"handled": 0, "failed": 0}
+    for event in events.select_related("account").order_by("created_at", "id").iterator(chunk_size=500):
+        counts["failed" if process(event).error else "handled"] += 1
+    return counts
 
 
 def handle(account: WhatsAppAccount, payload: dict) -> None:
@@ -90,7 +108,7 @@ def update_status(account: WhatsAppAccount, status: dict) -> int:
     """Move the message Meta's status is about, if this account sent it and the status is ahead of where it is.
     Says how many rows changed (0 or 1). One conditional update: two calls at once can't both move it.
 
-    A status for a message whose send hasn't saved Meta's id yet finds nothing (the event is still kept)."""
+    A status for a message whose send hasn't saved Meta's id yet finds nothing; `replay` runs its call again."""
     meta_id, word = str(status.get("id") or ""), status.get("status")
     if not meta_id or word not in (Message.SENT, Message.DELIVERED, Message.READ, Message.FAILED):
         return 0

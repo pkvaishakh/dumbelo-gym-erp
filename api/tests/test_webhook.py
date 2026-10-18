@@ -1,10 +1,12 @@
 """Meta's webhook: the handshake, signatures, delivery statuses, STOP replies, and usage on the invoice."""
 import hashlib
 import hmac
+import io
 import json
 from datetime import UTC, date, datetime
 
 import pytest
+from django.core.management import CommandError, call_command
 from django.urls import reverse
 
 from apps.audit.models import AuditLog
@@ -386,3 +388,56 @@ def test_usage_follows_the_gyms_billing_month(w, meta, shared_number):
     assert [(x.quantity, x.starts, x.ends, x.description) for x in line] == [
         (1, date(2026, 10, 15), date(2026, 11, 14), "WhatsApp messages delivered (utility), 15 Oct to 14 Nov"),
     ]
+
+
+# Running kept calls again
+
+def replay(*args) -> str:
+    out = io.StringIO()
+    call_command("replay_webhook_events", *args, stdout=out)
+    return out.getvalue()
+
+
+def test_a_status_before_the_send_saved_metas_id_lands_when_run_again(w, meta, shared_number):
+    msg = sent(w, shared_number, meta_id="")  # Meta has taken it, but our send hasn't saved the id yet
+    meta([status("wamid.EARLY", "delivered", datetime(2026, 10, 10, 6, 31, tzinfo=UTC))])
+    msg.provider_id = "wamid.EARLY"
+    msg.save(update_fields=["provider_id"])
+    msg.refresh_from_db()
+    assert msg.status == Message.SENT  # the early status found nothing
+
+    event = WebhookEvent.objects.get()
+    assert replay("--id", str(event.pk)) == "1 call run again: 1 handled, 0 still failing.\n"
+    msg.refresh_from_db()
+    assert msg.status == Message.DELIVERED and msg.delivered_at == datetime(2026, 10, 10, 6, 31, tzinfo=UTC)
+    replay("--id", str(event.pk))  # and again: nothing more
+    assert usage(w.gym, date(2026, 10, 1), date(2026, 10, 31))[0]["messages"] == 1
+
+
+def test_running_a_stop_again_opts_out_once(w, meta, shared_number):
+    sent(w, shared_number)
+    meta(messages=[inbound("STOP")])
+    replay("--since", "2026-01-01")
+    assert InboundMessage.objects.count() == 1 and AuditLog.objects.filter(action="member.opted_out").count() == 1
+
+
+def test_failed_runs_only_the_calls_that_couldnt_be_handled(w, client, meta, shared_number):
+    msg = sent(w, shared_number)
+    post(client, b"{not json")
+    meta([status(msg.provider_id, "delivered")])
+    assert replay("--since", "2026-01-01", "--failed") == "1 call run again: 0 handled, 1 still failing.\n"
+    assert replay("--since", "2026-01-01") == "2 calls run again: 1 handled, 1 still failing.\n"
+
+
+def test_since_leaves_out_older_calls(w, meta, shared_number):
+    meta()
+    WebhookEvent.objects.update(created_at=datetime(2026, 10, 1, 3, 0, tzinfo=UTC))  # 1 Oct 08:30 IST
+    assert replay("--since", "2026-10-01T09:00+05:30").startswith("0 calls")
+    assert replay("--since", "2026-10-01T08:00+05:30").startswith("1 call ")
+    assert replay("--since", "2026-10-01").startswith("1 call ")  # a bare day is from its midnight, UTC
+
+
+@pytest.mark.parametrize("args, message", [((), "Say which calls"), (("--since", "yesterday"), "Give --since as")])
+def test_the_command_says_what_it_needs(w, args, message):
+    with pytest.raises(CommandError, match=message):
+        replay(*args)

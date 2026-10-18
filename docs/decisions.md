@@ -226,7 +226,11 @@ What was decided, so code and screens stay consistent. Change this file when a d
   stopped mid-send) is never retried on its own: sending nothing beats sending twice. Shared-number usage is counted from delivered billable messages, so a
   repeated webhook can't count one twice. A message counts in the billing month Meta says it was delivered (in the
   gym's time zone), at the rate kept on it when it was sent; "read" without a "delivered" before it counts as
-  delivered at that time. Meta's word on a message is only taken from the account that sent it.
+  delivered at that time. Meta's word on a message is only taken from the account that sent it. Meta's own
+  "billable" flag isn't used: every message delivered from the shared number is billed at the gym's rate, including
+  ones Meta doesn't charge Rackline for (such as a utility message inside the member's 24-hour chat window).
+  Every signed webhook call is kept, and `manage.py replay_webhook_events` runs kept calls again (a status that came
+  before the send saved Meta's id, or a call that broke).
 - SMS and email are not in the MVP.
 
 ## Stack and hosting

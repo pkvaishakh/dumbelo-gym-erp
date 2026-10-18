@@ -39,7 +39,7 @@ apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender po
                      save_template, approved_templates); meta.py (Graph API calls, errors scrubbed of credentials and sorted into
                      temporary, permanent and "no answer", which is never retried); webhook.py (Meta's webhook: signature
                      check, WebhookEvent kept before handling, statuses that only move forward within the sending
-                     account, InboundMessage and STOP opt-outs); usage.py (delivered billable messages per gym and
+                     account, InboundMessage and STOP opt-outs, replay: `manage.py replay_webhook_events`); usage.py (delivered billable messages per gym and
                      month, counted from the rows, for invoices); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
                      no sign-in: the signature is the check); views/gym.py
                      (/api/messages/, /api/gym/whatsapp/) and views/console.py (/api/platform/whatsapp-accounts/,
