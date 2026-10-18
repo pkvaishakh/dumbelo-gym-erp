@@ -1,15 +1,18 @@
-"""The Console's gyms and their admin accounts: `/api/platform/gyms/` and `/api/platform/gyms/<id>/admins/`.
+"""The Console's gyms and their admin accounts (`/api/platform/gyms/`, `/api/platform/gyms/<id>/admins/`), and its
+Server screen (`/api/platform/status/`, `/api/platform/jobs/<job>/run/`).
 
 Rackline admins only (`RacklineViewMixin`), with no X-Gym: these views work across gyms. They never show what is
 inside a gym (members' details, payments, check-ins): only counts, branches and admin accounts. Every change is
 audited against the gym it belongs to.
 """
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.audit.models import record
 from apps.billing.invoicing import owed_by_gym
@@ -19,10 +22,10 @@ from apps.gyms.models import Branch, Gym, GymRole
 from apps.gyms.serializers import StaffPasswordSerializer
 from apps.members.models import Member
 
-from . import services
+from . import server, services
 from .serializers import (
     GymAdminAddSerializer, GymAdminSerializer, GymCreateSerializer, GymDetailSerializer, GymEditSerializer, GymRowSerializer,
-    NewGymSerializer, StatusChangeSerializer,
+    JobRunSerializer, NewGymSerializer, ServerStatusSerializer, StatusChangeSerializer,
 )
 
 
@@ -195,3 +198,27 @@ class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateMod
         before = services.make_owner(role)
         record(request, "admin.made_owner", role, {"owner": before.user.email if before else None}, {"owner": role.user.email}, gym=self.gym)
         return Response(self._row(role))
+
+
+@extend_schema(tags=["platform"])
+class ServerStatusView(RacklineViewMixin, APIView):
+    """Console → Server: the version running, whether the database, Redis, the worker and beat answer, each job's
+    last run, messages waiting or failed, and Meta's webhook calls. Something down shows as down, never as a 500."""
+
+    @extend_schema(responses=ServerStatusSerializer)
+    def get(self, request):
+        return Response(ServerStatusSerializer(server.status()).data)
+
+
+@extend_schema(tags=["platform"], parameters=[
+    OpenApiParameter("job", str, OpenApiParameter.PATH, enum=[j for j, spec in server.JOBS.items() if spec.task])])
+class JobRunNowView(RacklineViewMixin, APIView):
+    @extend_schema(request=None, responses={202: JobRunSerializer})
+    def post(self, request, job):
+        """Run Now: queue one run of reminders, invoices or the webhook replay on the worker. They are safe to
+        repeat; refused while that job is waiting or running. Audited."""
+        if job not in server.JOBS or server.JOBS[job].task is None:
+            raise Http404
+        run = server.run_now(job, request.user)
+        record(request, "job.run_now", run, None, {"job": job})
+        return Response(JobRunSerializer(run).data, status=status.HTTP_202_ACCEPTED)

@@ -263,4 +263,13 @@ What was decided, so code and screens stay consistent. Change this file when a d
   The web app on Vercel. Every step, and every setting a server needs, is in `docs/deploy.md`.
 - A server runs with `PRODUCTION=true`, which refuses to start without `SECRET_KEY`, `ALLOWED_HOSTS`,
   `DATABASE_URL` and `CACHE_URL`. `/api/health/` is the load balancer's question: no sign-in, no gym.
+- The server's status is for Rackline admins only (Console → Server): the version and when it was deployed, the
+  database, Redis, the worker (a 2-second ping) and beat (its last tick), each job's last run, messages waiting for a
+  retry or failed today, and Meta's webhook calls. Something down shows as down, never as an error. Every scheduled
+  job keeps a record of each run (what it did, or why it broke): a run that found nothing to do is kept only as its
+  job's latest, the rest for 30 days. Run Now starts reminders, invoices or the webhook replay (the last 7 days'
+  calls that couldn't be handled) on the worker: they are safe to repeat, it is refused while that job is waiting
+  or running, and it is audited. The retries aren't offered: they run every minute anyway. The webhook replay runs
+  only when asked (Run Now, or `manage.py replay_webhook_events`): a call that broke on a bug would only break
+  again until the bug is fixed.
 - Open: more languages than English.

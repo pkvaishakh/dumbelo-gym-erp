@@ -44,6 +44,7 @@ import type {
   GymCreateRequest,
   GymDetail,
   InvoiceVoidRequest,
+  JobRun,
   MessageKind,
   NewGym,
   PaginatedChargeList,
@@ -70,6 +71,7 @@ import type {
   PriceListCreateRequest,
   RecordPaymentRequest,
   Rule,
+  ServerStatus,
   StaffPasswordRequest,
   StatusChangeRequest,
   WhatsAppAccount,
@@ -3258,6 +3260,86 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Run Now: queue one run of reminders, invoices or the webhook replay on the worker. They are safe to
+repeat; refused while that job is waiting or running. Audited.
+ */
+export type platformJobsRunCreateResponse202 = {
+  data: JobRun
+  status: 202
+}
+    
+export type platformJobsRunCreateResponseSuccess = (platformJobsRunCreateResponse202) & {
+  headers: Headers;
+};
+;
+
+export type platformJobsRunCreateResponse = (platformJobsRunCreateResponseSuccess)
+
+export const getPlatformJobsRunCreateUrl = (job: 'invoices' | 'reminders' | 'webhook_replay',) => {
+
+
+  
+
+  return `/api/platform/jobs/${job}/run/`
+}
+
+export const platformJobsRunCreate = async (job: 'invoices' | 'reminders' | 'webhook_replay', options?: RequestInit): Promise<platformJobsRunCreateResponse> => {
+  
+  return apiFetch<platformJobsRunCreateResponse>(getPlatformJobsRunCreateUrl(job),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getPlatformJobsRunCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformJobsRunCreate>>, TError,{job: 'invoices' | 'reminders' | 'webhook_replay'}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformJobsRunCreate>>, TError,{job: 'invoices' | 'reminders' | 'webhook_replay'}, TContext> => {
+
+const mutationKey = ['platformJobsRunCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformJobsRunCreate>>, {job: 'invoices' | 'reminders' | 'webhook_replay'}> = (props) => {
+          const {job} = props ?? {};
+
+          return  platformJobsRunCreate(job,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformJobsRunCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformJobsRunCreate>>>
+    
+    export type PlatformJobsRunCreateMutationError = unknown
+
+    export const usePlatformJobsRunCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformJobsRunCreate>>, TError,{job: 'invoices' | 'reminders' | 'webhook_replay'}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformJobsRunCreate>>,
+        TError,
+        {job: 'invoices' | 'reminders' | 'webhook_replay'},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformJobsRunCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Rackline's price lists, newest first. Added, never edited: gyms move to new prices one by one.
  */
 export type platformPricesListResponse200 = {
@@ -3524,6 +3606,116 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * Console → Server: the version running, whether the database, Redis, the worker and beat answer, each job's
+last run, messages waiting or failed, and Meta's webhook calls. Something down shows as down, never as a 500.
+ */
+export type platformStatusRetrieveResponse200 = {
+  data: ServerStatus
+  status: 200
+}
+    
+export type platformStatusRetrieveResponseSuccess = (platformStatusRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformStatusRetrieveResponse = (platformStatusRetrieveResponseSuccess)
+
+export const getPlatformStatusRetrieveUrl = () => {
+
+
+  
+
+  return `/api/platform/status/`
+}
+
+export const platformStatusRetrieve = async ( options?: RequestInit): Promise<platformStatusRetrieveResponse> => {
+  
+  return apiFetch<platformStatusRetrieveResponse>(getPlatformStatusRetrieveUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformStatusRetrieveQueryKey = () => {
+    return [
+    `/api/platform/status/`
+    ] as const;
+    }
+
+    
+export const getPlatformStatusRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformStatusRetrieve>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformStatusRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformStatusRetrieveQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformStatusRetrieve>>> = ({ signal }) => platformStatusRetrieve({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformStatusRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformStatusRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformStatusRetrieve>>>
+export type PlatformStatusRetrieveQueryError = unknown
+
+
+export function usePlatformStatusRetrieve<TData = Awaited<ReturnType<typeof platformStatusRetrieve>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformStatusRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformStatusRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformStatusRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformStatusRetrieve<TData = Awaited<ReturnType<typeof platformStatusRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformStatusRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformStatusRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformStatusRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformStatusRetrieve<TData = Awaited<ReturnType<typeof platformStatusRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformStatusRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformStatusRetrieve<TData = Awaited<ReturnType<typeof platformStatusRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformStatusRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformStatusRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
  * WhatsApp accounts: Rackline's shared number first, then gyms' own. Filter with `?gym=` or `?status=`.
  */
 export type platformWhatsappAccountsListResponse200 = {

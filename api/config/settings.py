@@ -150,6 +150,11 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api",  # set, not detected: detection uses os.path and breaks on Windows (tags become "api")
     # Several models have a `kind` or `status`; name the payroll and dues ones so the web's types read clearly.
     "ENUM_NAME_OVERRIDES": {
+        "StateEnum": "apps.expenses.serializers.ExpenseDueSerializer.STATES",  # its name before other states came
+        "ServerCheckEnum": "apps.platform.server.CHECKS",
+        "ServerStateEnum": "apps.platform.server.STATES",
+        "JobRunStateEnum": "apps.platform.serializers.JobRunSerializer.STATES",
+        "JobTriggerEnum": "apps.core.models.JobRun.TRIGGERS",
         "SalaryItemKindEnum": "apps.payroll.models.SalaryItem.KINDS",
         "PayslipLineKindEnum": "apps.payroll.models.PayslipLine.KINDS",
         "PayslipStatusEnum": "apps.payroll.models.Payslip.STATUSES",
@@ -173,6 +178,11 @@ SPECTACULAR_SETTINGS = {
         "MethodEnum": "apps.members.models.Payment.METHODS",  # named, now that Rackline payments have methods of their own
     },
 }
+# ---- What is running (the Console's Server screen) ----
+# The deploy sets both: the release (a git tag or commit) and when it went out (ISO 8601, e.g. 2026-10-18T09:30:00Z).
+APP_VERSION = env("APP_VERSION", default="") or "dev"
+DEPLOYED_AT = env("DEPLOYED_AT", default="")
+
 # ---- Background jobs (see config/celery.py) ----
 # No broker means no worker: tasks run where they are called, which is what the tests and a laptop without
 # Redis want. A server sets CELERY_BROKER_URL to its Redis.

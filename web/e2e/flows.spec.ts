@@ -94,18 +94,18 @@ test("admin: long lists load a page at a time, and the other list screens load",
   }
 });
 
-test("admin: turns the gym's reminders off and on, and sees what a member was sent", async ({ page }) => {
+test("admin: pauses and resumes a message, and sees what a member was sent", async ({ page }) => {
   await signIn(page, "meera@rackline.demo");
   await page.goto("/more");
   await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { name: "Reminders to members" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
 
-  const setting = page.locator("label.rl-setting");
+  const setting = page.locator("label.rl-setting").filter({ has: page.locator('input[name="message-plan_ending"]') });
   await expect(setting.getByRole("switch")).toBeChecked();
   await setting.click();
   await expect(setting.getByRole("switch")).not.toBeChecked();
-  await expect(setting.getByText(/^Off: no one is messaged/)).toBeVisible();
-  await setting.click();  // and back on, so the demo gym is left as it was
+  await expect(setting.getByText(/• Paused$/)).toBeVisible();
+  await setting.click();  // and Resume, so the demo gym is left as it was
   await expect(setting.getByRole("switch")).toBeChecked();
 
   // a member who owes money has been messaged about it, and can be taken off the list

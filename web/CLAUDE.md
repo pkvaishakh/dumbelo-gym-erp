@@ -16,11 +16,14 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
                               print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
                               `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
-                              Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen).
+                              Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen),
+                              Server (More → Server: health, the jobs and Run Now, messages and webhook; checks again
+                              every 30 s, every 3 s while a run waits or runs).
                               Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
                               AddChargeSheet, ChargeSheet; whatsapp: WhereFields, SecretField, EditAccountSheet,
-                              CredentialsSheet, TemplateSheet; messages: HourField, DaysField, AutomationSheet, GymMessages)
+                              CredentialsSheet, TemplateSheet; messages: HourField, DaysField, AutomationSheet, GymMessages;
+                              server: RunBadge, jobLine, JobSheet with Run Now's confirm)
 src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,

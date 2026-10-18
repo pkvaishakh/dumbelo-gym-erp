@@ -1,5 +1,5 @@
 "use client";
-import { Building2, Clock, KeyRound, LogOut, Mail, MessageCircle, Pencil, UserRound } from "lucide-react";
+import { Building2, Clock, KeyRound, LogOut, Mail, MessageCircle, Pencil, Server, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { PageBar } from "@/components/shell";
@@ -9,8 +9,8 @@ import { gymSlug } from "@/lib/api";
 import { phone } from "@/lib/format";
 import { useWho } from "@/lib/session";
 
-/** Rackline's WhatsApp numbers and automation times, the Rackline admin's own account, and the gyms they also work at (opening one
- *  leaves the Console). */
+/** Rackline's WhatsApp numbers, automation times and server status, the Rackline admin's own account, and the gyms
+ *  they also work at (opening one leaves the Console). */
 export default function ConsoleMore() {
   const { me, signOut } = useWho();
   const [sheet, setSheet] = useState<"details" | "password" | null>(null);
@@ -30,6 +30,7 @@ export default function ConsoleMore() {
           <ul className="rl-card rl-remind">
             <MenuRow icon={MessageCircle} title="WhatsApp" value="Numbers and templates" href="/console/whatsapp" />
             <MenuRow icon={Clock} title="Automation" value="When messages go out" href="/console/automation" />
+            <MenuRow icon={Server} title="Server" value="Health and jobs" href="/console/server" />
           </ul>
         </Section>
         <Section title="Account Details">

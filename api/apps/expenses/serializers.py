@@ -104,7 +104,9 @@ class ExpenseDueSerializer(serializers.ModelSerializer):
                   "paid_paise", "paid_on"]
         read_only_fields = fields  # dues change only by paying or skipping
 
-    @extend_schema_field(serializers.ChoiceField(choices=["overdue", "today", "soon", "later", "paid", "skipped"]))
+    STATES = ["overdue", "today", "soon", "later", "paid", "skipped"]
+
+    @extend_schema_field(serializers.ChoiceField(choices=STATES))
     def get_state(self, due) -> str:
         """overdue, today, soon (inside its reminder days), later, paid or skipped."""
         if due.status != ExpenseDue.DUE:

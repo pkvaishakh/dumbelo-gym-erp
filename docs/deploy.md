@@ -103,6 +103,10 @@ half-configured server fails loudly at boot instead of quietly serving with a de
 | `WHATSAPP_PROVIDER` | `whatsapp_cloud` | Posts templates to Meta's Cloud API from each gym's number. `fake` (the default) sends nothing |
 | `DEBUG` | leave unset | `PRODUCTION=true` with `DEBUG=True` refuses to start |
 
+Set by the image itself, nothing to do: `APP_VERSION` (the commit) and `DEPLOYED_AT` (when the deploy workflow
+built it, UTC), which the Console's Server screen shows. The workflow passes both to `docker build`; an image built
+by hand says `dev` unless you pass `--build-arg APP_VERSION=… --build-arg DEPLOYED_AT=…` too.
+
 Optional, with sensible defaults in `api/config/settings.py`: `WHATSAPP_API_VERSION` (Meta's Graph API version,
 `v23.0`), `JWT_ACCESS_MINUTES` (30), `JWT_REFRESH_DAYS` (30), `THROTTLE_LOGIN`, `THROTTLE_LOGIN_IP`, `THROTTLE_REFRESH`, `THROTTLE_QR`, `THROTTLE_DEVICE`.
 

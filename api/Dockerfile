@@ -17,6 +17,12 @@ RUN python manage.py collectstatic --noinput
 RUN useradd --create-home --uid 10001 rackline && chown -R rackline:rackline /app
 USER rackline
 
+# What this image is, for the Console's Server screen: the deploy workflow passes the commit and the time it built
+# it. Last, so a new commit rebuilds only this layer. A service's own environment variables would win over these.
+ARG APP_VERSION=dev
+ARG DEPLOYED_AT=
+ENV APP_VERSION=$APP_VERSION DEPLOYED_AT=$DEPLOYED_AT
+
 EXPOSE 8000
 # Asks the API the same question the load balancer asks (apps/core/views.HealthView).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s CMD ["python", "-c", \

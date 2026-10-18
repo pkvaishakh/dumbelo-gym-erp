@@ -4540,6 +4540,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConsoleInvoice'
           description: ''
+  /api/platform/jobs/{job}/run/:
+    post:
+      operationId: platform_jobs_run_create
+      description: |-
+        Run Now: queue one run of reminders, invoices or the webhook replay on the worker. They are safe to
+        repeat; refused while that job is waiting or running. Audited.
+      parameters:
+      - in: path
+        name: job
+        schema:
+          type: string
+          enum:
+          - invoices
+          - reminders
+          - webhook_replay
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobRun'
+          description: ''
   /api/platform/prices/:
     get:
       operationId: platform_prices_list
@@ -4595,6 +4622,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PriceList'
+          description: ''
+  /api/platform/status/:
+    get:
+      operationId: platform_status_retrieve
+      description: |-
+        Console → Server: the version running, whether the database, Redis, the worker and beat answer, each job's
+        last run, messages waiting or failed, and Meta's webhook calls. Something down shows as down, never as a 500.
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerStatus'
           description: ''
   /api/platform/whatsapp-accounts/:
     get:
@@ -7303,6 +7347,28 @@ components:
       required:
       - gym
       - kind
+    Check:
+      type: object
+      properties:
+        key:
+          $ref: '#/components/schemas/ServerCheckEnum'
+        label:
+          type: string
+        state:
+          $ref: '#/components/schemas/ServerStateEnum'
+        detail:
+          type: string
+        at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Beat's last tick
+      required:
+      - at
+      - detail
+      - key
+      - label
+      - state
     CheckIn:
       type: object
       properties:
@@ -9243,6 +9309,150 @@ components:
           maxLength: 200
       required:
       - reason
+    JobCount:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required:
+      - count
+      - label
+    JobEnum:
+      enum:
+      - reminders
+      - invoices
+      - retries
+      - webhook_replay
+      type: string
+      description: |-
+        * `reminders` - Reminders
+        * `invoices` - Rackline invoices
+        * `retries` - Message retries
+        * `webhook_replay` - Webhook replay
+    JobRun:
+      type: object
+      description: 'One run of a job: who started it, how long it took and what it
+        did, in words.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        job:
+          allOf:
+          - $ref: '#/components/schemas/JobEnum'
+          readOnly: true
+        trigger:
+          allOf:
+          - $ref: '#/components/schemas/JobTriggerEnum'
+          readOnly: true
+        trigger_label:
+          type: string
+          readOnly: true
+        by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When it was started or queued
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When the worker began it
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/JobRunStateEnum'
+          readOnly: true
+        seconds:
+          type: number
+          format: double
+          nullable: true
+          description: How long it took, once it has finished.
+          readOnly: true
+        did:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCount'
+          readOnly: true
+        error:
+          type: string
+          readOnly: true
+          description: Why it stopped, if it broke
+      required:
+      - by_name
+      - created_at
+      - did
+      - error
+      - finished_at
+      - id
+      - job
+      - seconds
+      - started_at
+      - state
+      - trigger
+      - trigger_label
+    JobRunStateEnum:
+      enum:
+      - queued
+      - running
+      - done
+      - failed
+      type: string
+      description: |-
+        * `queued` - Waiting for the worker
+        * `running` - Running
+        * `done` - Done
+        * `failed` - Failed
+    JobStatus:
+      type: object
+      properties:
+        job:
+          $ref: '#/components/schemas/JobEnum'
+        label:
+          type: string
+        schedule:
+          type: string
+        can_run:
+          type: boolean
+          description: Run Now can start it
+        current:
+          allOf:
+          - $ref: '#/components/schemas/JobRun'
+          nullable: true
+          description: Its run waiting or under way
+        last_run:
+          allOf:
+          - $ref: '#/components/schemas/JobRun'
+          nullable: true
+          description: Its last finished run
+      required:
+      - can_run
+      - current
+      - job
+      - label
+      - last_run
+      - schedule
+    JobTriggerEnum:
+      enum:
+      - beat
+      - run_now
+      - by_hand
+      type: string
+      description: |-
+        * `beat` - On schedule
+        * `run_now` - Run Now
+        * `by_hand` - By hand
     LineRequest:
       type: object
       properties:
@@ -9638,6 +9848,16 @@ components:
       - status
       - text
       - to
+    MessageCounts:
+      type: object
+      properties:
+        waiting_retry:
+          type: integer
+        failed_today:
+          type: integer
+      required:
+      - failed_today
+      - waiting_retry
     MessageKind:
       type: object
       description: A message Rackline sends, and the details a template for it can
@@ -10012,6 +10232,29 @@ components:
           minLength: 1
       required:
       - text
+    NumberCall:
+      type: object
+      properties:
+        id:
+          type: integer
+        display_number:
+          type: string
+        gym_name:
+          type: string
+          nullable: true
+        is_shared:
+          type: boolean
+        last_call_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Meta's last call to this number's webhook
+      required:
+      - display_number
+      - gym_name
+      - id
+      - is_shared
+      - last_call_at
     Offer:
       type: object
       properties:
@@ -13076,6 +13319,68 @@ components:
       - pay_type
       - rate_paise
       - staff
+    ServerCheckEnum:
+      enum:
+      - database
+      - redis
+      - worker
+      - beat
+      type: string
+      description: |-
+        * `database` - Database
+        * `redis` - Redis
+        * `worker` - Worker
+        * `beat` - Beat
+    ServerStateEnum:
+      enum:
+      - up
+      - down
+      - 'off'
+      - unknown
+      type: string
+      description: |-
+        * `up` - Up
+        * `down` - Down
+        * `off` - Not used here
+        * `unknown` - Can't tell
+    ServerStatus:
+      type: object
+      properties:
+        version:
+          type: string
+        deployed_at:
+          type: string
+          format: date-time
+          nullable: true
+        checked_at:
+          type: string
+          format: date-time
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Check'
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobStatus'
+          nullable: true
+          description: Null while the database can't be read
+        messages:
+          allOf:
+          - $ref: '#/components/schemas/MessageCounts'
+          nullable: true
+        webhook:
+          allOf:
+          - $ref: '#/components/schemas/WebhookStatus'
+          nullable: true
+      required:
+      - checked_at
+      - checks
+      - deployed_at
+      - jobs
+      - messages
+      - version
+      - webhook
     Session:
       type: object
       properties:
@@ -13754,6 +14059,22 @@ components:
           maxLength: 200
       required:
       - reason
+    WebhookStatus:
+      type: object
+      properties:
+        failed_days:
+          type: integer
+        failed:
+          type: integer
+          description: Calls in the last `failed_days` days that couldn't be handled
+        numbers:
+          type: array
+          items:
+            $ref: '#/components/schemas/NumberCall'
+      required:
+      - failed
+      - failed_days
+      - numbers
     WhatsAppAccount:
       type: object
       description: An account as Rackline admins see it. `template_count` comes from

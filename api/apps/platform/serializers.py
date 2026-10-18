@@ -2,11 +2,14 @@ import re
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.errors import RuleBroken
+from apps.core.models import JobRun
 from apps.gyms.models import Branch, Gym, GymRole
 
+from . import server
 from .services import check_timezone, find_login
 
 SLUG = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$")
@@ -174,3 +177,93 @@ class GymAdminAddSerializer(serializers.Serializer):
             if errors:
                 raise serializers.ValidationError(errors)
         return data
+
+
+# ---- The Server screen (server.py) ----
+
+class JobCountSerializer(serializers.Serializer):
+    label = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class JobRunSerializer(serializers.ModelSerializer):
+    """One run of a job: who started it, how long it took and what it did, in words."""
+
+    QUEUED, RUNNING, DONE, FAILED = "queued", "running", "done", "failed"
+    STATES = [(QUEUED, "Waiting for the worker"), (RUNNING, "Running"), (DONE, "Done"), (FAILED, "Failed")]
+
+    trigger_label = serializers.CharField(source="get_trigger_display", read_only=True)
+    by_name = serializers.CharField(source="by.name", read_only=True, allow_null=True, default=None)
+    state = serializers.SerializerMethodField()
+    seconds = serializers.SerializerMethodField()
+    did = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobRun
+        fields = ["id", "job", "trigger", "trigger_label", "by_name", "created_at", "started_at", "finished_at", "state",
+                  "seconds", "did", "error"]
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.ChoiceField(choices=STATES))
+    def get_state(self, run) -> str:
+        if run.finished_at is None:
+            return self.QUEUED if run.started_at is None else self.RUNNING
+        return self.FAILED if run.error else self.DONE
+
+    def get_seconds(self, run) -> float | None:
+        """How long it took, once it has finished."""
+        if run.started_at is None or run.finished_at is None:
+            return None
+        return round((run.finished_at - run.started_at).total_seconds(), 1)
+
+    @extend_schema_field(JobCountSerializer(many=True))
+    def get_did(self, run):
+        """Its counts that aren't zero, in the job's order and words; empty when it found nothing to do."""
+        labels = server.JOBS[run.job].counts if run.job in server.JOBS else []
+        return [{"label": label, "count": run.counts[key]} for key, label in labels if run.counts.get(key)]
+
+
+class CheckSerializer(serializers.Serializer):
+    key = serializers.ChoiceField(choices=server.CHECKS)
+    label = serializers.CharField()
+    state = serializers.ChoiceField(choices=server.STATES)
+    detail = serializers.CharField()
+    at = serializers.DateTimeField(allow_null=True, help_text="Beat's last tick")
+
+
+class JobStatusSerializer(serializers.Serializer):
+    job = serializers.ChoiceField(choices=JobRun.JOBS)
+    label = serializers.CharField()
+    schedule = serializers.CharField()
+    can_run = serializers.BooleanField(help_text="Run Now can start it")
+    current = JobRunSerializer(allow_null=True, help_text="Its run waiting or under way")
+    last_run = JobRunSerializer(allow_null=True, help_text="Its last finished run")
+
+
+class MessageCountsSerializer(serializers.Serializer):
+    waiting_retry = serializers.IntegerField()
+    failed_today = serializers.IntegerField()
+
+
+class NumberCallSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    display_number = serializers.CharField()
+    gym_name = serializers.CharField(allow_null=True)
+    is_shared = serializers.BooleanField()
+    last_call_at = serializers.DateTimeField(allow_null=True, help_text="Meta's last call to this number's webhook")
+
+
+class WebhookStatusSerializer(serializers.Serializer):
+    failed_days = serializers.IntegerField()
+    failed = serializers.IntegerField(help_text="Calls in the last `failed_days` days that couldn't be handled")
+    numbers = NumberCallSerializer(many=True)
+
+
+class ServerStatusSerializer(serializers.Serializer):
+    version = serializers.CharField()
+    deployed_at = serializers.DateTimeField(allow_null=True)
+    checked_at = serializers.DateTimeField()
+    checks = CheckSerializer(many=True)
+    jobs = JobStatusSerializer(many=True, allow_null=True, help_text="Null while the database can't be read")
+    messages = MessageCountsSerializer(allow_null=True)
+    webhook = WebhookStatusSerializer(allow_null=True)
