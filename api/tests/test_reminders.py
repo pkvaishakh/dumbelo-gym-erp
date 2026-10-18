@@ -7,7 +7,8 @@ import pytest
 from apps.core import clock
 from apps.members.models import Member
 from apps.reminders.models import ReminderDue
-from apps.reminders.services import due_for, gyms_at_reminder_hour, queue_for
+from apps.messages.automation import reminder_runs
+from apps.reminders.services import queue_for
 from apps.reminders.tasks import sweep_reminders
 
 
@@ -29,23 +30,35 @@ def test_it_picks_plans_ending_in_seven_three_and_zero_days(w):
 
     assert queue_for(w.gym, w.today) == 3  # the three above; the five- and thirty-day ones are not due anything
 
-    assert kinds_for(w.gym, w.today, seven) == ["expiring_7"]
-    assert kinds_for(w.gym, w.today, three) == ["expiring_3"]
-    assert kinds_for(w.gym, w.today, today) == ["expiring_0"]
-    assert ReminderDue.objects.filter(gym=w.gym, kind="expiring_7").count() == 1
+    assert kinds_for(w.gym, w.today, seven) == ["plan_ending"]
+    assert kinds_for(w.gym, w.today, three) == ["plan_ending"]
+    assert kinds_for(w.gym, w.today, today) == ["plan_ends_today"]
+    assert ReminderDue.objects.get(member=seven).days_left == 7 and ReminderDue.objects.get(member=three).days_left == 3
+    assert ReminderDue.objects.get(member=today).days_left is None
+
+
+def test_the_days_ahead_are_whatever_rackline_set(w):
+    """Days ahead aren't fixed at 7 and 3: the list warns on the days it is given (AutomationSchedule's)."""
+    five = ending_in(w, 5, "Five", "9811111115")
+    seven = ending_in(w, 7, "Seven", "9811111117")
+    one = ending_in(w, 1, "One", "9811111101")
+
+    assert queue_for(w.gym, w.today, days_ahead=[5, 1]) == 2
+    assert kinds_for(w.gym, w.today, seven) == []
+    assert ReminderDue.objects.get(member=five).days_left == 5 and ReminderDue.objects.get(member=one).days_left == 1
 
 
 def test_a_member_who_owes_money_is_chased(w):
     owing = ending_in(w, 20, "Owing", "9811111120", paid=False)
     assert kinds_for(w.gym, w.today, owing) == []
     queue_for(w.gym, w.today)
-    assert kinds_for(w.gym, w.today, owing) == ["dues"]
+    assert kinds_for(w.gym, w.today, owing) == ["payment_due"]
 
 
 def test_a_plan_ending_with_money_owed_earns_both(w):
     both = ending_in(w, 3, "Both", "9811111103", paid=False)
     queue_for(w.gym, w.today)
-    assert kinds_for(w.gym, w.today, both) == ["dues", "expiring_3"]
+    assert kinds_for(w.gym, w.today, both) == ["payment_due", "plan_ending"]
 
 
 def test_archived_and_frozen_members_are_left_alone(w):
@@ -76,7 +89,7 @@ def test_tomorrow_is_its_own_day(w):
     member = ending_in(w, 10, "Owing", "9811111120", paid=False)
     queue_for(w.gym, w.today)
     assert queue_for(w.gym, w.today + timedelta(days=1)) > 0
-    assert ReminderDue.objects.filter(gym=w.gym, member=member, kind="dues").count() == 2
+    assert ReminderDue.objects.filter(gym=w.gym, member=member, kind="payment_due").count() == 2
 
 
 def test_each_gym_only_gets_its_own_members(w, other):
@@ -95,15 +108,15 @@ def test_six_in_the_morning_means_six_where_the_gym_is(w, other):
 
     # 00:30 UTC is 6:00 in Kolkata and 1:30 in London
     at = datetime(2026, 6, 1, 0, 30, tzinfo=ZoneInfo("UTC"))
-    assert [g.slug for g, _ in gyms_at_reminder_hour(at)] == ["iron"]
+    assert [r.gym.slug for r in reminder_runs(at)] == ["iron"]
 
     # five hours later it is London's turn, and Kolkata has moved on
     at = datetime(2026, 6, 1, 5, 30, tzinfo=ZoneInfo("UTC"))
-    assert [g.slug for g, _ in gyms_at_reminder_hour(at)] == ["steel"]
+    assert [r.gym.slug for r in reminder_runs(at)] == ["steel"]
 
     # and the day each one gets is its own local day
     at = datetime(2026, 6, 1, 0, 30, tzinfo=ZoneInfo("UTC"))
-    assert [day for _, day in gyms_at_reminder_hour(at)] == [datetime(2026, 6, 1).date()]
+    assert [r.day for r in reminder_runs(at)] == [datetime(2026, 6, 1).date()]
 
 
 def test_a_half_hour_time_zone_is_woken_at_its_own_six(w):
@@ -114,7 +127,7 @@ def test_a_half_hour_time_zone_is_woken_at_its_own_six(w):
     w.gym.save(update_fields=["timezone"])
     minutes = settings.CELERY_BEAT_SCHEDULE["reminders"]["schedule"].minute
     ticks = [datetime(2026, 6, 1, 0, m, tzinfo=ZoneInfo("UTC")) for m in sorted(minutes)]
-    six = [clock.local(w.gym, t) for t in ticks if list(gyms_at_reminder_hour(t))]
+    six = [clock.local(w.gym, t) for t in ticks if list(reminder_runs(t))]
     assert six and min(t.strftime("%H:%M") for t in six) == "06:00"
 
 
@@ -122,7 +135,7 @@ def test_a_suspended_gym_is_skipped(w):
     w.gym.status = "suspended"
     w.gym.save(update_fields=["status"])
     at = datetime.now(ZoneInfo("Asia/Kolkata")).replace(hour=6, minute=0)
-    assert list(gyms_at_reminder_hour(at)) == []
+    assert list(reminder_runs(at)) == []
 
 
 def test_the_scheduled_job_writes_the_rows_for_the_gyms_it_wakes(w, other):
@@ -135,7 +148,7 @@ def test_the_scheduled_job_writes_the_rows_for_the_gyms_it_wakes(w, other):
 
     at = datetime(2026, 6, 1, 0, 30, tzinfo=ZoneInfo("UTC")).isoformat()
     assert sweep_reminders.apply(kwargs={"at": at}).get() == 1
-    assert kinds_for(w.gym, sweep_day, member) == ["expiring_7"]
+    assert kinds_for(w.gym, sweep_day, member) == ["plan_ending"]
     assert not ReminderDue.objects.filter(gym=other.gym).exists()  # London is still asleep
 
 

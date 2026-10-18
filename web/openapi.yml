@@ -1813,15 +1813,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Expense'
           description: ''
-  /api/gym/settings/:
+  /api/gym/messages/:
     get:
-      operationId: gym_settings_retrieve
+      operationId: gym_messages_list
       description: |-
-        The gym's own rules, in one place. Admins only, and everything here holds at every branch.
-
-        One switch so far: whether members are sent their renewal and dues reminders. Turning it off stops the
-        messages, not the daily list, so the desk still sees who needs chasing and nothing is lost by turning it
-        back on. The change is audited: it decides what thousands of members do or don't hear from the gym.
+        More → Settings → Messages: each of the gym's messages, on or paused, and when it goes out. Admins only.
+        When is Rackline's to set, so it is only shown here.
       tags:
       - gym
       security:
@@ -1831,29 +1828,58 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GymSettings'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Rule'
           description: ''
+  /api/gym/messages/{kind}/:
     patch:
-      operationId: gym_settings_partial_update
+      operationId: gym_messages_partial_update
       description: |-
-        The gym's own rules, in one place. Admins only, and everything here holds at every branch.
-
-        One switch so far: whether members are sent their renewal and dues reminders. Turning it off stops the
-        messages, not the daily list, so the desk still sees who needs chasing and nothing is lost by turning it
-        back on. The change is audited: it decides what thousands of members do or don't hear from the gym.
+        Pause or Resume one of the gym's messages, at every branch. Pausing stops the messages, not the desk's
+        reminder list. Audited: it decides what members and staff hear from the gym.
+      parameters:
+      - in: path
+        name: kind
+        schema:
+          type: string
+          enum:
+          - payment_due
+          - payment_received
+          - plan_ending
+          - plan_ends_today
+          - task_assigned
+        required: true
       tags:
       - gym
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedGymSettingsRequest'
+              $ref: '#/components/schemas/PatchedSwitchRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedGymSettingsRequest'
+              $ref: '#/components/schemas/PatchedSwitchRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedGymSettingsRequest'
+              $ref: '#/components/schemas/PatchedSwitchRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rule'
+          description: ''
+  /api/gym/settings/:
+    get:
+      operationId: gym_settings_retrieve
+      description: |-
+        The gym as Rackline set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
+        changes: the gym's message switches are `/api/gym/messages/`.
+      tags:
+      - gym
       security:
       - jwtAuth: []
       responses:
@@ -2277,29 +2303,27 @@ paths:
     get:
       operationId: messages_list
       description: |-
-        The reminders a gym has sent its members, newest first.
+        The messages a gym has sent, newest first.
 
-        Read-only everywhere: messages go out with the daily job, so there is nothing for a screen to post.
-        Trainers and members are out because a dues reminder says the amount.
+        Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
+        members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
       parameters:
       - in: query
         name: kind
         schema:
           type: string
           enum:
-          - dues
-          - expiring_0
-          - expiring_3
-          - expiring_7
+          - payment_due
           - payment_received
+          - plan_ending
+          - plan_ends_today
           - rackline_invoice_due
           - rackline_payment_received
           - task_assigned
         description: |-
-          * `expiring_7` - Plan ends in 7 days
-          * `expiring_3` - Plan ends in 3 days
-          * `expiring_0` - Plan ends today
-          * `dues` - Payment due
+          * `plan_ending` - Plan ending soon
+          * `plan_ends_today` - Plan ends today
+          * `payment_due` - Payment due
           * `payment_received` - Payment received
           * `task_assigned` - Task assigned
           * `rackline_invoice_due` - Rackline invoice due
@@ -2351,10 +2375,10 @@ paths:
     get:
       operationId: messages_retrieve
       description: |-
-        The reminders a gym has sent its members, newest first.
+        The messages a gym has sent, newest first.
 
-        Read-only everywhere: messages go out with the daily job, so there is nothing for a screen to post.
-        Trainers and members are out because a dues reminder says the amount.
+        Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
+        members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
       parameters:
       - in: path
         name: id
@@ -3530,6 +3554,50 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/platform/automation/:
+    get:
+      operationId: platform_automation_retrieve
+      description: |-
+        Console → Automation: the hour reminders go out on each gym's clock, how many days before a plan ends
+        members are warned, and the hour on a billing day invoices are written. Whole hours only.
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationSchedule'
+          description: ''
+    patch:
+      operationId: platform_automation_partial_update
+      description: |-
+        Console → Automation: the hour reminders go out on each gym's clock, how many days before a plan ends
+        members are warned, and the hour on a billing day invoices are written. Whole hours only.
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAutomationScheduleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAutomationScheduleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAutomationScheduleRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationSchedule'
+          description: ''
   /api/platform/branch-requests/:
     get:
       operationId: platform_branch_requests_list
@@ -3995,6 +4063,80 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/platform/gyms/{gym_id}/messages/:
+    get:
+      operationId: platform_gyms_messages_list
+      description: |-
+        A gym's messages as Rackline sees them: on or paused, and when each goes out (Rackline's times, or the
+        gym's own where a Rackline admin set them).
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Rule'
+          description: ''
+  /api/platform/gyms/{gym_id}/messages/{kind}/:
+    patch:
+      operationId: platform_gyms_messages_partial_update
+      description: |-
+        Set this gym's hour (and, for a plan ending soon, its days) in place of Rackline's; both null is Use
+        Rackline's Times. Pause or Resume (`is_on`) only for the messages Rackline sends the gym's owner.
+      parameters:
+      - in: path
+        name: gym_id
+        schema:
+          type: integer
+        description: The gym's id
+        required: true
+      - in: path
+        name: kind
+        schema:
+          type: string
+          enum:
+          - payment_due
+          - payment_received
+          - plan_ending
+          - plan_ends_today
+          - rackline_invoice_due
+          - rackline_payment_received
+          - task_assigned
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGymTimesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGymTimesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGymTimesRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rule'
+          description: ''
   /api/platform/gyms/{gym_id}/plan/:
     get:
       operationId: platform_gyms_plan_retrieve
@@ -6752,6 +6894,41 @@ components:
       - member
       - receptionist
       - trainer
+    AutomationSchedule:
+      type: object
+      description: Rackline's times, for every gym that has no times of its own.
+      properties:
+        reminder_hour:
+          type: integer
+          maximum: 23
+          minimum: 0
+        days_ahead:
+          type: array
+          items:
+            type: integer
+            maximum: 60
+            minimum: 1
+          maxItems: 3
+          minItems: 1
+        invoice_hour:
+          type: integer
+          maximum: 23
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        updated_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - days_ahead
+      - invoice_hour
+      - reminder_hour
+      - updated_at
+      - updated_by_name
     BillsDue:
       type: object
       properties:
@@ -8688,8 +8865,8 @@ components:
       - timezone
     GymSettings:
       type: object
-      description: The gym's own rules. Only the switches can be changed here; the
-        name, slug and time zone are Rackline's.
+      description: 'The gym as Rackline set it up: its name, slug and time zone. Its
+        message switches are /api/gym/messages/.'
       properties:
         name:
           type: string
@@ -8702,9 +8879,6 @@ components:
         timezone:
           type: string
           readOnly: true
-        reminders_on:
-          type: boolean
-          description: Send members their renewal and dues reminders
       required:
       - name
       - slug
@@ -9483,20 +9657,18 @@ components:
       - parameters
     MessageKindEnum:
       enum:
-      - expiring_7
-      - expiring_3
-      - expiring_0
-      - dues
+      - plan_ending
+      - plan_ends_today
+      - payment_due
       - payment_received
       - task_assigned
       - rackline_invoice_due
       - rackline_payment_received
       type: string
       description: |-
-        * `expiring_7` - Plan ends in 7 days
-        * `expiring_3` - Plan ends in 3 days
-        * `expiring_0` - Plan ends today
-        * `dues` - Payment due
+        * `plan_ending` - Plan ending soon
+        * `plan_ends_today` - Plan ends today
+        * `payment_due` - Payment due
         * `payment_received` - Payment received
         * `task_assigned` - Task assigned
         * `rackline_invoice_due` - Rackline invoice due
@@ -10693,6 +10865,26 @@ components:
           maximum: 100000000000
           minimum: 0
           format: int64
+    PatchedAutomationScheduleRequest:
+      type: object
+      description: Rackline's times, for every gym that has no times of its own.
+      properties:
+        reminder_hour:
+          type: integer
+          maximum: 23
+          minimum: 0
+        days_ahead:
+          type: array
+          items:
+            type: integer
+            maximum: 60
+            minimum: 1
+          maxItems: 3
+          minItems: 1
+        invoice_hour:
+          type: integer
+          maximum: 23
+          minimum: 0
     PatchedBranchRequest:
       type: object
       description: A branch with its opening sessions. Sending `sessions` replaces
@@ -10763,14 +10955,28 @@ components:
           type: string
           format: email
           maxLength: 254
-    PatchedGymSettingsRequest:
+    PatchedGymTimesRequest:
       type: object
-      description: The gym's own rules. Only the switches can be changed here; the
-        name, slug and time zone are Rackline's.
+      description: |-
+        A Rackline admin's word on one of a gym's messages: its own hour and days (null for both: Use Rackline's
+        Times), and Pause or Resume for the messages Rackline sends the owner.
       properties:
-        reminders_on:
+        hour:
+          type: integer
+          maximum: 23
+          minimum: 0
+          nullable: true
+        days_ahead:
+          type: array
+          items:
+            type: integer
+            maximum: 60
+            minimum: 1
+          nullable: true
+          maxItems: 3
+          minItems: 1
+        is_on:
           type: boolean
-          description: Send members their renewal and dues reminders
     PatchedMeEditRequest:
       type: object
       description: A staff member's own name, sign-in email and mobile number.
@@ -11059,6 +11265,13 @@ components:
           type: string
           description: This person's number on the turnstile
           maxLength: 20
+    PatchedSwitchRequest:
+      type: object
+      description: 'Pause or Resume. The only thing a gym''s admins change about a
+        message: when it goes is Rackline''s.'
+      properties:
+        is_on:
+          type: boolean
     PatchedTaskRequest:
       type: object
       properties:
@@ -12680,6 +12893,44 @@ components:
         * `receptionist` - Receptionist
         * `trainer` - Trainer
         * `member` - Member
+    Rule:
+      type: object
+      description: 'One message for one gym: on or paused, who switches it, and when
+        it goes (Rackline''s times or the gym''s own).'
+      properties:
+        kind:
+          $ref: '#/components/schemas/MessageKindEnum'
+        label:
+          type: string
+        is_on:
+          type: boolean
+        switched_by:
+          allOf:
+          - $ref: '#/components/schemas/SwitchedByEnum'
+          readOnly: true
+          description: 'Who pauses and resumes it: the gym''s admins or Rackline'
+        hour:
+          type: integer
+          nullable: true
+          description: The hour it goes out (0-23, the gym's clock); empty when it
+            goes as it happens
+        days_ahead:
+          type: array
+          items:
+            type: integer
+          nullable: true
+          description: 'A plan ending soon: how many days before the end'
+        gyms_own_time:
+          type: boolean
+          description: A Rackline admin set this gym's time in place of Rackline's
+      required:
+      - days_ahead
+      - gyms_own_time
+      - hour
+      - is_on
+      - kind
+      - label
+      - switched_by
     SalaryItem:
       type: object
       properties:
@@ -13188,6 +13439,11 @@ components:
           description: How long Rackline support may look
       required:
       - hours
+    SwitchedByEnum:
+      enum:
+      - gym
+      - rackline
+      type: string
     Task:
       type: object
       properties:

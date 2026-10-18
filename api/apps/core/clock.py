@@ -16,7 +16,11 @@ def local(gym, at=None):
 
 def time_label(gym, at):
     """'6:05 AM' in the gym's time zone. Built by hand: strftime's no-padding flags differ between Linux and Windows."""
-    t = local(gym, at)
+    return clock_label(local(gym, at))
+
+
+def clock_label(t) -> str:
+    """'6:05 AM' for a time of day already in the gym's time zone (a task's due time, a local datetime)."""
     return f"{t.hour % 12 or 12}:{t.minute:02d} {'AM' if t.hour < 12 else 'PM'}"
 
 

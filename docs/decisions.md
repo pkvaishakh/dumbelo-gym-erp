@@ -211,12 +211,26 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Messages: plan ending in 7 and 3 days, plan ends today, payment due (to members); payment received, the member's
   receipt (**off by default** for each gym); task assigned (to the trainer or receptionist, when an admin assigns
   it); Rackline invoice due and Rackline payment received (to the gym's owner, controlled by Rackline admins).
-- Each gym's admins switch each of its messages on or off (pause and resume). Pausing stops the messages, not the
-  list, so the desk still sees who to chase. `reminders_on` is replaced by these switches.
+- Each gym's admins switch each of its messages on or off (pause and resume), in More → Settings → Messages, at
+  every branch at once. Pausing stops the messages, not the list, so the desk still sees who to chase. Pausing one
+  reminder never stops another: a member whose plan ends today and who owes money hears about the money when "plan
+  ends today" is paused. Rackline's two messages to the owner are switched by Rackline admins, per gym, in the
+  Console. Every switch is audited. `reminders_on` was replaced by these switches (a gym that had it off got its
+  three reminders paused).
+- The member's receipt goes after a payment is recorded (once the payment is saved; never for one that didn't save
+  or was voided), the task message to the trainer or receptionist when an admin gives them a task, and again to
+  whoever it is handed to; an edit sends nothing. A staff member with no mobile number, or who has left, gets none.
+- Rackline's messages to a gym's owner (the account owner) go from Rackline's shared number whatever the gym's
+  WhatsApp mode, are never billed to the gym, and still go while the gym is suspended (paying is how it opens again).
+  An open invoice is chased 3 days before its due day, then 1 and 7 days after it, while anything is still owed, at
+  the gym's reminder hour; Rackline payment received goes once a payment is recorded, with the receipt's number.
 - When automation runs is Rackline's to set, not the gym's: Rackline admins set one schedule for every gym (the
   reminders' hour, default 6 AM in each gym's own time zone; how many days ahead, default 7 and 3; the hour the
   invoice job runs on a billing day, default just after midnight) and can change the reminders' hour and days
-  ahead for one gym. Whole hours only. A gym's admins see when their messages go out but can't change it. Retry
+  ahead for one gym (each reminder, and the owner's invoice reminder, can have its own hour for that gym; Use
+  Rackline's Times goes back). Whole hours only. A gym's admins see when their messages go out but can't change it.
+  A member's one reminder for the day is chosen first, then goes at that reminder's hour. Invoices are written from
+  the invoice hour on (a tick missed that hour still writes it later the same day). Retry
   waits (1, 5 and 15 minutes) are fixed in code: they follow Meta's limits, not a business choice. Changes take
   effect on the next run, with no restart, and are audited.
 - The daily job writes who needs a nudge (`ReminderDue`) and then sends it. A member gets **one reminder a day** at

@@ -10,10 +10,9 @@ import type { MessagesListStatus } from './messagesListStatus';
 
 export type MessagesListParams = {
 /**
- * * `expiring_7` - Plan ends in 7 days
-* `expiring_3` - Plan ends in 3 days
-* `expiring_0` - Plan ends today
-* `dues` - Payment due
+ * * `plan_ending` - Plan ending soon
+* `plan_ends_today` - Plan ends today
+* `payment_due` - Payment due
 * `payment_received` - Payment received
 * `task_assigned` - Task assigned
 * `rackline_invoice_due` - Rackline invoice due

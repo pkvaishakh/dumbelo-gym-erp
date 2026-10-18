@@ -101,26 +101,11 @@ class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMod
 
 
 class GymSettingsView(GymViewMixin, APIView):
-    """The gym's own rules, in one place. Admins only, and everything here holds at every branch.
-
-    One switch so far: whether members are sent their renewal and dues reminders. Turning it off stops the
-    messages, not the daily list, so the desk still sees who needs chasing and nothing is lost by turning it
-    back on. The change is audited: it decides what thousands of members do or don't hear from the gym.
-    """
+    """The gym as Rackline set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
+    changes: the gym's message switches are `/api/gym/messages/`."""
 
     roles = {"*": ADMIN}
 
     @extend_schema(responses=GymSettingsSerializer)
     def get(self, request):
         return Response(GymSettingsSerializer(self.gym).data)
-
-    @extend_schema(request=GymSettingsSerializer, responses=GymSettingsSerializer)
-    def patch(self, request):
-        before = {"reminders_on": self.gym.reminders_on}
-        s = GymSettingsSerializer(self.gym, data=request.data, partial=True)
-        s.is_valid(raise_exception=True)
-        gym = s.save()
-        after = {"reminders_on": gym.reminders_on}
-        if before != after:
-            record(request, "gym.settings_changed", gym, before, after)
-        return Response(GymSettingsSerializer(gym).data)

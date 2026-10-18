@@ -8,6 +8,8 @@ from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.finance.models import Account, StatementTick
 from apps.finance.services import before_change
+from apps.messages.notify import after_commit
+from apps.messages.tasks import send_payment_receipt
 
 from .models import Member, Payment, Refund, Subscription, sold_at
 
@@ -62,7 +64,7 @@ def take_payment(member, amount_paise, method, by, branch=None, subscription=Non
                 subscription = sub
                 break
     branch = branch or member.home_branch
-    return Payment.objects.create(
+    payment = Payment.objects.create(
         gym=member.gym,
         member=member,
         subscription=subscription,
@@ -73,6 +75,8 @@ def take_payment(member, amount_paise, method, by, branch=None, subscription=Non
         note=note,
         account=Account.objects.for_money(branch.id, method, on=clock.today(member.gym)),
     )
+    after_commit(send_payment_receipt, payment.pk)  # the member's receipt, if the gym sends them
+    return payment
 
 
 @transaction.atomic

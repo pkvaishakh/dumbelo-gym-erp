@@ -15,11 +15,12 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               price lists and Add Price List, a gym's invoices (gyms/[id]/invoices: pending charges, Add
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
                               print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
-                              `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates).
+                              `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
+                              Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen).
                               Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
                               AddChargeSheet, ChargeSheet; whatsapp: WhereFields, SecretField, EditAccountSheet,
-                              CredentialsSheet, TemplateSheet)
+                              CredentialsSheet, TemplateSheet; messages: HourField, DaysField, AutomationSheet, GymMessages)
 src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
@@ -43,6 +44,7 @@ src/lib/session.tsx           useSession(): me, role, gym, paused, branch, setBr
 src/lib/hooks.ts              useGet (loosely typed GETs), useAction (writes + refresh), fieldError
 src/lib/format.ts             rupees, dates, clock times, greeting, STATUS_LABEL, gymToday (the gym's day, not the device's)
 src/lib/types.ts              shapes of endpoints the schema leaves loose (summary, collection…)
+src/lib/messages.ts           when each WhatsApp message goes out, in words (hourLabel, daysLabel, whenLabel, MESSAGE_TO)
 src/lib/reports.ts            report categories, periods, MAX_MONTHS (the API's) and the range check
 src/lib/report-rows.ts        each report as plain rows: its CSV (reportCsv) and its print page
 src/lib/csv.ts                toCsv, plainRupees, download, statementCsv

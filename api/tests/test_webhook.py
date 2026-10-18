@@ -68,7 +68,7 @@ def sent(w, account, meta_id="wamid.OUT1", billable=True, rate=15, member=None, 
     member = member or w.member
     template = account.templates.filter(kind="payment_due").first()
     return Message.objects.create(
-        gym=member.gym, member=member, kind="dues", dedupe_key=key or f"test:{meta_id}", account=account, template=template,
+        gym=member.gym, member=member, kind="payment_due", dedupe_key=key or f"test:{meta_id}", account=account, template=template,
         to=member.phone, text="Hi", for_date=date(2026, 10, 10), status=Message.SENT, attempts=1, provider="whatsapp_cloud",
         provider_id=meta_id, billable=billable, rate_paise=rate if billable else 0,
     )

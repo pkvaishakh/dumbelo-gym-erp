@@ -3,7 +3,7 @@
 Everything that changes what a gym owes locks its `GymBilling` row first (then the invoice), so the invoice job, an
 approval, a charge and a payment can't cross each other. Numbers come from `NumberSeries` under its own lock.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from django.db import IntegrityError, transaction
 from django.db.models import OuterRef, Q
@@ -14,7 +14,10 @@ from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.core.queries import sum_of
 from apps.gyms.models import Gym
-from apps.messages.models import WhatsAppTemplate
+from apps.messages.automation import is_invoice_hour
+from apps.messages.models import AutomationSchedule, WhatsAppTemplate
+from apps.messages.notify import after_commit
+from apps.messages.tasks import send_rackline_receipt
 from apps.messages.usage import usage
 
 from .models import PAY_WITHIN_DAYS, GymBilling, Invoice, InvoiceLine, InvoicePayment, NumberSeries, financial_year
@@ -114,11 +117,15 @@ def write_invoice(gym: Gym, starts: date) -> Invoice | None:
     return inv
 
 
-def gyms_billed_on(day: date | None = None):
-    """(gym, day) for every active gym whose billing day is today on its own clock, or `day` when given. Trial and
-    suspended gyms aren't billed."""
+def gyms_billed_on(day: date | None = None, now: datetime | None = None):
+    """(gym, day) for every active gym whose billing day is today on its own clock and whose clock has reached
+    Rackline's invoice hour (AutomationSchedule), or every gym billed on `day` when given (a day the worker
+    missed, any hour). Trial and suspended gyms aren't billed."""
+    schedule = AutomationSchedule.current()
     for plan in GymBilling.objects.filter(gym__status=Gym.ACTIVE).select_related("gym").iterator():
-        on = day or clock.today(plan.gym)
+        if day is None and not is_invoice_hour(plan.gym, now, schedule):
+            continue
+        on = day or clock.local(plan.gym, now).date()
         if on.day == plan.billing_day:
             yield plan.gym, on
 
@@ -185,6 +192,7 @@ def record_payment(inv: Invoice, *, amount_paise: int, method: str, paid_on: dat
         inv.status = Invoice.PAID
         inv.save(update_fields=["status", "updated_at"])
         _paid_until(plan)
+    after_commit(send_rackline_receipt, pay.pk)  # the owner hears it arrived
     return pay
 
 

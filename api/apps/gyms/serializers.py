@@ -88,12 +88,12 @@ class BranchSerializer(serializers.ModelSerializer):
 
 
 class GymSettingsSerializer(serializers.ModelSerializer):
-    """The gym's own rules. Only the switches can be changed here; the name, slug and time zone are Rackline's."""
+    """The gym as Rackline set it up: its name, slug and time zone. Its message switches are /api/gym/messages/."""
 
     class Meta:
         model = Gym
-        fields = ["name", "slug", "timezone", "reminders_on"]
-        read_only_fields = ["name", "slug", "timezone"]
+        fields = ["name", "slug", "timezone"]
+        read_only_fields = fields
 
 
 def _same_form(field, value):

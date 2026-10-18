@@ -1,4 +1,5 @@
 import re
+from typing import Literal
 
 from django.urls import reverse
 from rest_framework import serializers
@@ -6,7 +7,7 @@ from rest_framework import serializers
 from apps.billing.models import GymBilling
 from apps.gyms.models import Gym
 
-from .models import PLACEHOLDER, Message, WhatsAppAccount, WhatsAppTemplate
+from .models import PLACEHOLDER, AutomationSchedule, Message, NotificationRule, WhatsAppAccount, WhatsAppTemplate
 
 META_ID = re.compile(r"^\d{5,32}$")  # Meta's ids are long numbers; nothing else may reach a Graph API path
 DISPLAY_NUMBER = re.compile(r"^\+?[\d ()-]{6,23}$")
@@ -27,6 +28,69 @@ class MessageSerializer(serializers.ModelSerializer):
 
     def get_kind_label(self, message) -> str:
         return message.get_kind_display()
+
+
+# ---- When messages go out, and their switches ----
+
+class RuleSerializer(serializers.Serializer):
+    """One message for one gym: on or paused, who switches it, and when it goes (Rackline's times or the gym's own)."""
+
+    kind = serializers.ChoiceField(choices=WhatsAppTemplate.KINDS)
+    label = serializers.CharField()
+    is_on = serializers.BooleanField()
+    switched_by = serializers.SerializerMethodField(help_text="Who pauses and resumes it: the gym's admins or Rackline")
+    hour = serializers.IntegerField(allow_null=True, help_text="The hour it goes out (0-23, the gym's clock); empty when it goes as it happens")
+    days_ahead = serializers.ListField(child=serializers.IntegerField(), allow_null=True,
+                                       help_text="A plan ending soon: how many days before the end")
+    gyms_own_time = serializers.BooleanField(help_text="A Rackline admin set this gym's time in place of Rackline's")
+
+    def get_switched_by(self, rule) -> Literal["gym", "rackline"]:
+        return "rackline" if rule.kind in NotificationRule.RACKLINE_KINDS else "gym"
+
+
+class SwitchSerializer(serializers.Serializer):
+    """Pause or Resume. The only thing a gym's admins change about a message: when it goes is Rackline's."""
+
+    is_on = serializers.BooleanField()
+
+    def to_internal_value(self, data):
+        # Refused, not ignored, and before anything else: an admin trying to set a time should hear why it can't be
+        if extra := set(data if isinstance(data, dict) else ()) - {"is_on"}:
+            raise serializers.ValidationError({f: "Rackline sets when messages go out. Contact Rackline to change it." for f in extra})
+        return super().to_internal_value(data)
+
+
+def _hour(**kw):
+    return serializers.IntegerField(min_value=0, max_value=23, error_messages={
+        "min_value": "Pick an hour from 0 (midnight) to 23 (11 PM)", "max_value": "Pick an hour from 0 (midnight) to 23 (11 PM)"}, **kw)
+
+
+def _days(**kw):
+    return serializers.ListField(child=serializers.IntegerField(min_value=1, max_value=60), min_length=1, max_length=3,
+                                 error_messages={"min_length": "Pick at least one day", "max_length": "Pick up to 3 days"}, **kw)
+
+
+class GymTimesSerializer(serializers.Serializer):
+    """A Rackline admin's word on one of a gym's messages: its own hour and days (null for both: Use Rackline's
+    Times), and Pause or Resume for the messages Rackline sends the owner."""
+
+    hour = _hour(required=False, allow_null=True)
+    days_ahead = _days(required=False, allow_null=True)
+    is_on = serializers.BooleanField(required=False)
+
+
+class AutomationScheduleSerializer(serializers.ModelSerializer):
+    """Rackline's times, for every gym that has no times of its own."""
+
+    reminder_hour = _hour()
+    days_ahead = _days()
+    invoice_hour = _hour()
+    updated_by_name = serializers.CharField(source="updated_by.name", read_only=True, allow_null=True, default=None)
+    updated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = AutomationSchedule
+        fields = ["reminder_hour", "days_ahead", "invoice_hour", "updated_at", "updated_by_name"]
 
 
 # ---- WhatsApp accounts (the Console) ----

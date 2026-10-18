@@ -32,7 +32,12 @@ apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py
 apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender posts templates to Meta), Message (queued |
                      sent | delivered | read | failed, `dedupe_key` unique per gym), services.py (Route: the number and
                      templates a gym sends from; queue → deliver → keep Meta's id; send_due: the reminders;
-                     send_retries: temporary failures, 3 retries), and the 6 AM job and the retry sweep (tasks.py). WhatsAppAccount (Rackline's shared number has no gym; a gym's own)
+                     send_retries: temporary failures, 3 retries; send_one: one message about something that just happened),
+                     automation.py (AutomationSchedule: Rackline's reminder hour, days ahead and invoice hour; NotificationRule:
+                     a gym's Pause/Resume per message and its own times; rules_for, reminder_runs: which gyms' reminders are due
+                     on this tick, change_schedule, switch, set_times), notify.py (the receipt, task assigned, and Rackline's
+                     invoice due and payment received to the owner; after_commit queues one once the transaction commits), the
+                     reminder tick, the retry sweep and the event tasks (tasks.py). WhatsAppAccount (Rackline's shared number has no gym; a gym's own)
                      and WhatsAppTemplate (kinds and their PARAMETERS); crypto.py (EncryptedTextField over
                      FIELD_ENCRYPTION_KEY, MultiFernet; `manage.py rotate_credentials`); accounts.py (add_account,
                      change_account, replace_credentials, test_connection, account_for: the account a gym sends from,
@@ -42,8 +47,9 @@ apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender po
                      account, InboundMessage and STOP opt-outs, replay: `manage.py replay_webhook_events`); usage.py (delivered billable messages per gym and
                      month, counted from the rows, for invoices); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
                      no sign-in: the signature is the check); views/gym.py
-                     (/api/messages/, /api/gym/whatsapp/) and views/console.py (/api/platform/whatsapp-accounts/,
-                     /api/platform/whatsapp-templates/). Querysets that show an account defer SECRET_FIELDS.
+                     (/api/messages/, /api/gym/whatsapp/, /api/gym/messages/[<kind>/]: Pause and Resume), views/console.py
+                     (/api/platform/whatsapp-accounts/, /api/platform/whatsapp-templates/) and views/automation.py
+                     (/api/platform/automation/, /api/platform/gyms/<id>/messages/[<kind>/]). Querysets that show an account defer SECRET_FIELDS.
                      App label "gym_messages": see apps.py
 apps/reports/        views/summary.py (SummaryView: admin Home, including expense dues; writes due dates); one read-only
                      report per category (views/overview, revenue, expenses, money, members, attendance, tasks:

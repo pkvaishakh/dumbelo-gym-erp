@@ -47,7 +47,7 @@ Tick a box when the API, the screen and a test are all in. Decisions behind each
 - [x] WhatsApp accounts and templates, credentials encrypted (session 12)
 - [x] Sending through Meta's Cloud API with templates, no duplicates, retries (session 13)
 - [x] Meta webhook: delivery status, STOP replies, shared-number usage (session 14)
-- [ ] Message switches; automation times set by Rackline admins; payment received, task assigned, Rackline invoice messages (session 15)
+- [x] Message switches; automation times set by Rackline admins; payment received, task assigned, Rackline invoice messages (session 15)
 - [ ] Server status in the Console: health, background jobs, messages and webhook, Run Now (session 16)
 - [ ] Message log, usage screens, and end-to-end flows for all of it (session 17)
 

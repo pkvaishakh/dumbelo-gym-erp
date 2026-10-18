@@ -1,15 +1,16 @@
 "use client";
-import { Activity, MessageCircle, Phone } from "lucide-react";
+import { Activity, AlertCircle, MessageCircle, Phone } from "lucide-react";
 
-import { useGymSettingsRetrieve, useGymWhatsappRetrieve } from "@/api/gen/gym/gym";
+import { useGymMessagesList, useGymWhatsappRetrieve } from "@/api/gen/gym/gym";
 import type { GymWhatsApp } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
-import { Details, ErrorText, Section, Setting, SkeletonRows } from "@/components/ui";
+import { Details, Empty, ErrorText, Section, Setting, SkeletonRows } from "@/components/ui";
 import { ago, WHATSAPP_STATUS } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
+import { MESSAGE_TO, whenLabel } from "@/lib/messages";
 import { useSession } from "@/lib/session";
 
-const SETTINGS = "/api/gym/settings/";
+const MESSAGES = "/api/gym/messages/";
 
 // The gym's own words for its WhatsApp mode (the Console's are in WHATSAPP_MODE).
 const SENDS_FROM: Record<string, { label: string; note: string }> = {
@@ -40,47 +41,52 @@ function WhatsAppCard({ wa }: { wa: GymWhatsApp }) {
   );
 }
 
-/** The gym's own rules, for admins: whether members are sent their reminders, and how WhatsApp is set up. */
+/** A switch per message the gym sends (Pause / Resume). When each goes out is Rackline's to set, so it's only said. */
+function MessageSwitches() {
+  const q = useGymMessagesList();
+  const a = useAction();
+  async function turn(kind: string, on: boolean) {
+    try {
+      await a.run(`${MESSAGES}${kind}/`, { is_on: on }, { method: "PATCH", refresh: [MESSAGES] });
+    } catch { /* shown under the switches */ }
+  }
+  if (q.isLoading) return <SkeletonRows n={5} />;
+  if (q.isError || !q.data) {
+    return (
+      <Empty icon={AlertCircle} title="Can't load your messages" text={q.error instanceof Error ? q.error.message : "Check your connection and try again."}>
+        <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => q.refetch()}>Try Again</button>
+      </Empty>
+    );
+  }
+  return (
+    <>
+      <div className="rl-card">
+        {q.data.data.map((r) => (
+          <Setting key={r.kind} name={`message-${r.kind}`} title={r.label} checked={r.is_on} disabled={a.busy} onChange={(on) => turn(r.kind, on)}
+            note={`${MESSAGE_TO[r.kind] ?? ""} • ${whenLabel(r)}${r.is_on ? "" : " • Paused"}`} />
+        ))}
+      </div>
+      <ErrorText>{a.error?.message}</ErrorText>
+    </>
+  );
+}
+
+/** The gym's own rules, for admins: which WhatsApp messages it sends, and how WhatsApp is set up. */
 export default function SettingsPage() {
   const { role } = useSession();
-  const q = useGymSettingsRetrieve();
   const wa = useGymWhatsappRetrieve().data?.data;
-  const a = useAction();
-  const gym = q.data?.data;
-
-  async function setReminders(on: boolean) {
-    try {
-      await a.run(SETTINGS, { reminders_on: on }, { method: "PATCH", refresh: [SETTINGS] });
-    } catch { /* shown under the switch */ }
-  }
 
   return (
     <div className="rl-app rl-root">
       <PageBar title="Settings" sub={role.branches.length > 1 ? `For all ${role.branches.length} branches` : role.gym_name} back="/more" />
       <main className="rl-app__main">
-        <Section title="Reminders to members">
-          {gym ? (
-            <>
-              <div className="rl-card">
-                <Setting
-                  name="reminders"
-                  title="Send reminders on WhatsApp"
-                  note={gym.reminders_on ? "Renewals and payments due, at 6 am" : "Off: no one is messaged, and the desk still sees who to chase"}
-                  checked={gym.reminders_on ?? true}
-                  disabled={a.busy}
-                  onChange={setReminders}
-                />
-              </div>
-              <ErrorText>{a.error?.message}</ErrorText>
-            </>
-          ) : (
-            <SkeletonRows n={1} />
-          )}
+        <Section title="Messages" aside={<span className="rl-row__meta">Times set by Rackline</span>}>
+          <MessageSwitches />
         </Section>
         <p className="rl-row__meta">
-          Members hear from you when their plan is a week, three days or a day from ending, and while they still owe
-          money — one message a day at most. The switch takes effect at once, at every branch. To stop messaging one
-          member, turn their reminders off on their profile.
+          Pause a message and it stops at once, at every branch; the desk still sees who to chase on the reminders list.
+          Members get one reminder a day at most. Rackline sets when messages go out, on your gym&apos;s clock. To stop
+          messaging one member, turn their reminders off on their profile.
         </p>
         <Section title="WhatsApp">
           {wa ? <WhatsAppCard wa={wa} /> : <SkeletonRows n={2} />}

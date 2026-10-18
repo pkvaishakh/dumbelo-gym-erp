@@ -7,22 +7,19 @@ class ReminderDue(GymScoped):
     """One nudge a member has earned on one local day: their plan is ending, or they owe money.
 
     The daily job writes these; sending them is a separate step. The unique constraint is what makes the job
-    safe to run twice: the second run finds the row already there and adds nothing.
+    safe to run twice: the second run finds the row already there and adds nothing. The kinds are the messages'
+    own (`WhatsAppTemplate.KINDS`), so a reminder, its switch and its template share one name.
     """
 
-    EXPIRING_7, EXPIRING_3, EXPIRING_0, DUES = "expiring_7", "expiring_3", "expiring_0", "dues"
-    KINDS = [
-        (EXPIRING_7, "Plan ends in 7 days"),
-        (EXPIRING_3, "Plan ends in 3 days"),
-        (EXPIRING_0, "Plan ends today"),
-        (DUES, "Payment due"),
-    ]
-    #: how many days are left when each expiry reminder goes out
-    DAYS_LEFT = {7: EXPIRING_7, 3: EXPIRING_3, 0: EXPIRING_0}
+    PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE = "plan_ending", "plan_ends_today", "payment_due"
+    KINDS = [(PLAN_ENDING, "Plan ending soon"), (PLAN_ENDS_TODAY, "Plan ends today"), (PAYMENT_DUE, "Payment due")]
+    #: How many days before a plan ends its members are warned, until Rackline sets other days (AutomationSchedule)
+    DAYS_AHEAD = (7, 3)
 
     member = models.ForeignKey("members.Member", on_delete=models.CASCADE, related_name="reminders")
-    kind = models.CharField(max_length=12, choices=KINDS)
+    kind = models.CharField(max_length=20, choices=KINDS)
     for_date = models.DateField(help_text="The day in the gym's time zone this reminder is for")
+    days_left = models.PositiveSmallIntegerField(null=True, blank=True, help_text="For a plan ending soon: how many days it had left")
 
     class Meta:
         ordering = ["-for_date", "member__name"]

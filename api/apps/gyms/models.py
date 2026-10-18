@@ -22,7 +22,6 @@ class Gym(TimeStamped):
     status_changed_at = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=40, default="Asia/Kolkata")
     billing_email = models.EmailField(blank=True)
-    reminders_on = models.BooleanField(default=True, help_text="Send members their renewal and dues reminders")
 
     def __str__(self):
         return self.name

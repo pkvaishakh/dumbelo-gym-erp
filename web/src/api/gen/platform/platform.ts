@@ -30,6 +30,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AutomationSchedule,
   Charge,
   ChargeCreateRequest,
   ConsoleBranchAsk,
@@ -52,7 +53,9 @@ import type {
   PaginatedPriceListList,
   PaginatedWhatsAppAccountList,
   PaginatedWhatsAppTemplateList,
+  PatchedAutomationScheduleRequest,
   PatchedGymEditRequest,
+  PatchedGymTimesRequest,
   PatchedPlanChangeRequest,
   PatchedWhatsAppAccountChangeRequest,
   PatchedWhatsAppTemplateInputRequest,
@@ -66,6 +69,7 @@ import type {
   PriceList,
   PriceListCreateRequest,
   RecordPaymentRequest,
+  Rule,
   StaffPasswordRequest,
   StatusChangeRequest,
   WhatsAppAccount,
@@ -82,6 +86,197 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * Console → Automation: the hour reminders go out on each gym's clock, how many days before a plan ends
+members are warned, and the hour on a billing day invoices are written. Whole hours only.
+ */
+export type platformAutomationRetrieveResponse200 = {
+  data: AutomationSchedule
+  status: 200
+}
+    
+export type platformAutomationRetrieveResponseSuccess = (platformAutomationRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformAutomationRetrieveResponse = (platformAutomationRetrieveResponseSuccess)
+
+export const getPlatformAutomationRetrieveUrl = () => {
+
+
+  
+
+  return `/api/platform/automation/`
+}
+
+export const platformAutomationRetrieve = async ( options?: RequestInit): Promise<platformAutomationRetrieveResponse> => {
+  
+  return apiFetch<platformAutomationRetrieveResponse>(getPlatformAutomationRetrieveUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformAutomationRetrieveQueryKey = () => {
+    return [
+    `/api/platform/automation/`
+    ] as const;
+    }
+
+    
+export const getPlatformAutomationRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformAutomationRetrieveQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformAutomationRetrieve>>> = ({ signal }) => platformAutomationRetrieve({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformAutomationRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformAutomationRetrieve>>>
+export type PlatformAutomationRetrieveQueryError = unknown
+
+
+export function usePlatformAutomationRetrieve<TData = Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformAutomationRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformAutomationRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformAutomationRetrieve<TData = Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformAutomationRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformAutomationRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformAutomationRetrieve<TData = Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformAutomationRetrieve<TData = Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformAutomationRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformAutomationRetrieveQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Console → Automation: the hour reminders go out on each gym's clock, how many days before a plan ends
+members are warned, and the hour on a billing day invoices are written. Whole hours only.
+ */
+export type platformAutomationPartialUpdateResponse200 = {
+  data: AutomationSchedule
+  status: 200
+}
+    
+export type platformAutomationPartialUpdateResponseSuccess = (platformAutomationPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformAutomationPartialUpdateResponse = (platformAutomationPartialUpdateResponseSuccess)
+
+export const getPlatformAutomationPartialUpdateUrl = () => {
+
+
+  
+
+  return `/api/platform/automation/`
+}
+
+export const platformAutomationPartialUpdate = async (patchedAutomationScheduleRequest: PatchedAutomationScheduleRequest, options?: RequestInit): Promise<platformAutomationPartialUpdateResponse> => {
+  
+  return apiFetch<platformAutomationPartialUpdateResponse>(getPlatformAutomationPartialUpdateUrl(),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedAutomationScheduleRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformAutomationPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformAutomationPartialUpdate>>, TError,{data: PatchedAutomationScheduleRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformAutomationPartialUpdate>>, TError,{data: PatchedAutomationScheduleRequest}, TContext> => {
+
+const mutationKey = ['platformAutomationPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformAutomationPartialUpdate>>, {data: PatchedAutomationScheduleRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  platformAutomationPartialUpdate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformAutomationPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof platformAutomationPartialUpdate>>>
+    export type PlatformAutomationPartialUpdateMutationBody = PatchedAutomationScheduleRequest
+    export type PlatformAutomationPartialUpdateMutationError = unknown
+
+    export const usePlatformAutomationPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformAutomationPartialUpdate>>, TError,{data: PatchedAutomationScheduleRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformAutomationPartialUpdate>>,
+        TError,
+        {data: PatchedAutomationScheduleRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformAutomationPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Every gym's requests for more branches, to Approve or Decline. Filter with `?status=asked` or `?gym=`.
  */
 export type platformBranchRequestsListResponse200 = {
@@ -1594,6 +1789,200 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getPlatformGymsAdminsResetPasswordCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * A gym's messages as Rackline sees them: on or paused, and when each goes out (Rackline's times, or the
+gym's own where a Rackline admin set them).
+ */
+export type platformGymsMessagesListResponse200 = {
+  data: Rule[]
+  status: 200
+}
+    
+export type platformGymsMessagesListResponseSuccess = (platformGymsMessagesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformGymsMessagesListResponse = (platformGymsMessagesListResponseSuccess)
+
+export const getPlatformGymsMessagesListUrl = (gymId: number,) => {
+
+
+  
+
+  return `/api/platform/gyms/${gymId}/messages/`
+}
+
+export const platformGymsMessagesList = async (gymId: number, options?: RequestInit): Promise<platformGymsMessagesListResponse> => {
+  
+  return apiFetch<platformGymsMessagesListResponse>(getPlatformGymsMessagesListUrl(gymId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformGymsMessagesListQueryKey = (gymId?: number,) => {
+    return [
+    `/api/platform/gyms/${gymId}/messages/`
+    ] as const;
+    }
+
+    
+export const getPlatformGymsMessagesListQueryOptions = <TData = Awaited<ReturnType<typeof platformGymsMessagesList>>, TError = unknown>(gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsMessagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformGymsMessagesListQueryKey(gymId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformGymsMessagesList>>> = ({ signal }) => platformGymsMessagesList(gymId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(gymId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformGymsMessagesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformGymsMessagesListQueryResult = NonNullable<Awaited<ReturnType<typeof platformGymsMessagesList>>>
+export type PlatformGymsMessagesListQueryError = unknown
+
+
+export function usePlatformGymsMessagesList<TData = Awaited<ReturnType<typeof platformGymsMessagesList>>, TError = unknown>(
+ gymId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsMessagesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformGymsMessagesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformGymsMessagesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformGymsMessagesList<TData = Awaited<ReturnType<typeof platformGymsMessagesList>>, TError = unknown>(
+ gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsMessagesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformGymsMessagesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformGymsMessagesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformGymsMessagesList<TData = Awaited<ReturnType<typeof platformGymsMessagesList>>, TError = unknown>(
+ gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsMessagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformGymsMessagesList<TData = Awaited<ReturnType<typeof platformGymsMessagesList>>, TError = unknown>(
+ gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsMessagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformGymsMessagesListQueryOptions(gymId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Set this gym's hour (and, for a plan ending soon, its days) in place of Rackline's; both null is Use
+Rackline's Times. Pause or Resume (`is_on`) only for the messages Rackline sends the gym's owner.
+ */
+export type platformGymsMessagesPartialUpdateResponse200 = {
+  data: Rule
+  status: 200
+}
+    
+export type platformGymsMessagesPartialUpdateResponseSuccess = (platformGymsMessagesPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformGymsMessagesPartialUpdateResponse = (platformGymsMessagesPartialUpdateResponseSuccess)
+
+export const getPlatformGymsMessagesPartialUpdateUrl = (gymId: number,
+    kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned',) => {
+
+
+  
+
+  return `/api/platform/gyms/${gymId}/messages/${kind}/`
+}
+
+export const platformGymsMessagesPartialUpdate = async (gymId: number,
+    kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned',
+    patchedGymTimesRequest: PatchedGymTimesRequest, options?: RequestInit): Promise<platformGymsMessagesPartialUpdateResponse> => {
+  
+  return apiFetch<platformGymsMessagesPartialUpdateResponse>(getPlatformGymsMessagesPartialUpdateUrl(gymId,kind),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedGymTimesRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformGymsMessagesPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformGymsMessagesPartialUpdate>>, TError,{gymId: number;kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned';data: PatchedGymTimesRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformGymsMessagesPartialUpdate>>, TError,{gymId: number;kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned';data: PatchedGymTimesRequest}, TContext> => {
+
+const mutationKey = ['platformGymsMessagesPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformGymsMessagesPartialUpdate>>, {gymId: number;kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned';data: PatchedGymTimesRequest}> = (props) => {
+          const {gymId,kind,data} = props ?? {};
+
+          return  platformGymsMessagesPartialUpdate(gymId,kind,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformGymsMessagesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof platformGymsMessagesPartialUpdate>>>
+    export type PlatformGymsMessagesPartialUpdateMutationBody = PatchedGymTimesRequest
+    export type PlatformGymsMessagesPartialUpdateMutationError = unknown
+
+    export const usePlatformGymsMessagesPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformGymsMessagesPartialUpdate>>, TError,{gymId: number;kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned';data: PatchedGymTimesRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformGymsMessagesPartialUpdate>>,
+        TError,
+        {gymId: number;kind: 'payment_due' | 'payment_received' | 'plan_ending' | 'plan_ends_today' | 'rackline_invoice_due' | 'rackline_payment_received' | 'task_assigned';data: PatchedGymTimesRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformGymsMessagesPartialUpdateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
