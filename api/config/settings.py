@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.reminders",
     "apps.messages",
     "apps.platform",
+    "apps.billing",
 ]
 
 MIDDLEWARE = [
@@ -158,6 +159,8 @@ SPECTACULAR_SETTINGS = {
         "StatementEntryKindEnum": "apps.finance.models.StatementTick.KINDS",
         "TaskStatusEnum": "apps.tasks.models.Task.STATUSES",
         "GymStatusEnum": "apps.gyms.models.Gym.STATUS",
+        "BranchAskStatusEnum": "apps.billing.models.BranchRequest.STATUS",
+        "WhatsappModeEnum": "apps.billing.models.GymBilling.WHATSAPP_MODES",
     },
 }
 # ---- Background jobs (see config/celery.py) ----

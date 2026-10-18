@@ -152,10 +152,12 @@ aws ecs run-task --cluster rackline --task-definition rackline-migrate --launch-
 
 Watch it in CloudWatch under `/ecs/rackline`; it should end with `OK` for every migration and exit 0.
 
-A gym of your own comes next. `python manage.py create_gym` (session 8) makes one from the command line; until
-then, make a Rackline superuser with the same one-off task (command
-`["python", "manage.py", "createsuperuser", "--noinput"]` with `DJANGO_SUPERUSER_*` set) and create the gym,
-its first branch and its owner admin in the Django admin at `https://api.rackline.in/admin/`.
+A gym of your own comes next. Make a Rackline superuser with the same one-off task (command
+`["python", "manage.py", "createsuperuser", "--noinput"]` with `DJANGO_SUPERUSER_*` set), sign in to the Console
+(`/console`) and add Rackline's prices first (Prices → Add Price List): no gym opens without them. Then New Gym in
+the Console, or `python manage.py create_gym` from the command line, makes the gym, its first branch, its owner
+admin and its Rackline plan. Don't create gyms in the Django admin: they get no Rackline plan, so they can't add
+branches.
 
 Never run `seed_demo` against the pilot database. It builds the demo gym, not a real one.
 

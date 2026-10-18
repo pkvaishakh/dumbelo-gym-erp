@@ -7,7 +7,7 @@ config/              settings (django-environ, .env), env.py (what a server must
                      PRODUCTION=true), urls (router + a few APIViews)
 apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMixin, suspended gyms: gym_suspended and
                      `open_when_suspended`), rackline.py (IsRacklineAdmin, RacklineViewMixin), errors.py (RuleBroken,
-                     error shape), clock.py (gym time zone, days, months), money.py, models.py (GymScoped base),
+                     error shape), clock.py (gym time zone, days, months), money.py, models.py (GymScoped base), queries.py (count_of: a per-row COUNT subquery),
                      views.py (/api/health/), middleware.py (lets the load balancer's check through),
                      management/commands/seed_demo.py
 apps/accounts/       User (email for staff, +91 phone for members), login/refresh/me
@@ -39,6 +39,12 @@ apps/reports/        views/summary.py (SummaryView: admin Home, including expens
 apps/platform/       Rackline's side under /api/platform/ (no X-Gym, Rackline admins only): services.py (create_gym, suspend,
                      activate, add_admin, reset_admin_password, deactivate_admin, make_owner), views.py (gyms, a gym's admins),
                      management/commands/create_gym.py (the same service)
+apps/billing/        A gym's Rackline plan: PriceList (never edited), GymBilling (prices copied from a list, branch_quota,
+                     billing_day, whatsapp_mode, paid_until), BranchRequest (asked | approved | declined, with the pro-rata
+                     charge); services.py (open_plan, change_plan, move_to_current_prices, make_room_for_branch: call it in
+                     the transaction that opens or reopens a branch, ask_for_branches, approve, decline, pro_rata);
+                     views/gym.py (/api/billing/plan/, open when suspended; /api/billing/branch-requests/) and
+                     views/console.py (/api/platform/prices/, /api/platform/gyms/<id>/plan/, /api/platform/branch-requests/)
 apps/audit/          AuditLog + record(request, action, obj, before, after, gym=None): pass `gym` from the Console
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)
 ```

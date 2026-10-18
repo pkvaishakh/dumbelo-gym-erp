@@ -63,7 +63,7 @@ def test_me_says_who_runs_the_console(w):
     assert me["is_rackline_admin"] is True and me["roles"] == []
 
 
-def test_new_gym_owner_can_sign_in(db, client):
+def test_new_gym_owner_can_sign_in(prices, client):
     c = rackline()
     r = c.post(GYMS, NEW_GYM, format="json")
     assert r.status_code == 201, r.content
@@ -109,7 +109,7 @@ def test_new_gym_form_errors(w):
     assert not Gym.objects.filter(slug="pulse").exists()
 
 
-def test_create_gym_command_uses_the_same_service(db, capsys):
+def test_create_gym_command_uses_the_same_service(prices, capsys):
     call_command("create_gym", "--name", "Pulse", "--slug", "pulse", "--branch", "Kochi", "--owner-email", "anil@pulse.in", "--owner-name", "Anil")
     out = capsys.readouterr().out
     password = out.split("first password: ")[1].split()[0]

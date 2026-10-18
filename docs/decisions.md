@@ -144,16 +144,28 @@ What was decided, so code and screens stay consistent. Change this file when a d
 ## Rackline billing (Rackline admins set it; a gym's admins see it)
 - One price list, kept by Rackline admins: a monthly base fee, a monthly fee per branch, a one-time WhatsApp setup
   fee, a one-time attendance machine setup fee (per device), and the rate per delivered message on Rackline's
-  shared WhatsApp number (by Meta's message category). All in paise.
+  shared WhatsApp number (by Meta's message category: utility for reminders and receipts, marketing, authentication).
+  All in paise. A price list starts on a day (today or later, one list per day) and is never edited or deleted:
+  new prices are a new list. The current list is the latest one that has started, on Rackline's own day (India).
+  No gym opens until Rackline has a price list. Gyms that were on Rackline before price lists got a starting list at
+  ₹0, with room for the branches they had open, until a Rackline admin moves them to real prices.
 - Each gym has its Rackline plan (`GymBilling`): the prices copied from the price list when it was set (a new
   price list never reprices a gym until a Rackline admin moves it), a branch quota, a billing day and its WhatsApp
   mode. The monthly charge is the base fee plus the per-branch fee times the **quota**, not the branches in use,
-  so the bill is predictable. It is charged in advance for the month ahead.
+  so the bill is predictable. It is charged in advance for the month ahead. A new gym starts with room for 1
+  branch, on that day's prices, and its billing day is the day it joined (the 28th at most, so every month has
+  one). Rackline admins set the quota, billing day and WhatsApp mode from the gym's Rackline plan in the Console.
 - A gym opens branches up to its quota. Opening or reactivating one past it is refused ("Your plan has room for 2
   branches. Ask for another one to open this branch."). An admin asks for more from the app (Add Branch to My
   Plan); a Rackline admin approves it, the quota goes up at once, and the rest of the current month is charged
   **pro rata from the day it is approved** (per-branch fee × days left ÷ days in the billing month, rounded to
   the rupee) on the next invoice. A quota is never lowered below the branches in use.
+- The billing month runs from the billing day to the day before the next one (billing day 15: 15 Mar to 14 Apr).
+  Days left count the approval day itself, in the gym's time zone; half a rupee rounds up. The request keeps the
+  days, the rate and the amount, so the invoice shows how it was worked out. A gym has one open request at a time
+  (1 to 5 branches, with a note for Rackline); a declined one says why, and the admin can ask again. A Rackline admin
+  who is also an admin of the gym can't decide its requests. A closed branch takes no place in the plan, so adding
+  one closed is allowed; reopening it needs room.
 - Invoices are written monthly on the billing day: the plan for the month ahead, pro-rata branches, one-time setup
   fees, and the previous month's shared WhatsApp usage (delivered billable messages × the rate kept on each
   message). Numbers run in one series per financial year (`RL/2026-27/0001`). No GST yet: every line carries tax

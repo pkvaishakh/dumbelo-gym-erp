@@ -1,21 +1,22 @@
 "use client";
-import { AlertCircle, Building2, CalendarDays, Clock, Mail, Pencil, UserRound } from "lucide-react";
+import { AlertCircle, BadgeIndianRupee, Building2, CalendarDays, Clock, Mail, Pencil, UserRound } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { usePlatformGymsRetrieve } from "@/api/gen/platform/platform";
+import { usePlatformGymsPlanRetrieve, usePlatformGymsRetrieve } from "@/api/gen/platform/platform";
 import { DetailBar } from "@/components/shell";
-import { Details, Empty, Icon, Photo, Section, SkeletonRows, Status } from "@/components/ui";
+import { Details, Empty, Icon, MenuRow, Photo, Section, SkeletonRows, Status } from "@/components/ui";
 import { AdminsSection } from "@/features/console/admins";
 import { EditGymSheet, StatusSheet } from "@/features/console/gym-sheets";
 import { GymStatus } from "@/features/console/parts";
-import { day, GYM_STATUS, plural } from "@/lib/format";
+import { branchesOf, day, GYM_STATUS, plural, rupees } from "@/lib/format";
 
 /** One gym, as Rackline sees it: status, branches and admins. Never what is inside it (members, money, visits). */
 export default function GymScreen() {
   const { id } = useParams<{ id: string }>();
   const q = usePlatformGymsRetrieve(Number(id));
   const g = q.data?.data;
+  const plan = usePlatformGymsPlanRetrieve(Number(id)).data?.data;
   const [editing, setEditing] = useState(false);
   const [change, setChange] = useState<"suspend" | "activate" | null>(null);
   if (q.isError) {
@@ -62,6 +63,12 @@ export default function GymScreen() {
               ))}
             </ul>
           ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No branches yet.</p></div>}
+        </Section>
+        <Section title="Rackline plan">
+          <ul className="rl-card rl-remind">
+            <MenuRow icon={BadgeIndianRupee} title={plan ? `${rupees(plan.monthly_paise)} a month` : "Rackline plan"} href={`/console/gyms/${g.id}/plan`}
+              value={plan ? branchesOf(plan.branches_in_use, plan.branch_quota) : undefined} />
+          </ul>
         </Section>
         <AdminsSection gymId={g.id} />
         <Section label="Account">

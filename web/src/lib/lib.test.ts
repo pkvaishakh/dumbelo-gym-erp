@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countDifference, gymToday, lastDigits, monthLabel, moveLabel, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, trend, until } from "./format";
+import { branchesOf, countDifference, gymToday, lastDigits, monthLabel, moveLabel, ordinal, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, trend, until } from "./format";
 import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
@@ -8,7 +8,8 @@ import { keyUrl } from "./query";
 describe("money", () => {
   it("shows rupees with Indian grouping and no paise when there are none", () => {
     expect(rupees(15000000)).toBe("₹1,50,000");
-    expect(rupees(150050)).toBe("₹1,500.5");
+    expect(rupees(150050)).toBe("₹1,500.50"); // two paise digits, like the API's rupees()
+    expect(rupees(90)).toBe("₹0.90");
     expect(rupees(null)).toBe("₹0");
   });
   it("turns typed rupees into whole paise", () => {
@@ -170,5 +171,15 @@ describe("gym short names", () => {
     expect(SLUG_RULE.test("ab")).toBe(false);
     expect(SLUG_RULE.test("-iron")).toBe(false);
     expect(SLUG_RULE.test("Iron")).toBe(false);
+  });
+});
+
+describe("Rackline plan", () => {
+  it("names the billing day", () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 28].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "28th"]);
+  });
+  it("says how much of the quota is in use", () => {
+    expect(branchesOf(2, 3)).toBe("2 of 3 branches");
+    expect(branchesOf(1, 1)).toBe("1 of 1 branch");
   });
 });

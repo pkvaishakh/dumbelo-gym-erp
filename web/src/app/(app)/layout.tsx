@@ -17,12 +17,15 @@ function Loading() {
   );
 }
 
-/** A suspended gym shows its paused screen everywhere, except More for its admins (the API keeps the rest shut). */
+// What a suspended gym's admins can still open: More, and their Rackline plan (the API keeps the rest shut).
+const OPEN_WHEN_PAUSED = ["/more", "/rackline-plan"];
+
+/** A suspended gym shows its paused screen everywhere, except OPEN_WHEN_PAUSED for its admins. */
 function Frame({ children }: { children: React.ReactNode }) {
   const { role, paused } = useSession();
   const path = usePathname();
   if (!paused) return <>{children}<TabBar /></>;
-  return role.role === "admin" && path === "/more" ? <>{children}</> : <PausedScreen />;
+  return role.role === "admin" && OPEN_WHEN_PAUSED.includes(path) ? <>{children}</> : <PausedScreen />;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

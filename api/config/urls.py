@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, RefreshView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
+from apps.billing.views import BranchRequestViewSet, ConsoleBranchRequestViewSet, GymPlanPricesView, GymPlanView, PriceListViewSet, RacklinePlanView
 from apps.core.views import HealthView
 from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpenseViewSet
 from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, MoneyMoveViewSet
@@ -38,9 +39,12 @@ router.register("accounts", AccountViewSet, basename="account")
 router.register("money-moves", MoneyMoveViewSet, basename="money-move")
 router.register("drawer-closes", DrawerCloseViewSet, basename="drawer-close")
 router.register("messages", MessageViewSet, basename="message")
+router.register("billing/branch-requests", BranchRequestViewSet, basename="branch-request")
 # Rackline's own side (the Console): no X-Gym, Rackline admins only.
 router.register("platform/gyms", GymViewSet, basename="platform-gym")
 router.register(r"platform/gyms/(?P<gym_id>\d+)/admins", GymAdminViewSet, basename="platform-gym-admin")
+router.register("platform/prices", PriceListViewSet, basename="platform-price-list")
+router.register("platform/branch-requests", ConsoleBranchRequestViewSet, basename="platform-branch-request")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -62,6 +66,9 @@ urlpatterns = [
     path("api/reports/tasks/", TasksView.as_view(), name="report-tasks"),
     path("api/gym/settings/", GymSettingsView.as_view(), name="gym-settings"),
     path("api/cash/", CashView.as_view(), name="cash"),
+    path("api/billing/plan/", RacklinePlanView.as_view(), name="rackline-plan"),
+    path("api/platform/gyms/<int:gym_id>/plan/", GymPlanView.as_view(), name="platform-gym-plan"),
+    path("api/platform/gyms/<int:gym_id>/plan/current-prices/", GymPlanPricesView.as_view(), name="platform-gym-plan-prices"),
     path("api/", include(router.urls)),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="docs"),

@@ -12,6 +12,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.accounts.services import set_password
+from apps.billing.services import open_plan
 from apps.core.errors import RuleBroken
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 
@@ -55,7 +56,8 @@ def check_timezone(name: str) -> str:
 @transaction.atomic
 def create_gym(*, name: str, slug: str, timezone_name: str, branch: str, owner_email: str, owner_name: str = "",
                owner_password: str | None = None, billing_email: str = "") -> NewGym:
-    """A new gym on trial: its first branch, open all day until its admin sets the hours, and its owner admin."""
+    """A new gym on trial: its first branch, open all day until its admin sets the hours, its owner admin, and its
+    Rackline plan on today's prices with room for that one branch."""
     check_timezone(timezone_name)
     try:
         with transaction.atomic():
@@ -64,6 +66,7 @@ def create_gym(*, name: str, slug: str, timezone_name: str, branch: str, owner_e
         raise RuleBroken("slug_taken", f"Another gym already uses {slug}. Pick another short name.")
     first = Branch.objects.create(gym=gym, name=branch.strip())
     BranchSession.objects.create(branch=first, name=FIRST_SESSION[0], starts=FIRST_SESSION[1], ends=FIRST_SESSION[2])
+    open_plan(gym)
     user, new = _login_for(owner_email, owner_name, owner_password)
     owner = GymRole.objects.create(user=user, gym=gym, role=GymRole.ADMIN, is_owner=True)
     return NewGym(gym, owner, new)

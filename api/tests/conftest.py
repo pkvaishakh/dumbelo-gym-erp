@@ -1,9 +1,11 @@
-from datetime import time, timedelta
+from datetime import date, time, timedelta
 
 import pytest
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.billing.models import PriceList
+from apps.billing.services import open_plan
 from apps.core import clock
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Plan
@@ -11,8 +13,20 @@ from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
 
 
+PRICES = {
+    "base_paise": 999_00, "per_branch_paise": 3_100_00, "whatsapp_setup_paise": 2_000_00, "machine_setup_paise": 1_500_00,
+    "utility_message_paise": 15, "marketing_message_paise": 90, "authentication_message_paise": 15,
+}
+
+
+def price_list():
+    """Rackline's prices since 2026: what a gym's Rackline plan copies when it opens."""
+    return PriceList.objects.get_or_create(active_from=date(2026, 1, 1), defaults=PRICES)[0]
+
+
 class World:
-    """A small gym: two branches, an admin, a receptionist at branch A, a trainer at A, a member on a monthly plan."""
+    """A small gym: two branches, an admin, a receptionist at branch A, a trainer at A, a member on a monthly plan.
+    Its Rackline plan has room for the two branches and no more."""
 
     def __init__(self, slug="iron", n=0):
         self.gym = Gym.objects.create(name=f"Iron House {slug}", slug=slug, status="active")
@@ -21,6 +35,8 @@ class World:
         for br in (self.a, self.b):
             BranchSession.objects.create(branch=br, name="Morning", starts=time(5), ends=time(11))
             BranchSession.objects.create(branch=br, name="Evening", starts=time(16), ends=time(22))
+        price_list()
+        self.billing = open_plan(self.gym, quota=2, billing_day=1)
         self.admin = self.role(f"admin{n}@x.in", GymRole.ADMIN, [], owner=True)
         self.desk = self.role(f"desk{n}@x.in", GymRole.RECEPTIONIST, [self.a])
         self.desk_b = self.role(f"deskb{n}@x.in", GymRole.RECEPTIONIST, [self.b])
@@ -84,6 +100,11 @@ def empty_outbox():
     from apps.messages.senders import FakeSender
 
     FakeSender.outbox.clear()
+
+
+@pytest.fixture
+def prices(db):
+    return price_list()
 
 
 @pytest.fixture

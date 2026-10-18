@@ -30,14 +30,24 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ConsoleBranchAsk,
+  ConsolePlan,
+  DeclineRequest,
   GymAdmin,
   GymAdminAddRequest,
   GymCreateRequest,
   GymDetail,
   NewGym,
+  PaginatedConsoleBranchAskList,
   PaginatedGymRowList,
+  PaginatedPriceListList,
   PatchedGymEditRequest,
+  PatchedPlanChangeRequest,
+  PlatformBranchRequestsListParams,
   PlatformGymsListParams,
+  PlatformPricesListParams,
+  PriceList,
+  PriceListCreateRequest,
   StaffPasswordRequest,
   StatusChangeRequest
 } from '.././model';
@@ -50,6 +60,461 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
+ * Every gym's requests for more branches, to Approve or Decline. Filter with `?status=asked` or `?gym=`.
+ */
+export type platformBranchRequestsListResponse200 = {
+  data: PaginatedConsoleBranchAskList
+  status: 200
+}
+    
+export type platformBranchRequestsListResponseSuccess = (platformBranchRequestsListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformBranchRequestsListResponse = (platformBranchRequestsListResponseSuccess)
+
+export const getPlatformBranchRequestsListUrl = (params?: PlatformBranchRequestsListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/branch-requests/?${stringifiedParams}` : `/api/platform/branch-requests/`
+}
+
+export const platformBranchRequestsList = async (params?: PlatformBranchRequestsListParams, options?: RequestInit): Promise<platformBranchRequestsListResponse> => {
+  
+  return apiFetch<platformBranchRequestsListResponse>(getPlatformBranchRequestsListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformBranchRequestsListInfiniteQueryKey = (params?: PlatformBranchRequestsListParams,) => {
+    return [
+    'infinite', `/api/platform/branch-requests/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformBranchRequestsListQueryKey = (params?: PlatformBranchRequestsListParams,) => {
+    return [
+    `/api/platform/branch-requests/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformBranchRequestsListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformBranchRequestsList>>, PlatformBranchRequestsListParams['offset']>, TError = unknown>(params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData, QueryKey, PlatformBranchRequestsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformBranchRequestsListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformBranchRequestsList>>, QueryKey, PlatformBranchRequestsListParams['offset']> = ({ signal, pageParam }) => platformBranchRequestsList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData, QueryKey, PlatformBranchRequestsListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformBranchRequestsListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformBranchRequestsList>>>
+export type PlatformBranchRequestsListInfiniteQueryError = unknown
+
+
+export function usePlatformBranchRequestsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformBranchRequestsList>>, PlatformBranchRequestsListParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformBranchRequestsListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData, QueryKey, PlatformBranchRequestsListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformBranchRequestsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformBranchRequestsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformBranchRequestsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformBranchRequestsList>>, PlatformBranchRequestsListParams['offset']>, TError = unknown>(
+ params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData, QueryKey, PlatformBranchRequestsListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformBranchRequestsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformBranchRequestsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformBranchRequestsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformBranchRequestsList>>, PlatformBranchRequestsListParams['offset']>, TError = unknown>(
+ params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData, QueryKey, PlatformBranchRequestsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformBranchRequestsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformBranchRequestsList>>, PlatformBranchRequestsListParams['offset']>, TError = unknown>(
+ params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData, QueryKey, PlatformBranchRequestsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformBranchRequestsListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformBranchRequestsListQueryOptions = <TData = Awaited<ReturnType<typeof platformBranchRequestsList>>, TError = unknown>(params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformBranchRequestsListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformBranchRequestsList>>> = ({ signal }) => platformBranchRequestsList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformBranchRequestsListQueryResult = NonNullable<Awaited<ReturnType<typeof platformBranchRequestsList>>>
+export type PlatformBranchRequestsListQueryError = unknown
+
+
+export function usePlatformBranchRequestsList<TData = Awaited<ReturnType<typeof platformBranchRequestsList>>, TError = unknown>(
+ params: undefined |  PlatformBranchRequestsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformBranchRequestsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformBranchRequestsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformBranchRequestsList<TData = Awaited<ReturnType<typeof platformBranchRequestsList>>, TError = unknown>(
+ params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformBranchRequestsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformBranchRequestsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformBranchRequestsList<TData = Awaited<ReturnType<typeof platformBranchRequestsList>>, TError = unknown>(
+ params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformBranchRequestsList<TData = Awaited<ReturnType<typeof platformBranchRequestsList>>, TError = unknown>(
+ params?: PlatformBranchRequestsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformBranchRequestsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Every gym's requests for more branches, to Approve or Decline. Filter with `?status=asked` or `?gym=`.
+ */
+export type platformBranchRequestsRetrieveResponse200 = {
+  data: ConsoleBranchAsk
+  status: 200
+}
+    
+export type platformBranchRequestsRetrieveResponseSuccess = (platformBranchRequestsRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformBranchRequestsRetrieveResponse = (platformBranchRequestsRetrieveResponseSuccess)
+
+export const getPlatformBranchRequestsRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/branch-requests/${id}/`
+}
+
+export const platformBranchRequestsRetrieve = async (id: number, options?: RequestInit): Promise<platformBranchRequestsRetrieveResponse> => {
+  
+  return apiFetch<platformBranchRequestsRetrieveResponse>(getPlatformBranchRequestsRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformBranchRequestsRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/platform/branch-requests/${id}/`
+    ] as const;
+    }
+
+    
+export const getPlatformBranchRequestsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformBranchRequestsRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>> = ({ signal }) => platformBranchRequestsRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformBranchRequestsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>>
+export type PlatformBranchRequestsRetrieveQueryError = unknown
+
+
+export function usePlatformBranchRequestsRetrieve<TData = Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformBranchRequestsRetrieve<TData = Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformBranchRequestsRetrieve<TData = Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformBranchRequestsRetrieve<TData = Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformBranchRequestsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformBranchRequestsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The gym's quota goes up now; the rest of this billing month is charged on its next invoice.
+ */
+export type platformBranchRequestsApproveCreateResponse200 = {
+  data: ConsoleBranchAsk
+  status: 200
+}
+    
+export type platformBranchRequestsApproveCreateResponseSuccess = (platformBranchRequestsApproveCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformBranchRequestsApproveCreateResponse = (platformBranchRequestsApproveCreateResponseSuccess)
+
+export const getPlatformBranchRequestsApproveCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/branch-requests/${id}/approve/`
+}
+
+export const platformBranchRequestsApproveCreate = async (id: number, options?: RequestInit): Promise<platformBranchRequestsApproveCreateResponse> => {
+  
+  return apiFetch<platformBranchRequestsApproveCreateResponse>(getPlatformBranchRequestsApproveCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getPlatformBranchRequestsApproveCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformBranchRequestsApproveCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformBranchRequestsApproveCreate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['platformBranchRequestsApproveCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformBranchRequestsApproveCreate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  platformBranchRequestsApproveCreate(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformBranchRequestsApproveCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformBranchRequestsApproveCreate>>>
+    
+    export type PlatformBranchRequestsApproveCreateMutationError = unknown
+
+    export const usePlatformBranchRequestsApproveCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformBranchRequestsApproveCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformBranchRequestsApproveCreate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformBranchRequestsApproveCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Every gym's requests for more branches, to Approve or Decline. Filter with `?status=asked` or `?gym=`.
+ */
+export type platformBranchRequestsDeclineCreateResponse200 = {
+  data: ConsoleBranchAsk
+  status: 200
+}
+    
+export type platformBranchRequestsDeclineCreateResponseSuccess = (platformBranchRequestsDeclineCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformBranchRequestsDeclineCreateResponse = (platformBranchRequestsDeclineCreateResponseSuccess)
+
+export const getPlatformBranchRequestsDeclineCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/branch-requests/${id}/decline/`
+}
+
+export const platformBranchRequestsDeclineCreate = async (id: number,
+    declineRequest: DeclineRequest, options?: RequestInit): Promise<platformBranchRequestsDeclineCreateResponse> => {
+  
+  return apiFetch<platformBranchRequestsDeclineCreateResponse>(getPlatformBranchRequestsDeclineCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      declineRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformBranchRequestsDeclineCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformBranchRequestsDeclineCreate>>, TError,{id: number;data: DeclineRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformBranchRequestsDeclineCreate>>, TError,{id: number;data: DeclineRequest}, TContext> => {
+
+const mutationKey = ['platformBranchRequestsDeclineCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformBranchRequestsDeclineCreate>>, {id: number;data: DeclineRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformBranchRequestsDeclineCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformBranchRequestsDeclineCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformBranchRequestsDeclineCreate>>>
+    export type PlatformBranchRequestsDeclineCreateMutationBody = DeclineRequest
+    export type PlatformBranchRequestsDeclineCreateMutationError = unknown
+
+    export const usePlatformBranchRequestsDeclineCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformBranchRequestsDeclineCreate>>, TError,{id: number;data: DeclineRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformBranchRequestsDeclineCreate>>,
+        TError,
+        {id: number;data: DeclineRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformBranchRequestsDeclineCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Every gym on Rackline. Gyms are never deleted: a gym that stops paying is suspended.
  */
 export type platformGymsListResponse200 = {
@@ -833,6 +1298,275 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * A gym's Rackline plan: its prices, branch quota, billing day and WhatsApp mode.
+ */
+export type platformGymsPlanRetrieveResponse200 = {
+  data: ConsolePlan
+  status: 200
+}
+    
+export type platformGymsPlanRetrieveResponseSuccess = (platformGymsPlanRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformGymsPlanRetrieveResponse = (platformGymsPlanRetrieveResponseSuccess)
+
+export const getPlatformGymsPlanRetrieveUrl = (gymId: number,) => {
+
+
+  
+
+  return `/api/platform/gyms/${gymId}/plan/`
+}
+
+export const platformGymsPlanRetrieve = async (gymId: number, options?: RequestInit): Promise<platformGymsPlanRetrieveResponse> => {
+  
+  return apiFetch<platformGymsPlanRetrieveResponse>(getPlatformGymsPlanRetrieveUrl(gymId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformGymsPlanRetrieveQueryKey = (gymId?: number,) => {
+    return [
+    `/api/platform/gyms/${gymId}/plan/`
+    ] as const;
+    }
+
+    
+export const getPlatformGymsPlanRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError = unknown>(gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformGymsPlanRetrieveQueryKey(gymId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>> = ({ signal }) => platformGymsPlanRetrieve(gymId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(gymId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformGymsPlanRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>>
+export type PlatformGymsPlanRetrieveQueryError = unknown
+
+
+export function usePlatformGymsPlanRetrieve<TData = Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError = unknown>(
+ gymId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformGymsPlanRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformGymsPlanRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformGymsPlanRetrieve<TData = Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError = unknown>(
+ gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformGymsPlanRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformGymsPlanRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformGymsPlanRetrieve<TData = Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError = unknown>(
+ gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformGymsPlanRetrieve<TData = Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError = unknown>(
+ gymId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformGymsPlanRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformGymsPlanRetrieveQueryOptions(gymId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Set the quota (never below the branches open), the billing day or the WhatsApp mode.
+ */
+export type platformGymsPlanPartialUpdateResponse200 = {
+  data: ConsolePlan
+  status: 200
+}
+    
+export type platformGymsPlanPartialUpdateResponseSuccess = (platformGymsPlanPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformGymsPlanPartialUpdateResponse = (platformGymsPlanPartialUpdateResponseSuccess)
+
+export const getPlatformGymsPlanPartialUpdateUrl = (gymId: number,) => {
+
+
+  
+
+  return `/api/platform/gyms/${gymId}/plan/`
+}
+
+export const platformGymsPlanPartialUpdate = async (gymId: number,
+    patchedPlanChangeRequest: PatchedPlanChangeRequest, options?: RequestInit): Promise<platformGymsPlanPartialUpdateResponse> => {
+  
+  return apiFetch<platformGymsPlanPartialUpdateResponse>(getPlatformGymsPlanPartialUpdateUrl(gymId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedPlanChangeRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformGymsPlanPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformGymsPlanPartialUpdate>>, TError,{gymId: number;data: PatchedPlanChangeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformGymsPlanPartialUpdate>>, TError,{gymId: number;data: PatchedPlanChangeRequest}, TContext> => {
+
+const mutationKey = ['platformGymsPlanPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformGymsPlanPartialUpdate>>, {gymId: number;data: PatchedPlanChangeRequest}> = (props) => {
+          const {gymId,data} = props ?? {};
+
+          return  platformGymsPlanPartialUpdate(gymId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformGymsPlanPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof platformGymsPlanPartialUpdate>>>
+    export type PlatformGymsPlanPartialUpdateMutationBody = PatchedPlanChangeRequest
+    export type PlatformGymsPlanPartialUpdateMutationError = unknown
+
+    export const usePlatformGymsPlanPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformGymsPlanPartialUpdate>>, TError,{gymId: number;data: PatchedPlanChangeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformGymsPlanPartialUpdate>>,
+        TError,
+        {gymId: number;data: PatchedPlanChangeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformGymsPlanPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Move to Current Prices: the gym's next invoice uses today's price list.
+ */
+export type platformGymsPlanCurrentPricesCreateResponse200 = {
+  data: ConsolePlan
+  status: 200
+}
+    
+export type platformGymsPlanCurrentPricesCreateResponseSuccess = (platformGymsPlanCurrentPricesCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformGymsPlanCurrentPricesCreateResponse = (platformGymsPlanCurrentPricesCreateResponseSuccess)
+
+export const getPlatformGymsPlanCurrentPricesCreateUrl = (gymId: number,) => {
+
+
+  
+
+  return `/api/platform/gyms/${gymId}/plan/current-prices/`
+}
+
+export const platformGymsPlanCurrentPricesCreate = async (gymId: number, options?: RequestInit): Promise<platformGymsPlanCurrentPricesCreateResponse> => {
+  
+  return apiFetch<platformGymsPlanCurrentPricesCreateResponse>(getPlatformGymsPlanCurrentPricesCreateUrl(gymId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getPlatformGymsPlanCurrentPricesCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformGymsPlanCurrentPricesCreate>>, TError,{gymId: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformGymsPlanCurrentPricesCreate>>, TError,{gymId: number}, TContext> => {
+
+const mutationKey = ['platformGymsPlanCurrentPricesCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformGymsPlanCurrentPricesCreate>>, {gymId: number}> = (props) => {
+          const {gymId} = props ?? {};
+
+          return  platformGymsPlanCurrentPricesCreate(gymId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformGymsPlanCurrentPricesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformGymsPlanCurrentPricesCreate>>>
+    
+    export type PlatformGymsPlanCurrentPricesCreateMutationError = unknown
+
+    export const usePlatformGymsPlanCurrentPricesCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformGymsPlanCurrentPricesCreate>>, TError,{gymId: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformGymsPlanCurrentPricesCreate>>,
+        TError,
+        {gymId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformGymsPlanCurrentPricesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Every gym on Rackline. Gyms are never deleted: a gym that stops paying is suspended.
  */
 export type platformGymsRetrieveResponse200 = {
@@ -1181,6 +1915,272 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getPlatformGymsSuspendCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Rackline's price lists, newest first. Added, never edited: gyms move to new prices one by one.
+ */
+export type platformPricesListResponse200 = {
+  data: PaginatedPriceListList
+  status: 200
+}
+    
+export type platformPricesListResponseSuccess = (platformPricesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformPricesListResponse = (platformPricesListResponseSuccess)
+
+export const getPlatformPricesListUrl = (params?: PlatformPricesListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/prices/?${stringifiedParams}` : `/api/platform/prices/`
+}
+
+export const platformPricesList = async (params?: PlatformPricesListParams, options?: RequestInit): Promise<platformPricesListResponse> => {
+  
+  return apiFetch<platformPricesListResponse>(getPlatformPricesListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformPricesListInfiniteQueryKey = (params?: PlatformPricesListParams,) => {
+    return [
+    'infinite', `/api/platform/prices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformPricesListQueryKey = (params?: PlatformPricesListParams,) => {
+    return [
+    `/api/platform/prices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformPricesListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformPricesList>>, PlatformPricesListParams['offset']>, TError = unknown>(params?: PlatformPricesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData, QueryKey, PlatformPricesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformPricesListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformPricesList>>, QueryKey, PlatformPricesListParams['offset']> = ({ signal, pageParam }) => platformPricesList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData, QueryKey, PlatformPricesListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformPricesListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformPricesList>>>
+export type PlatformPricesListInfiniteQueryError = unknown
+
+
+export function usePlatformPricesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformPricesList>>, PlatformPricesListParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformPricesListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData, QueryKey, PlatformPricesListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformPricesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformPricesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformPricesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformPricesList>>, PlatformPricesListParams['offset']>, TError = unknown>(
+ params?: PlatformPricesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData, QueryKey, PlatformPricesListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformPricesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformPricesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformPricesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformPricesList>>, PlatformPricesListParams['offset']>, TError = unknown>(
+ params?: PlatformPricesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData, QueryKey, PlatformPricesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformPricesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformPricesList>>, PlatformPricesListParams['offset']>, TError = unknown>(
+ params?: PlatformPricesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData, QueryKey, PlatformPricesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformPricesListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformPricesListQueryOptions = <TData = Awaited<ReturnType<typeof platformPricesList>>, TError = unknown>(params?: PlatformPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformPricesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformPricesList>>> = ({ signal }) => platformPricesList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformPricesListQueryResult = NonNullable<Awaited<ReturnType<typeof platformPricesList>>>
+export type PlatformPricesListQueryError = unknown
+
+
+export function usePlatformPricesList<TData = Awaited<ReturnType<typeof platformPricesList>>, TError = unknown>(
+ params: undefined |  PlatformPricesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformPricesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformPricesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformPricesList<TData = Awaited<ReturnType<typeof platformPricesList>>, TError = unknown>(
+ params?: PlatformPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformPricesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformPricesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformPricesList<TData = Awaited<ReturnType<typeof platformPricesList>>, TError = unknown>(
+ params?: PlatformPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformPricesList<TData = Awaited<ReturnType<typeof platformPricesList>>, TError = unknown>(
+ params?: PlatformPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformPricesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformPricesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Rackline's price lists, newest first. Added, never edited: gyms move to new prices one by one.
+ */
+export type platformPricesCreateResponse201 = {
+  data: PriceList
+  status: 201
+}
+    
+export type platformPricesCreateResponseSuccess = (platformPricesCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type platformPricesCreateResponse = (platformPricesCreateResponseSuccess)
+
+export const getPlatformPricesCreateUrl = () => {
+
+
+  
+
+  return `/api/platform/prices/`
+}
+
+export const platformPricesCreate = async (priceListCreateRequest: PriceListCreateRequest, options?: RequestInit): Promise<platformPricesCreateResponse> => {
+  
+  return apiFetch<platformPricesCreateResponse>(getPlatformPricesCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      priceListCreateRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformPricesCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformPricesCreate>>, TError,{data: PriceListCreateRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformPricesCreate>>, TError,{data: PriceListCreateRequest}, TContext> => {
+
+const mutationKey = ['platformPricesCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformPricesCreate>>, {data: PriceListCreateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  platformPricesCreate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformPricesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformPricesCreate>>>
+    export type PlatformPricesCreateMutationBody = PriceListCreateRequest
+    export type PlatformPricesCreateMutationError = unknown
+
+    export const usePlatformPricesCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformPricesCreate>>, TError,{data: PriceListCreateRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformPricesCreate>>,
+        TError,
+        {data: PriceListCreateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformPricesCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
