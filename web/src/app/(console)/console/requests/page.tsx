@@ -27,7 +27,7 @@ function RequestsPage() {
   const waiting = status === "asked";
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Branch requests" sub={list.data ? (waiting ? `${count} waiting` : plural(count, "request")) : "Gyms asking for more branches"} />
+      <PageBar title="Branch requests" back="/console/more" sub={list.data ? (waiting ? `${count} waiting` : plural(count, "request")) : "Gyms asking for more branches"} />
       <main className="rl-app__main">
         <Chips name="rq-status" label="Filter by status" value={status} onChange={pick} options={FILTERS} />
         <Section label="Requests">

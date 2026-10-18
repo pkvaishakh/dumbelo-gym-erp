@@ -31,7 +31,7 @@ export default function Server() {
   const sub = s ? `Version ${s.version}${s.deployed_at ? ` • deployed ${ago(s.deployed_at)}` : ""}` : "Health, jobs and messages";
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Server" sub={sub} back="/console/more" action={
+      <PageBar title="Server" sub={sub} action={
         <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="Check again" disabled={q.isFetching} onClick={() => q.refetch()}><Icon as={RefreshCw} /></button>
       } />
       <main className="rl-app__main">

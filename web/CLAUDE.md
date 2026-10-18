@@ -10,14 +10,14 @@ src/app/login                 shared sign-in
 src/app/(app)/layout.tsx      SessionProvider (who, which gym, which branch) + bottom TabBar
 src/app/(app)/<route>         one folder per screen; task screens are /…/new or /…/edit (no tab bar there).
                               A suspended gym shows features/paused everywhere but More (admins only)
-src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Gyms, Requests, Prices,
-                              More); gyms list, a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests,
-                              price lists and Add Price List, a gym's invoices (gyms/[id]/invoices: pending charges, Add
+src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Gyms, Server, Prices,
+                              More); gyms list, a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests
+                              (More → Branch requests), price lists and Add Price List, a gym's invoices (gyms/[id]/invoices: pending charges, Add
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
                               print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
                               `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
                               Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen),
-                              Server (More → Server: health, the jobs and Run Now, messages and webhook; checks again
+                              Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
                               every 30 s, every 3 s while a run waits or runs).
                               Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
