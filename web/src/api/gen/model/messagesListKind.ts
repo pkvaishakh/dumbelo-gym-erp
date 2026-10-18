@@ -15,4 +15,8 @@ export const MessagesListKind = {
   expiring_0: 'expiring_0',
   expiring_3: 'expiring_3',
   expiring_7: 'expiring_7',
+  payment_received: 'payment_received',
+  rackline_invoice_due: 'rackline_invoice_due',
+  rackline_payment_received: 'rackline_payment_received',
+  task_assigned: 'task_assigned',
 } as const;

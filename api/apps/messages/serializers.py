@@ -5,24 +5,24 @@ from rest_framework import serializers
 from apps.billing.models import GymBilling
 from apps.gyms.models import Gym
 
-from .models import Message, WhatsAppAccount, WhatsAppTemplate
+from .models import PLACEHOLDER, Message, WhatsAppAccount, WhatsAppTemplate
 
 META_ID = re.compile(r"^\d{5,32}$")  # Meta's ids are long numbers; nothing else may reach a Graph API path
 DISPLAY_NUMBER = re.compile(r"^\+?[\d ()-]{6,23}$")
 TEMPLATE_NAME = re.compile(r"^[a-z0-9_]{1,512}$")
 LANGUAGE = re.compile(r"^[a-z]{2,3}(_[A-Z]{2})?$")
-PLACEHOLDER = re.compile(r"\{\{\s*(\d+)\s*\}\}")
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    """A reminder as the desk sees it: when it went, what it said, and whether it arrived."""
+    """A message as the desk sees it: when it went, what it said, and whether it arrived."""
 
-    member_name = serializers.CharField(source="member.name", read_only=True)
+    member_name = serializers.CharField(source="member.name", read_only=True, allow_null=True, default=None)
     kind_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = ["id", "member", "member_name", "kind", "kind_label", "to", "text", "for_date", "status", "error", "created_at"]
+        read_only_fields = fields
 
     def get_kind_label(self, message) -> str:
         return message.get_kind_display()

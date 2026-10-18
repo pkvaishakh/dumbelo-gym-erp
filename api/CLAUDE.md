@@ -29,12 +29,15 @@ apps/finance/        Account (branch cash or bank; BranchAccount: the one bank a
                      inside the transaction that records them. Anything that corrects, voids or removes one calls
                      `before_change(kind, id)` first (reconciled entries are locked)
 apps/reminders/      ReminderDue + the rules that fill it (services.py, tasks.py); Celery in config/celery.py
-apps/messages/       WhatsApp: senders.py (FakeSender by default), Message, and the 6 AM job that writes the day's
-                     list and sends it (tasks.py). WhatsAppAccount (Rackline's shared number has no gym; a gym's own)
+apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender posts templates to Meta), Message (queued |
+                     sent | delivered | read | failed, `dedupe_key` unique per gym), services.py (Route: the number and
+                     templates a gym sends from; queue → deliver → keep Meta's id; send_due: the reminders;
+                     send_retries: temporary failures, 3 retries), and the 6 AM job and the retry sweep (tasks.py). WhatsAppAccount (Rackline's shared number has no gym; a gym's own)
                      and WhatsAppTemplate (kinds and their PARAMETERS); crypto.py (EncryptedTextField over
                      FIELD_ENCRYPTION_KEY, MultiFernet; `manage.py rotate_credentials`); accounts.py (add_account,
                      change_account, replace_credentials, test_connection, account_for: the account a gym sends from,
-                     save_template); meta.py (Graph API calls, errors scrubbed of credentials); views/gym.py
+                     save_template, approved_templates); meta.py (Graph API calls, errors scrubbed of credentials and sorted into
+                     temporary, permanent and "no answer", which is never retried); views/gym.py
                      (/api/messages/, /api/gym/whatsapp/) and views/console.py (/api/platform/whatsapp-accounts/,
                      /api/platform/whatsapp-templates/). Querysets that show an account defer SECRET_FIELDS.
                      App label "gym_messages": see apps.py

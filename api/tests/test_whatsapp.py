@@ -16,7 +16,6 @@ from apps.audit.models import AuditLog
 from apps.billing.models import GymBilling
 from apps.messages import accounts, crypto
 from apps.messages.models import WhatsAppAccount, WhatsAppTemplate
-from apps.messages.senders import CloudSender, SendFailed
 from tests.test_platform import rackline, support
 
 ACCOUNTS = "/api/platform/whatsapp-accounts/"
@@ -28,6 +27,12 @@ SHARED = {"waba_id": "100000000000001", "phone_number_id": "200000000000001", "d
           "access_token": TOKEN, "app_secret": SECRET}
 PLAN_ENDING = {"kind": "plan_ending", "name": "plan_ending_v1", "language": "en", "body": "Hi {{1}}, your {{2}} at {{3}} ends on {{4}}.",
                "parameters": ["first_name", "plan", "gym", "end_date"], "status": "approved"}
+
+
+@pytest.fixture(autouse=True)
+def shared_number():
+    """These tests add Rackline's shared number themselves, through the Console."""
+    return None
 
 
 def own(gym, n=2):
@@ -410,13 +415,3 @@ def test_the_lists_keep_a_query_budget(w, other, django_assert_max_num_queries):
         assert c.get(ACCOUNTS).json()["count"] == 3
     with django_assert_max_num_queries(4):
         assert c.get(TEMPLATES, {"account": shared["id"]}).json()["count"] == 4
-
-
-# ---- The sender ----
-
-def test_the_cloud_sender_says_why_nothing_went(w):
-    with pytest.raises(SendFailed, match="shared number hasn't been added"):
-        CloudSender().send("+919800000001", "Hi")
-    accounts.add_account(gym=None, **SHARED)
-    with pytest.raises(SendFailed, match="comes next"):
-        CloudSender().send("+919800000001", "Hi")

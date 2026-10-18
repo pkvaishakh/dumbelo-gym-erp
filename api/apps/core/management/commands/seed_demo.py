@@ -55,7 +55,7 @@ STAFF = [
 ]
 # The words of each message as a WhatsApp template, with the details that fill it (WhatsAppTemplate.PARAMETERS).
 DEMO_TEMPLATES = [
-    ("plan_ending", ["first_name", "plan", "gym", "end_date"], "Hi {{1}}, your {{2}} at {{3}} ends on {{4}}. Renew it at the front desk to keep checking in."),
+    ("plan_ending", ["first_name", "plan", "gym", "end_date", "days_left"], "Hi {{1}}, your {{2}} at {{3}} ends on {{4}}, {{5}}. Renew it at the front desk to keep checking in."),
     ("plan_ends_today", ["first_name", "plan", "gym"], "Hi {{1}}, your {{2}} at {{3}} ends today. Renew it at the front desk to keep checking in."),
     ("payment_due", ["first_name", "amount", "plan", "gym"], "Hi {{1}}, {{2}} is still to pay on your {{3}} at {{4}}. You can pay it at the front desk the next time you come in."),
     ("payment_received", ["first_name", "amount", "gym", "paid_on"], "Hi {{1}}, thank you: {{3}} received {{2}} from you on {{4}}."),

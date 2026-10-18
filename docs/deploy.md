@@ -100,7 +100,7 @@ half-configured server fails loudly at boot instead of quietly serving with a de
 | `CELERY_BROKER_URL` | from step 2, db 0 | The job queue. Empty means jobs run inside the request: never on a server |
 | `CORS_ALLOWED_ORIGINS` | `https://app.rackline.in` | Which site may call the API from a browser. The default is localhost, so this must be set |
 | `FIELD_ENCRYPTION_KEY` | a Fernet key, this server's own (below) | Encrypts the WhatsApp credentials in the database. Losing it loses them |
-| `WHATSAPP_PROVIDER` | `whatsapp_cloud` | `fake` (the default) sends nothing |
+| `WHATSAPP_PROVIDER` | `whatsapp_cloud` | Posts templates to Meta's Cloud API from each gym's number. `fake` (the default) sends nothing |
 | `DEBUG` | leave unset | `PRODUCTION=true` with `DEBUG=True` refuses to start |
 
 Optional, with sensible defaults in `api/config/settings.py`: `WHATSAPP_API_VERSION` (Meta's Graph API version,
@@ -208,7 +208,10 @@ instance: two would hand out the same morning twice. (Nothing breaks if they do 
 reminder rows and sends no second message — but there is no reason to pay for it.) Beat also runs
 `apps.billing.tasks.write_invoices` at five past every hour: each active gym's Rackline invoice on its billing day,
 skipped once written. If the worker was down on a billing day, write it by hand:
-`python manage.py write_invoices --day 2026-11-01`.
+`python manage.py write_invoices --day 2026-11-01`. And every minute, `apps.messages.tasks.retry_messages` tries
+again the WhatsApp messages Meta turned away for now (rate limits, Meta busy), up to 3 times with growing waits.
+A message Meta may already have taken (it didn't answer, or the worker died mid-send) is never sent again on its
+own: the gym's message log says so.
 
 ### If you'd rather run the API on ECS too
 
