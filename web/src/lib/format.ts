@@ -176,3 +176,15 @@ export const BRANCH_ASK_STATUS: Record<string, { label: string; badge: string }>
   approved: { label: "Approved", badge: "active" },
   declined: { label: "Declined", badge: "expired" },
 };
+
+/** A Rackline invoice's state as a badge. An open invoice past its due day is "Overdue". */
+export const INVOICE_STATUS: Record<string, { label: string; badge: string }> = {
+  open: { label: "To pay", badge: "expiring" },
+  overdue: { label: "Overdue", badge: "expired" },
+  paid: { label: "Paid", badge: "active" },
+  void: { label: "Void", badge: "off" },
+};
+export const invoiceState = (inv: { status: string; overdue: boolean }) => (inv.status === "open" && inv.overdue ? "overdue" : inv.status);
+
+/** How a gym paid Rackline. */
+export const RACKLINE_PAY_METHOD: Record<string, string> = { bank: "Bank transfer", upi: "UPI", cheque: "Cheque", card: "Card", cash: "Cash" };

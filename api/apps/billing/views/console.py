@@ -15,7 +15,7 @@ from apps.core.queries import count_of
 from apps.core.rackline import RacklineViewMixin
 from apps.gyms.models import Branch, Gym
 
-from .. import services
+from .. import invoicing, services
 from ..models import BranchRequest, GymBilling, PriceList
 from ..serializers import (
     ConsoleBranchAskSerializer, ConsolePlanSerializer, DeclineSerializer, PlanChangeSerializer, PriceListCreateSerializer,
@@ -59,6 +59,7 @@ class _GymPlan(RacklineViewMixin, APIView):
     def answer(self, gym: Gym) -> Response:
         plan = get_object_or_404(GymBilling.objects.select_related("price_list"), gym=gym)
         plan.branches_in_use = services.active_branches(gym)
+        plan.owed_paise = invoicing.owed(gym)
         current = PriceList.current()
         plan.current_prices = current if current and current.pk != plan.price_list_id else None
         return Response(ConsolePlanSerializer(plan).data)

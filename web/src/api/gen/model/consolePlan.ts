@@ -10,8 +10,8 @@ import type { PriceListRef } from './priceListRef';
 import type { ConsolePlanCurrentPrices } from './consolePlanCurrentPrices';
 
 /**
- * A gym's Rackline plan as both its admins and the Console see it. `branches_in_use` and `current_prices`
-are filled in by the view (one query each).
+ * A gym's Rackline plan as both its admins and the Console see it. `branches_in_use`, `owed_paise` and
+`current_prices` are filled in by the view (one query each).
  */
 export interface ConsolePlan {
   /** Monthly base fee */
@@ -42,6 +42,8 @@ export interface ConsolePlan {
    * @nullable
    */
   readonly paid_until: string | null;
+  /** What its open invoices still owe */
+  readonly owed_paise: number;
   readonly price_list: PriceListRef;
   /**
    * Today's price list, when the gym isn't on it

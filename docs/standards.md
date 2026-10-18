@@ -34,7 +34,8 @@ Search before you write. If the thing exists, use it. If it nearly exists, exten
   - Gym, role and branch scoping: `GymViewMixin`, `in_my_branches`, role tuples (`apps/core/tenancy.py`)
   - Rackline's own views (`/api/platform/`): `RacklineViewMixin` / `IsRacklineAdmin` (`apps/core/rackline.py`)
   - Foreign key input: `GymPK` (`apps/members/serializers.py`)
-  - A count per row without a GROUP BY: `count_of` (`apps/core/queries.py`)
+  - A count or total per row without a GROUP BY: `count_of`, `sum_of` (`apps/core/queries.py`)
+  - What a gym owes Rackline: `owed_by_gym` (`apps/billing/invoicing.py`); Rackline invoice and receipt numbers: `next_number`
   - Opening or reopening a branch: `make_room_for_branch` (`apps/billing/services.py`), the branch quota under a lock
   - Times, days and local formatting: `apps/core/clock.py`
   - Paise and rupees: `apps/core/money.py` (API), `src/lib/format.ts` (web)

@@ -30,24 +30,34 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Charge,
+  ChargeCreateRequest,
   ConsoleBranchAsk,
+  ConsoleInvoice,
+  ConsoleInvoicePayment,
   ConsolePlan,
   DeclineRequest,
   GymAdmin,
   GymAdminAddRequest,
   GymCreateRequest,
   GymDetail,
+  InvoiceVoidRequest,
   NewGym,
+  PaginatedChargeList,
   PaginatedConsoleBranchAskList,
+  PaginatedConsoleInvoiceRowList,
   PaginatedGymRowList,
   PaginatedPriceListList,
   PatchedGymEditRequest,
   PatchedPlanChangeRequest,
   PlatformBranchRequestsListParams,
+  PlatformChargesListParams,
   PlatformGymsListParams,
+  PlatformInvoicesListParams,
   PlatformPricesListParams,
   PriceList,
   PriceListCreateRequest,
+  RecordPaymentRequest,
   StaffPasswordRequest,
   StatusChangeRequest
 } from '.././model';
@@ -511,6 +521,284 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getPlatformBranchRequestsDeclineCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
+approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed.
+ */
+export type platformChargesListResponse200 = {
+  data: PaginatedChargeList
+  status: 200
+}
+    
+export type platformChargesListResponseSuccess = (platformChargesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformChargesListResponse = (platformChargesListResponseSuccess)
+
+export const getPlatformChargesListUrl = (params?: PlatformChargesListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/charges/?${stringifiedParams}` : `/api/platform/charges/`
+}
+
+export const platformChargesList = async (params?: PlatformChargesListParams, options?: RequestInit): Promise<platformChargesListResponse> => {
+  
+  return apiFetch<platformChargesListResponse>(getPlatformChargesListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformChargesListQueryKey = (params?: PlatformChargesListParams,) => {
+    return [
+    `/api/platform/charges/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformChargesListQueryOptions = <TData = Awaited<ReturnType<typeof platformChargesList>>, TError = unknown>(params?: PlatformChargesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformChargesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformChargesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformChargesList>>> = ({ signal }) => platformChargesList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformChargesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformChargesListQueryResult = NonNullable<Awaited<ReturnType<typeof platformChargesList>>>
+export type PlatformChargesListQueryError = unknown
+
+
+export function usePlatformChargesList<TData = Awaited<ReturnType<typeof platformChargesList>>, TError = unknown>(
+ params: undefined |  PlatformChargesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformChargesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformChargesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformChargesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformChargesList<TData = Awaited<ReturnType<typeof platformChargesList>>, TError = unknown>(
+ params?: PlatformChargesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformChargesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformChargesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformChargesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformChargesList<TData = Awaited<ReturnType<typeof platformChargesList>>, TError = unknown>(
+ params?: PlatformChargesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformChargesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformChargesList<TData = Awaited<ReturnType<typeof platformChargesList>>, TError = unknown>(
+ params?: PlatformChargesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformChargesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformChargesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
+approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed.
+ */
+export type platformChargesCreateResponse201 = {
+  data: Charge
+  status: 201
+}
+    
+export type platformChargesCreateResponseSuccess = (platformChargesCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type platformChargesCreateResponse = (platformChargesCreateResponseSuccess)
+
+export const getPlatformChargesCreateUrl = () => {
+
+
+  
+
+  return `/api/platform/charges/`
+}
+
+export const platformChargesCreate = async (chargeCreateRequest: ChargeCreateRequest, options?: RequestInit): Promise<platformChargesCreateResponse> => {
+  
+  return apiFetch<platformChargesCreateResponse>(getPlatformChargesCreateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      chargeCreateRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformChargesCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformChargesCreate>>, TError,{data: ChargeCreateRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformChargesCreate>>, TError,{data: ChargeCreateRequest}, TContext> => {
+
+const mutationKey = ['platformChargesCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformChargesCreate>>, {data: ChargeCreateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  platformChargesCreate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformChargesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformChargesCreate>>>
+    export type PlatformChargesCreateMutationBody = ChargeCreateRequest
+    export type PlatformChargesCreateMutationError = unknown
+
+    export const usePlatformChargesCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformChargesCreate>>, TError,{data: ChargeCreateRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformChargesCreate>>,
+        TError,
+        {data: ChargeCreateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformChargesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
+approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed.
+ */
+export type platformChargesDestroyResponse204 = {
+  data: void
+  status: 204
+}
+    
+export type platformChargesDestroyResponseSuccess = (platformChargesDestroyResponse204) & {
+  headers: Headers;
+};
+;
+
+export type platformChargesDestroyResponse = (platformChargesDestroyResponseSuccess)
+
+export const getPlatformChargesDestroyUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/charges/${id}/`
+}
+
+export const platformChargesDestroy = async (id: number, options?: RequestInit): Promise<platformChargesDestroyResponse> => {
+  
+  return apiFetch<platformChargesDestroyResponse>(getPlatformChargesDestroyUrl(id),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+
+export const getPlatformChargesDestroyMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformChargesDestroy>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformChargesDestroy>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['platformChargesDestroy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformChargesDestroy>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  platformChargesDestroy(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformChargesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof platformChargesDestroy>>>
+    
+    export type PlatformChargesDestroyMutationError = unknown
+
+    export const usePlatformChargesDestroy = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformChargesDestroy>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformChargesDestroy>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformChargesDestroyMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -1915,6 +2203,656 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getPlatformGymsSuspendCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * A payment to Rackline. Never deleted: Void Payment keeps it, with a reason, and the invoice owes it again.
+ */
+export type platformInvoicePaymentsRetrieveResponse200 = {
+  data: ConsoleInvoicePayment
+  status: 200
+}
+    
+export type platformInvoicePaymentsRetrieveResponseSuccess = (platformInvoicePaymentsRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformInvoicePaymentsRetrieveResponse = (platformInvoicePaymentsRetrieveResponseSuccess)
+
+export const getPlatformInvoicePaymentsRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/invoice-payments/${id}/`
+}
+
+export const platformInvoicePaymentsRetrieve = async (id: number, options?: RequestInit): Promise<platformInvoicePaymentsRetrieveResponse> => {
+  
+  return apiFetch<platformInvoicePaymentsRetrieveResponse>(getPlatformInvoicePaymentsRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformInvoicePaymentsRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/platform/invoice-payments/${id}/`
+    ] as const;
+    }
+
+    
+export const getPlatformInvoicePaymentsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformInvoicePaymentsRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>> = ({ signal }) => platformInvoicePaymentsRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformInvoicePaymentsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>>
+export type PlatformInvoicePaymentsRetrieveQueryError = unknown
+
+
+export function usePlatformInvoicePaymentsRetrieve<TData = Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicePaymentsRetrieve<TData = Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicePaymentsRetrieve<TData = Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformInvoicePaymentsRetrieve<TData = Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicePaymentsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformInvoicePaymentsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * A payment to Rackline. Never deleted: Void Payment keeps it, with a reason, and the invoice owes it again.
+ */
+export type platformInvoicePaymentsVoidCreateResponse200 = {
+  data: ConsoleInvoicePayment
+  status: 200
+}
+    
+export type platformInvoicePaymentsVoidCreateResponseSuccess = (platformInvoicePaymentsVoidCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformInvoicePaymentsVoidCreateResponse = (platformInvoicePaymentsVoidCreateResponseSuccess)
+
+export const getPlatformInvoicePaymentsVoidCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/invoice-payments/${id}/void/`
+}
+
+export const platformInvoicePaymentsVoidCreate = async (id: number,
+    invoiceVoidRequest: InvoiceVoidRequest, options?: RequestInit): Promise<platformInvoicePaymentsVoidCreateResponse> => {
+  
+  return apiFetch<platformInvoicePaymentsVoidCreateResponse>(getPlatformInvoicePaymentsVoidCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      invoiceVoidRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformInvoicePaymentsVoidCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformInvoicePaymentsVoidCreate>>, TError,{id: number;data: InvoiceVoidRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformInvoicePaymentsVoidCreate>>, TError,{id: number;data: InvoiceVoidRequest}, TContext> => {
+
+const mutationKey = ['platformInvoicePaymentsVoidCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformInvoicePaymentsVoidCreate>>, {id: number;data: InvoiceVoidRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformInvoicePaymentsVoidCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformInvoicePaymentsVoidCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformInvoicePaymentsVoidCreate>>>
+    export type PlatformInvoicePaymentsVoidCreateMutationBody = InvoiceVoidRequest
+    export type PlatformInvoicePaymentsVoidCreateMutationError = unknown
+
+    export const usePlatformInvoicePaymentsVoidCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformInvoicePaymentsVoidCreate>>, TError,{id: number;data: InvoiceVoidRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformInvoicePaymentsVoidCreate>>,
+        TError,
+        {id: number;data: InvoiceVoidRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformInvoicePaymentsVoidCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+job, never by hand; corrected by voiding.
+ */
+export type platformInvoicesListResponse200 = {
+  data: PaginatedConsoleInvoiceRowList
+  status: 200
+}
+    
+export type platformInvoicesListResponseSuccess = (platformInvoicesListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformInvoicesListResponse = (platformInvoicesListResponseSuccess)
+
+export const getPlatformInvoicesListUrl = (params?: PlatformInvoicesListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/invoices/?${stringifiedParams}` : `/api/platform/invoices/`
+}
+
+export const platformInvoicesList = async (params?: PlatformInvoicesListParams, options?: RequestInit): Promise<platformInvoicesListResponse> => {
+  
+  return apiFetch<platformInvoicesListResponse>(getPlatformInvoicesListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformInvoicesListInfiniteQueryKey = (params?: PlatformInvoicesListParams,) => {
+    return [
+    'infinite', `/api/platform/invoices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformInvoicesListQueryKey = (params?: PlatformInvoicesListParams,) => {
+    return [
+    `/api/platform/invoices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformInvoicesListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformInvoicesList>>, PlatformInvoicesListParams['offset']>, TError = unknown>(params?: PlatformInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData, QueryKey, PlatformInvoicesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformInvoicesListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformInvoicesList>>, QueryKey, PlatformInvoicesListParams['offset']> = ({ signal, pageParam }) => platformInvoicesList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData, QueryKey, PlatformInvoicesListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformInvoicesListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformInvoicesList>>>
+export type PlatformInvoicesListInfiniteQueryError = unknown
+
+
+export function usePlatformInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformInvoicesList>>, PlatformInvoicesListParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformInvoicesListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData, QueryKey, PlatformInvoicesListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformInvoicesList>>, PlatformInvoicesListParams['offset']>, TError = unknown>(
+ params?: PlatformInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData, QueryKey, PlatformInvoicesListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformInvoicesList>>, PlatformInvoicesListParams['offset']>, TError = unknown>(
+ params?: PlatformInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData, QueryKey, PlatformInvoicesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformInvoicesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformInvoicesList>>, PlatformInvoicesListParams['offset']>, TError = unknown>(
+ params?: PlatformInvoicesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData, QueryKey, PlatformInvoicesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformInvoicesListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformInvoicesListQueryOptions = <TData = Awaited<ReturnType<typeof platformInvoicesList>>, TError = unknown>(params?: PlatformInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformInvoicesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformInvoicesList>>> = ({ signal }) => platformInvoicesList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformInvoicesListQueryResult = NonNullable<Awaited<ReturnType<typeof platformInvoicesList>>>
+export type PlatformInvoicesListQueryError = unknown
+
+
+export function usePlatformInvoicesList<TData = Awaited<ReturnType<typeof platformInvoicesList>>, TError = unknown>(
+ params: undefined |  PlatformInvoicesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicesList<TData = Awaited<ReturnType<typeof platformInvoicesList>>, TError = unknown>(
+ params?: PlatformInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicesList>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicesList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicesList<TData = Awaited<ReturnType<typeof platformInvoicesList>>, TError = unknown>(
+ params?: PlatformInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformInvoicesList<TData = Awaited<ReturnType<typeof platformInvoicesList>>, TError = unknown>(
+ params?: PlatformInvoicesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformInvoicesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+job, never by hand; corrected by voiding.
+ */
+export type platformInvoicesRetrieveResponse200 = {
+  data: ConsoleInvoice
+  status: 200
+}
+    
+export type platformInvoicesRetrieveResponseSuccess = (platformInvoicesRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformInvoicesRetrieveResponse = (platformInvoicesRetrieveResponseSuccess)
+
+export const getPlatformInvoicesRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/invoices/${id}/`
+}
+
+export const platformInvoicesRetrieve = async (id: number, options?: RequestInit): Promise<platformInvoicesRetrieveResponse> => {
+  
+  return apiFetch<platformInvoicesRetrieveResponse>(getPlatformInvoicesRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformInvoicesRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/platform/invoices/${id}/`
+    ] as const;
+    }
+
+    
+export const getPlatformInvoicesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformInvoicesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformInvoicesRetrieve>>> = ({ signal }) => platformInvoicesRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformInvoicesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformInvoicesRetrieve>>>
+export type PlatformInvoicesRetrieveQueryError = unknown
+
+
+export function usePlatformInvoicesRetrieve<TData = Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicesRetrieve<TData = Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformInvoicesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformInvoicesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformInvoicesRetrieve<TData = Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformInvoicesRetrieve<TData = Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformInvoicesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformInvoicesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Record Payment: all or part of what it owes, never more. Paid in full, the gym's plan is paid until its
+last day.
+ */
+export type platformInvoicesPaymentsCreateResponse200 = {
+  data: ConsoleInvoice
+  status: 200
+}
+    
+export type platformInvoicesPaymentsCreateResponseSuccess = (platformInvoicesPaymentsCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformInvoicesPaymentsCreateResponse = (platformInvoicesPaymentsCreateResponseSuccess)
+
+export const getPlatformInvoicesPaymentsCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/invoices/${id}/payments/`
+}
+
+export const platformInvoicesPaymentsCreate = async (id: number,
+    recordPaymentRequest: RecordPaymentRequest, options?: RequestInit): Promise<platformInvoicesPaymentsCreateResponse> => {
+  
+  return apiFetch<platformInvoicesPaymentsCreateResponse>(getPlatformInvoicesPaymentsCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      recordPaymentRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformInvoicesPaymentsCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformInvoicesPaymentsCreate>>, TError,{id: number;data: RecordPaymentRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformInvoicesPaymentsCreate>>, TError,{id: number;data: RecordPaymentRequest}, TContext> => {
+
+const mutationKey = ['platformInvoicesPaymentsCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformInvoicesPaymentsCreate>>, {id: number;data: RecordPaymentRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformInvoicesPaymentsCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformInvoicesPaymentsCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformInvoicesPaymentsCreate>>>
+    export type PlatformInvoicesPaymentsCreateMutationBody = RecordPaymentRequest
+    export type PlatformInvoicesPaymentsCreateMutationError = unknown
+
+    export const usePlatformInvoicesPaymentsCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformInvoicesPaymentsCreate>>, TError,{id: number;data: RecordPaymentRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformInvoicesPaymentsCreate>>,
+        TError,
+        {id: number;data: RecordPaymentRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformInvoicesPaymentsCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Void Invoice, with a reason. Its payments are voided first; it keeps its number and lines.
+ */
+export type platformInvoicesVoidCreateResponse200 = {
+  data: ConsoleInvoice
+  status: 200
+}
+    
+export type platformInvoicesVoidCreateResponseSuccess = (platformInvoicesVoidCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformInvoicesVoidCreateResponse = (platformInvoicesVoidCreateResponseSuccess)
+
+export const getPlatformInvoicesVoidCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/invoices/${id}/void/`
+}
+
+export const platformInvoicesVoidCreate = async (id: number,
+    invoiceVoidRequest: InvoiceVoidRequest, options?: RequestInit): Promise<platformInvoicesVoidCreateResponse> => {
+  
+  return apiFetch<platformInvoicesVoidCreateResponse>(getPlatformInvoicesVoidCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      invoiceVoidRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformInvoicesVoidCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformInvoicesVoidCreate>>, TError,{id: number;data: InvoiceVoidRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformInvoicesVoidCreate>>, TError,{id: number;data: InvoiceVoidRequest}, TContext> => {
+
+const mutationKey = ['platformInvoicesVoidCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformInvoicesVoidCreate>>, {id: number;data: InvoiceVoidRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformInvoicesVoidCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformInvoicesVoidCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformInvoicesVoidCreate>>>
+    export type PlatformInvoicesVoidCreateMutationBody = InvoiceVoidRequest
+    export type PlatformInvoicesVoidCreateMutationError = unknown
+
+    export const usePlatformInvoicesVoidCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformInvoicesVoidCreate>>, TError,{id: number;data: InvoiceVoidRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformInvoicesVoidCreate>>,
+        TError,
+        {id: number;data: InvoiceVoidRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformInvoicesVoidCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

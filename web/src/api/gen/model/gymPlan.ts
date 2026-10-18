@@ -41,6 +41,8 @@ export interface GymPlan {
    * @nullable
    */
   readonly paid_until: string | null;
+  /** What its open invoices still owe */
+  readonly owed_paise: number;
   readonly price_list: PriceListRef;
   /** @nullable */
   readonly last_request: GymPlanLastRequest;

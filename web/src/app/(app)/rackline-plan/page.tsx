@@ -1,14 +1,15 @@
 "use client";
-import { AlertCircle, MessageCircle, Plus } from "lucide-react";
+import { AlertCircle, FileText, MessageCircle, Plus } from "lucide-react";
 import { useState } from "react";
 
-import { useBillingPlanRetrieve } from "@/api/gen/billing/billing";
+import { useBillingInvoicesListInfinite, useBillingPlanRetrieve } from "@/api/gen/billing/billing";
 import type { BranchAsk, GymPlan } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
-import { Confirm, Details, Empty, ErrorText, Field, Icon, Section, Seg, Sheet, SkeletonRows } from "@/components/ui";
+import { Confirm, Details, Empty, ErrorText, Field, Icon, LoadMore, Section, Seg, Sheet, SkeletonRows } from "@/components/ui";
+import { InvoiceRowLink } from "@/features/rackline-invoices";
 import { AskStatus, BranchRoom, PlanCard, PlanPrices, proRataText } from "@/features/rackline-plan";
 import { day, ordinal, plural, rupees, WHATSAPP_MODE } from "@/lib/format";
-import { fieldError, useAction } from "@/lib/hooks";
+import { fieldError, paged, pages, useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
 const COUNTS = ["1", "2", "3", "4", "5"] as const;
@@ -30,6 +31,7 @@ export default function RacklinePlanPage() {
         ) : !plan ? <SkeletonRows n={4} /> : (
           <>
             <PlanCard plan={plan} />
+            <Invoices owed={plan.owed_paise} />
             <Section title="Branches">
               <BranchRoom plan={plan} />
               <LastRequest r={plan.last_request} />
@@ -55,6 +57,31 @@ export default function RacklinePlanPage() {
       </main>
       {plan && <AskSheet plan={plan} open={asking} onClose={() => setAsking(false)} />}
     </div>
+  );
+}
+
+/** The gym's Rackline invoices, newest first, and what's still to pay on them. Each opens with its receipts. */
+function Invoices({ owed }: { owed: number }) {
+  const q = useBillingInvoicesListInfinite({}, { query: paged });
+  const { rows } = pages(q);
+  return (
+    <Section title="Invoices" aside={<p className="rl-section__aside">{owed ? `${rupees(owed)} to pay` : "Nothing to pay"}</p>}>
+      {owed > 0 && (
+        <p className="rl-field__hint" style={{ marginTop: 0 }}>Pay Rackline by bank transfer or UPI. Rackline records it here and you get a receipt.</p>
+      )}
+      {q.isLoading ? <SkeletonRows n={2} /> : q.isError ? (
+        <Empty icon={AlertCircle} title="Can't load your invoices" text="Check your connection and try again.">
+          <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => q.refetch()}>Try Again</button>
+        </Empty>
+      ) : rows.length ? (
+        <>
+          <ul className="rl-card rl-mlist rl-mlist--compact">{rows.map((inv) => <InvoiceRowLink key={inv.id} inv={inv} href={`/rackline-plan/invoices/${inv.id}`} />)}</ul>
+          <LoadMore q={q} />
+        </>
+      ) : (
+        <Empty icon={FileText} title="No invoices yet" text="Your first invoice is written on your billing day, for the month ahead." />
+      )}
+    </Section>
   );
 }
 

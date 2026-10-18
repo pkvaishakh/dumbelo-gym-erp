@@ -5,7 +5,10 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, RefreshView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
-from apps.billing.views import BranchRequestViewSet, ConsoleBranchRequestViewSet, GymPlanPricesView, GymPlanView, PriceListViewSet, RacklinePlanView
+from apps.billing.views import (
+    BranchRequestViewSet, ChargeViewSet, ConsoleBranchRequestViewSet, ConsoleInvoicePaymentViewSet, ConsoleInvoiceViewSet, GymPlanPricesView,
+    GymPlanView, InvoiceViewSet, PriceListViewSet, RacklinePlanView,
+)
 from apps.core.views import HealthView
 from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpenseViewSet
 from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, MoneyMoveViewSet
@@ -40,11 +43,15 @@ router.register("money-moves", MoneyMoveViewSet, basename="money-move")
 router.register("drawer-closes", DrawerCloseViewSet, basename="drawer-close")
 router.register("messages", MessageViewSet, basename="message")
 router.register("billing/branch-requests", BranchRequestViewSet, basename="branch-request")
+router.register("billing/invoices", InvoiceViewSet, basename="rackline-invoice")
 # Rackline's own side (the Console): no X-Gym, Rackline admins only.
 router.register("platform/gyms", GymViewSet, basename="platform-gym")
 router.register(r"platform/gyms/(?P<gym_id>\d+)/admins", GymAdminViewSet, basename="platform-gym-admin")
 router.register("platform/prices", PriceListViewSet, basename="platform-price-list")
 router.register("platform/branch-requests", ConsoleBranchRequestViewSet, basename="platform-branch-request")
+router.register("platform/invoices", ConsoleInvoiceViewSet, basename="platform-invoice")
+router.register("platform/invoice-payments", ConsoleInvoicePaymentViewSet, basename="platform-invoice-payment")
+router.register("platform/charges", ChargeViewSet, basename="platform-charge")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

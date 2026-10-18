@@ -13,14 +13,14 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.gyms.models import Branch, Gym, GymRole
 
-from .models import LAST_BILLING_DAY, BranchRequest, GymBilling, PriceList
+from .models import LAST_BILLING_DAY, BranchRequest, GymBilling, InvoiceLine, PriceList
 
 
-def _branches(n: int) -> str:
+def branches_label(n: int) -> str:
     return f"{n} branch" if n == 1 else f"{n} branches"
 
 
-def _locked(gym: Gym) -> GymBilling:
+def locked_plan(gym: Gym) -> GymBilling:
     plan = GymBilling.objects.select_for_update().filter(gym=gym).first()
     if plan is None:  # a gym made by hand in the Django admin, not by create_gym
         raise RuleBroken("no_plan", "This gym has no Rackline plan yet. Ask Rackline to set it up.")
@@ -58,11 +58,11 @@ def open_plan(gym: Gym, *, quota: int = 1, billing_day: int | None = None) -> Gy
 @transaction.atomic
 def change_plan(gym: Gym, *, branch_quota: int | None = None, billing_day: int | None = None, whatsapp_mode: str | None = None) -> GymBilling:
     """A Rackline admin setting the quota, billing day or WhatsApp mode. A quota never drops below the branches open."""
-    plan = _locked(gym)
+    plan = locked_plan(gym)
     if branch_quota is not None and branch_quota != plan.branch_quota:
         open_now = active_branches(gym)
         if branch_quota < open_now:
-            raise RuleBroken("below_branches", f"{gym.name} has {_branches(open_now)} open. Its plan can't have room for fewer.")
+            raise RuleBroken("below_branches", f"{gym.name} has {branches_label(open_now)} open. Its plan can't have room for fewer.")
         plan.branch_quota = branch_quota
     if billing_day is not None:
         plan.billing_day = billing_day
@@ -75,7 +75,7 @@ def change_plan(gym: Gym, *, branch_quota: int | None = None, billing_day: int |
 @transaction.atomic
 def move_to_current_prices(gym: Gym) -> GymBilling:
     """Copy today's price list onto the gym's plan. Its next invoice uses them; past invoices never change."""
-    plan = _locked(gym)
+    plan = locked_plan(gym)
     prices = PriceList.current()
     if prices is None or prices.pk == plan.price_list_id:
         raise RuleBroken("already_current", f"{gym.name} is already on the current prices")
@@ -90,9 +90,9 @@ def move_to_current_prices(gym: Gym) -> GymBilling:
 
 def make_room_for_branch(gym: Gym, branch: Branch | None = None) -> None:
     """Call inside the transaction that opens a branch (or reopens `branch`): refused when the plan is full."""
-    plan = _locked(gym)
+    plan = locked_plan(gym)
     if active_branches(gym, leaving_out=branch) >= plan.branch_quota:
-        raise RuleBroken("branch_limit", f"Your plan has room for {_branches(plan.branch_quota)}. Ask for another one to open this branch.")
+        raise RuleBroken("branch_limit", f"Your plan has room for {branches_label(plan.branch_quota)}. Ask for another one to open this branch.")
 
 
 # Asking for more branches
@@ -100,7 +100,7 @@ def make_room_for_branch(gym: Gym, branch: Branch | None = None) -> None:
 @transaction.atomic
 def ask_for_branches(gym: Gym, *, count: int, note: str, by) -> BranchRequest:
     """Add Branch to My Plan: one open request at a time, so Rackline answers one question per gym."""
-    _locked(gym)
+    locked_plan(gym)
     if BranchRequest.objects.filter(gym=gym, status=BranchRequest.ASKED).exists():
         raise RuleBroken("already_asked", "You've already asked for more branches. Rackline will answer soon.")
     return BranchRequest.objects.create(gym=gym, count=count, note=note.strip(), asked_by=by)
@@ -147,7 +147,7 @@ def _decided(req: BranchRequest, by) -> BranchRequest:
 @transaction.atomic
 def approve(req: BranchRequest, *, by) -> BranchRequest:
     """Raise the quota now and keep what the rest of this billing month costs, for the next invoice."""
-    plan = _locked(req.gym)
+    plan = locked_plan(req.gym)
     req = _decided(req, by)
     cost = pro_rata(plan.per_branch_paise, req.count, plan.billing_day, clock.today(req.gym))
     plan.branch_quota += req.count
@@ -156,12 +156,23 @@ def approve(req: BranchRequest, *, by) -> BranchRequest:
     req.charged_from, req.charged_to, req.period_days = cost.charged_from, cost.charged_to, cost.period_days
     req.rate_paise, req.pro_rata_paise = cost.rate_paise, cost.amount_paise
     req.save()
+    pro_rata_line(req)
     return req
+
+
+def pro_rata_line(req: BranchRequest) -> InvoiceLine:
+    """The pending line that bills an approved request on the gym's next invoice: how many, which days, and why."""
+    return InvoiceLine.objects.create(
+        gym_id=req.gym_id, kind=InvoiceLine.BRANCHES_PRO_RATA, branch_request=req, starts=req.charged_from, ends=req.charged_to,
+        description=f"{branches_label(req.count)} added, {clock.date_label(req.charged_from)} to {clock.date_label(req.charged_to)} "
+                    f"({req.days_charged} of {req.period_days} days)",
+        quantity=req.count, rate_paise=req.rate_paise, amount_paise=req.pro_rata_paise, added_by=req.decided_by,
+    )
 
 
 @transaction.atomic
 def decline(req: BranchRequest, *, by, reason: str) -> BranchRequest:
-    _locked(req.gym)
+    locked_plan(req.gym)
     req = _decided(req, by)
     req.status, req.decline_reason = BranchRequest.DECLINED, reason.strip()
     req.save()

@@ -17,7 +17,7 @@ export default defineConfig({
         query: { useQuery: true, signal: true },
         // Long lists also get an infinite hook (useXxxListInfinite) for "Show more": pages by offset.
         operations: Object.fromEntries(
-          ["members_list", "payments_list", "expenses_list", "checkins_list", "tasks_list", "staff_list", "payslips_list", "expense_dues_list", "money_moves_list", "platform_gyms_list", "platform_branch_requests_list", "platform_prices_list"].map((id) => [
+          ["members_list", "payments_list", "expenses_list", "checkins_list", "tasks_list", "staff_list", "payslips_list", "expense_dues_list", "money_moves_list", "platform_gyms_list", "platform_branch_requests_list", "platform_prices_list", "platform_invoices_list", "billing_invoices_list"].map((id) => [
             id,
             { query: { useQuery: true, useInfinite: true, useInfiniteQueryParam: "offset", signal: true } },
           ]),

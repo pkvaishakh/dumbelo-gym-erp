@@ -9,7 +9,7 @@ import { usePlatformGymsListInfinite } from "@/api/gen/platform/platform";
 import { PageBar } from "@/components/shell";
 import { AddButton, Chips, Empty, LoadMore, Photo, SearchField, Section, SkeletonRows } from "@/components/ui";
 import { GymStatus } from "@/features/console/parts";
-import { plural } from "@/lib/format";
+import { plural, rupees } from "@/lib/format";
 import { paged, pages, useSearch } from "@/lib/hooks";
 
 const FILTERS = [
@@ -50,7 +50,7 @@ function GymsPage() {
                     <Photo name={g.name} />
                     <span className="rl-row__title rl-mrow__name">{g.name}</span>
                     <span className="rl-row__meta rl-mrow__meta">
-                      {plural(g.branch_count, "branch", "branches")} • {plural(g.member_count, "member")}
+                      {plural(g.branch_count, "branch", "branches")} • {g.owed_paise ? `Owes ${rupees(g.owed_paise)}` : plural(g.member_count, "member")}
                     </span>
                     <GymStatus status={g.status} />
                   </Link></li>

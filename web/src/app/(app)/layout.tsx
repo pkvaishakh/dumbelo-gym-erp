@@ -25,7 +25,8 @@ function Frame({ children }: { children: React.ReactNode }) {
   const { role, paused } = useSession();
   const path = usePathname();
   if (!paused) return <>{children}<TabBar /></>;
-  return role.role === "admin" && OPEN_WHEN_PAUSED.includes(path) ? <>{children}</> : <PausedScreen />;
+  const open = OPEN_WHEN_PAUSED.some((p) => path === p || path.startsWith(`${p}/`)); // the plan's invoices and receipts too
+  return role.role === "admin" && open ? <>{children}</> : <PausedScreen />;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

@@ -15,7 +15,8 @@ from django.db import transaction
 
 from apps.attendance.models import CheckIn, Device
 from apps.attendance.services import check_in
-from apps.billing.models import PriceList
+from apps.billing import invoicing
+from apps.billing.models import Invoice, InvoiceLine, InvoicePayment, PriceList
 from apps.billing.services import open_plan
 from apps.core import clock
 from apps.core.errors import RuleBroken
@@ -192,6 +193,7 @@ class Command(BaseCommand):
         Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today,
                                created_by=meera, account=Account.objects.for_money(branches["Whitefield"].id, "card", on=today))
         self._moves(gym, accounts, meera, today)
+        self._rackline_invoices(gym, today)
 
         # Yesterday's and today's reminders, sent by the fake sender, so the Reminders card has something in it.
         for day in (today - timedelta(days=1), today):
@@ -217,6 +219,18 @@ class Command(BaseCommand):
                 whatsapp_setup_paise=2000 * 100, machine_setup_paise=1500 * 100, utility_message_paise=15,
                 marketing_message_paise=90, authentication_message_paise=15, note="Launch prices",
             )
+
+    def _rackline_invoices(self, gym, today):
+        """Three months of Rackline invoices: the first two paid by bank transfer, this month's half paid, and the
+        machine setup for the turnstiles waiting for the next invoice."""
+        ops = User.objects.get(email="rackline@rackline.demo")
+        this_month = today.replace(day=1)
+        for back in (2, 1, 0):
+            inv = invoicing.write_invoice(gym, clock.add_months(this_month, -back))
+            amount = inv.total_paise if back else inv.total_paise // 200 * 100  # half, in whole rupees
+            invoicing.record_payment(inv, amount_paise=amount, method="bank", paid_on=min(inv.issued_on + timedelta(days=3), today),
+                                     reference=f"HDFC{inv.issued_on:%y%m}0042", by=ops)
+        invoicing.add_charge(gym, kind=InvoiceLine.MACHINE_SETUP, quantity=Device.objects.filter(branch__gym=gym).count(), by=ops)
 
     def _accounts(self, gym, branches, meera, today):
         """Cash in hand at every branch; one HDFC account shared by Indiranagar and Koramangala, its own account for
@@ -323,6 +337,9 @@ class Command(BaseCommand):
         Account.objects.filter(gym=gym).delete()  # the branches they serve go with them
         Subscription.objects.filter(member__gym=gym).delete()
         Member.objects.filter(gym=gym).delete()
+        InvoicePayment.objects.filter(gym=gym).delete()
+        InvoiceLine.objects.filter(gym=gym).delete()
+        Invoice.objects.filter(gym=gym).delete()
         Offer.objects.filter(gym=gym).delete()
         Plan.objects.filter(gym=gym).delete()
         users = list(GymRole.objects.filter(gym=gym).values_list("user_id", flat=True))

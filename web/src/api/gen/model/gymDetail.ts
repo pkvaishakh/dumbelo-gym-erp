@@ -30,6 +30,8 @@ export interface GymDetail {
   readonly owner_name: string | null;
   /** @nullable */
   readonly owner_email: string | null;
+  /** What its open Rackline invoices still owe */
+  readonly owed_paise: number;
   readonly created_at: string;
   /** Why a Rackline admin last suspended or activated it */
   readonly status_reason: string;

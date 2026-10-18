@@ -530,6 +530,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/BranchAsk'
           description: ''
+  /api/billing/invoices/:
+    get:
+      operationId: billing_invoices_list
+      description: |-
+        The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+        open while the gym is suspended: it's how they see what to settle.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInvoiceRowList'
+          description: ''
+  /api/billing/invoices/{id}/:
+    get:
+      operationId: billing_invoices_retrieve
+      description: |-
+        The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+        open while the gym is suspended: it's how they see what to settle.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice.
+        required: true
+      tags:
+      - billing
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceDetail'
+          description: ''
   /api/billing/plan/:
     get:
       operationId: billing_plan_retrieve
@@ -3571,6 +3625,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConsoleBranchAsk'
           description: ''
+  /api/platform/charges/:
+    get:
+      operationId: platform_charges_list
+      description: |-
+        Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
+        approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed.
+      parameters:
+      - in: query
+        name: gym
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedChargeList'
+          description: ''
+    post:
+      operationId: platform_charges_create
+      description: |-
+        Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
+        approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed.
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargeCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChargeCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChargeCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Charge'
+          description: ''
+  /api/platform/charges/{id}/:
+    delete:
+      operationId: platform_charges_destroy
+      description: |-
+        Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
+        approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice line.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/platform/gyms/:
     get:
       operationId: platform_gyms_list
@@ -4031,6 +4167,205 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GymDetail'
+          description: ''
+  /api/platform/invoice-payments/{id}/:
+    get:
+      operationId: platform_invoice_payments_retrieve
+      description: 'A payment to Rackline. Never deleted: Void Payment keeps it, with
+        a reason, and the invoice owes it again.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice payment.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleInvoicePayment'
+          description: ''
+  /api/platform/invoice-payments/{id}/void/:
+    post:
+      operationId: platform_invoice_payments_void_create
+      description: 'A payment to Rackline. Never deleted: Void Payment keeps it, with
+        a reason, and the invoice owes it again.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice payment.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceVoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoiceVoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoiceVoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleInvoicePayment'
+          description: ''
+  /api/platform/invoices/:
+    get:
+      operationId: platform_invoices_list
+      description: |-
+        Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+        job, never by hand; corrected by voiding.
+      parameters:
+      - in: query
+        name: gym
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - open
+          - paid
+          - void
+        description: |-
+          * `open` - Open
+          * `paid` - Paid
+          * `void` - Void
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConsoleInvoiceRowList'
+          description: ''
+  /api/platform/invoices/{id}/:
+    get:
+      operationId: platform_invoices_retrieve
+      description: |-
+        Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+        job, never by hand; corrected by voiding.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleInvoice'
+          description: ''
+  /api/platform/invoices/{id}/payments/:
+    post:
+      operationId: platform_invoices_payments_create
+      description: |-
+        Record Payment: all or part of what it owes, never more. Paid in full, the gym's plan is paid until its
+        last day.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleInvoice'
+          description: ''
+  /api/platform/invoices/{id}/void/:
+    post:
+      operationId: platform_invoices_void_create
+      description: Void Invoice, with a reason. Its payments are voided first; it
+        keeps its number and lines.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this invoice.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceVoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoiceVoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoiceVoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleInvoice'
           description: ''
   /api/platform/prices/:
     get:
@@ -6302,6 +6637,111 @@ components:
         * `supplies` - Supplies
         * `marketing` - Marketing
         * `other` - Other
+    Charge:
+      type: object
+      description: 'A charge waiting for the gym''s next invoice: added by a Rackline
+        admin, or branches approved in the month.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceLineKindEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        starts:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: First day it covers, for charges by the month or the day
+        ends:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        quantity:
+          type: integer
+          readOnly: true
+        rate_paise:
+          type: integer
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+        tax_rate_bp:
+          type: integer
+          readOnly: true
+          description: 'GST in hundredths of a percent (1800 = 18%): zero for now'
+        tax_paise:
+          type: integer
+          readOnly: true
+        gym:
+          type: integer
+          readOnly: true
+        added_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - added_by_name
+      - amount_paise
+      - created_at
+      - description
+      - ends
+      - gym
+      - id
+      - kind
+      - quantity
+      - rate_paise
+      - starts
+      - tax_paise
+      - tax_rate_bp
+    ChargeCreateKindEnum:
+      enum:
+      - whatsapp_setup
+      - machine_setup
+      - adjustment
+      type: string
+      description: |-
+        * `whatsapp_setup` - WhatsApp setup
+        * `machine_setup` - Attendance machine setup
+        * `adjustment` - Other charge
+    ChargeCreateRequest:
+      type: object
+      description: |-
+        Add Charge. Setup fees take the gym's own price unless one is given; another charge needs its amount and what
+        it's for.
+      properties:
+        gym:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/ChargeCreateKindEnum'
+        quantity:
+          type: integer
+          maximum: 50
+          minimum: 1
+          default: 1
+          description: Machines, for a machine setup
+        rate_paise:
+          type: integer
+          maximum: 100000000
+          minimum: 1
+          description: Each one; the gym's price if left out
+        description:
+          type: string
+          default: ''
+          maxLength: 200
+      required:
+      - gym
+      - kind
     CheckIn:
       type: object
       properties:
@@ -6479,11 +6919,259 @@ components:
       - pro_rata_paise
       - rate_paise
       - status
+    ConsoleInvoice:
+      type: object
+      description: One invoice with its lines and payments, as the gym's admins see
+        it and print it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+          description: 'RL/2026-27/0001: one series per financial year'
+        period_from:
+          type: string
+          format: date
+          readOnly: true
+          description: 'The billing day it was written for: the first day it covers'
+        period_to:
+          type: string
+          format: date
+          readOnly: true
+          description: The day before the next billing day
+        issued_on:
+          type: string
+          format: date
+          readOnly: true
+        due_on:
+          type: string
+          format: date
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        subtotal_paise:
+          type: integer
+          readOnly: true
+        tax_paise:
+          type: integer
+          readOnly: true
+          description: 'GST: zero until Rackline charges it'
+        total_paise:
+          type: integer
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+          description: Leaving out voided payments
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What's still to pay; 0 once paid or void
+        overdue:
+          type: boolean
+          readOnly: true
+        gym_name:
+          type: string
+          readOnly: true
+        billing_email:
+          type: string
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+        voided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLine'
+          readOnly: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleInvoicePayment'
+          readOnly: true
+        gym:
+          type: integer
+          readOnly: true
+        voided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - billing_email
+      - due_on
+      - gym
+      - gym_name
+      - id
+      - issued_on
+      - lines
+      - number
+      - overdue
+      - owed_paise
+      - paid_paise
+      - payments
+      - period_from
+      - period_to
+      - status
+      - subtotal_paise
+      - tax_paise
+      - total_paise
+      - void_reason
+      - voided_at
+      - voided_by_name
+    ConsoleInvoicePayment:
+      type: object
+      description: A payment to Rackline and its receipt, as the gym's admins see
+        it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        receipt_number:
+          type: string
+          readOnly: true
+          description: 'RLR/2026-27/0001: one series per financial year'
+        amount_paise:
+          type: integer
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/RacklinePayMethodEnum'
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+          description: UTR, cheque or transaction number
+        paid_on:
+          type: string
+          format: date
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+        voided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        recorded_by_name:
+          type: string
+          readOnly: true
+        voided_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - amount_paise
+      - created_at
+      - id
+      - method
+      - paid_on
+      - receipt_number
+      - recorded_by_name
+      - reference
+      - void_reason
+      - voided
+      - voided_at
+      - voided_by_name
+    ConsoleInvoiceRow:
+      type: object
+      description: |-
+        An invoice in a list. What's paid comes from the queryset (`with_paid`); `overdue` is an open invoice past
+        its due day.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+          description: 'RL/2026-27/0001: one series per financial year'
+        period_from:
+          type: string
+          format: date
+          readOnly: true
+          description: 'The billing day it was written for: the first day it covers'
+        period_to:
+          type: string
+          format: date
+          readOnly: true
+          description: The day before the next billing day
+        issued_on:
+          type: string
+          format: date
+          readOnly: true
+        due_on:
+          type: string
+          format: date
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        subtotal_paise:
+          type: integer
+          readOnly: true
+        tax_paise:
+          type: integer
+          readOnly: true
+          description: 'GST: zero until Rackline charges it'
+        total_paise:
+          type: integer
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+          description: Leaving out voided payments
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What's still to pay; 0 once paid or void
+        overdue:
+          type: boolean
+          readOnly: true
+        gym:
+          type: integer
+          readOnly: true
+        gym_name:
+          type: string
+          readOnly: true
+      required:
+      - due_on
+      - gym
+      - gym_name
+      - id
+      - issued_on
+      - number
+      - overdue
+      - owed_paise
+      - paid_paise
+      - period_from
+      - period_to
+      - status
+      - subtotal_paise
+      - tax_paise
+      - total_paise
     ConsolePlan:
       type: object
       description: |-
-        A gym's Rackline plan as both its admins and the Console see it. `branches_in_use` and `current_prices`
-        are filled in by the view (one query each).
+        A gym's Rackline plan as both its admins and the Console see it. `branches_in_use`, `owed_paise` and
+        `current_prices` are filled in by the view (one query each).
       properties:
         base_paise:
           type: integer
@@ -6539,6 +7227,10 @@ components:
           readOnly: true
           nullable: true
           description: Last day its paid invoices cover
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What its open invoices still owe
         price_list:
           allOf:
           - $ref: '#/components/schemas/PriceListRef'
@@ -6559,6 +7251,7 @@ components:
       - machine_setup_paise
       - marketing_message_paise
       - monthly_paise
+      - owed_paise
       - paid_until
       - per_branch_paise
       - price_list
@@ -7403,6 +8096,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What its open Rackline invoices still owe
         created_at:
           type: string
           format: date-time
@@ -7429,6 +8126,7 @@ components:
       - id
       - member_count
       - name
+      - owed_paise
       - owner_email
       - owner_name
       - slug
@@ -7495,6 +8193,10 @@ components:
           readOnly: true
           nullable: true
           description: Last day its paid invoices cover
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What its open invoices still owe
         price_list:
           allOf:
           - $ref: '#/components/schemas/PriceListRef'
@@ -7514,6 +8216,7 @@ components:
       - machine_setup_paise
       - marketing_message_paise
       - monthly_paise
+      - owed_paise
       - paid_until
       - per_branch_paise
       - price_list
@@ -7563,6 +8266,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What its open Rackline invoices still owe
         created_at:
           type: string
           format: date-time
@@ -7574,6 +8281,7 @@ components:
       - id
       - member_count
       - name
+      - owed_paise
       - owner_email
       - owner_name
       - slug
@@ -7612,6 +8320,317 @@ components:
         * `trial` - Trial
         * `active` - Active
         * `suspended` - Suspended
+    InvoiceDetail:
+      type: object
+      description: One invoice with its lines and payments, as the gym's admins see
+        it and print it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+          description: 'RL/2026-27/0001: one series per financial year'
+        period_from:
+          type: string
+          format: date
+          readOnly: true
+          description: 'The billing day it was written for: the first day it covers'
+        period_to:
+          type: string
+          format: date
+          readOnly: true
+          description: The day before the next billing day
+        issued_on:
+          type: string
+          format: date
+          readOnly: true
+        due_on:
+          type: string
+          format: date
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        subtotal_paise:
+          type: integer
+          readOnly: true
+        tax_paise:
+          type: integer
+          readOnly: true
+          description: 'GST: zero until Rackline charges it'
+        total_paise:
+          type: integer
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+          description: Leaving out voided payments
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What's still to pay; 0 once paid or void
+        overdue:
+          type: boolean
+          readOnly: true
+        gym_name:
+          type: string
+          readOnly: true
+        billing_email:
+          type: string
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+        voided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLine'
+          readOnly: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoicePayment'
+          readOnly: true
+      required:
+      - billing_email
+      - due_on
+      - gym_name
+      - id
+      - issued_on
+      - lines
+      - number
+      - overdue
+      - owed_paise
+      - paid_paise
+      - payments
+      - period_from
+      - period_to
+      - status
+      - subtotal_paise
+      - tax_paise
+      - total_paise
+      - void_reason
+      - voided_at
+    InvoiceLine:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceLineKindEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        starts:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: First day it covers, for charges by the month or the day
+        ends:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        quantity:
+          type: integer
+          readOnly: true
+        rate_paise:
+          type: integer
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+        tax_rate_bp:
+          type: integer
+          readOnly: true
+          description: 'GST in hundredths of a percent (1800 = 18%): zero for now'
+        tax_paise:
+          type: integer
+          readOnly: true
+      required:
+      - amount_paise
+      - description
+      - ends
+      - id
+      - kind
+      - quantity
+      - rate_paise
+      - starts
+      - tax_paise
+      - tax_rate_bp
+    InvoiceLineKindEnum:
+      enum:
+      - base
+      - branches
+      - branches_pro_rata
+      - whatsapp_usage
+      - whatsapp_setup
+      - machine_setup
+      - adjustment
+      type: string
+      description: |-
+        * `base` - Base fee
+        * `branches` - Branches
+        * `branches_pro_rata` - Branches added during the month
+        * `whatsapp_usage` - WhatsApp messages
+        * `whatsapp_setup` - WhatsApp setup
+        * `machine_setup` - Attendance machine setup
+        * `adjustment` - Other charge
+    InvoicePayment:
+      type: object
+      description: A payment to Rackline and its receipt, as the gym's admins see
+        it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        receipt_number:
+          type: string
+          readOnly: true
+          description: 'RLR/2026-27/0001: one series per financial year'
+        amount_paise:
+          type: integer
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/RacklinePayMethodEnum'
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+          description: UTR, cheque or transaction number
+        paid_on:
+          type: string
+          format: date
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+        voided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount_paise
+      - created_at
+      - id
+      - method
+      - paid_on
+      - receipt_number
+      - reference
+      - void_reason
+      - voided
+      - voided_at
+    InvoiceRow:
+      type: object
+      description: |-
+        An invoice in a list. What's paid comes from the queryset (`with_paid`); `overdue` is an open invoice past
+        its due day.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: string
+          readOnly: true
+          description: 'RL/2026-27/0001: one series per financial year'
+        period_from:
+          type: string
+          format: date
+          readOnly: true
+          description: 'The billing day it was written for: the first day it covers'
+        period_to:
+          type: string
+          format: date
+          readOnly: true
+          description: The day before the next billing day
+        issued_on:
+          type: string
+          format: date
+          readOnly: true
+        due_on:
+          type: string
+          format: date
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceStatusEnum'
+          readOnly: true
+        subtotal_paise:
+          type: integer
+          readOnly: true
+        tax_paise:
+          type: integer
+          readOnly: true
+          description: 'GST: zero until Rackline charges it'
+        total_paise:
+          type: integer
+          readOnly: true
+        paid_paise:
+          type: integer
+          readOnly: true
+          description: Leaving out voided payments
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What's still to pay; 0 once paid or void
+        overdue:
+          type: boolean
+          readOnly: true
+      required:
+      - due_on
+      - id
+      - issued_on
+      - number
+      - overdue
+      - owed_paise
+      - paid_paise
+      - period_from
+      - period_to
+      - status
+      - subtotal_paise
+      - tax_paise
+      - total_paise
+    InvoiceStatusEnum:
+      enum:
+      - open
+      - paid
+      - void
+      type: string
+      description: |-
+        * `open` - Open
+        * `paid` - Paid
+        * `void` - Void
+    InvoiceVoidRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Kept with it, and shown to the gym's admins
+          maxLength: 200
+      required:
+      - reason
     LineRequest:
       type: object
       properties:
@@ -8269,6 +9288,10 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owed_paise:
+          type: integer
+          readOnly: true
+          description: What its open Rackline invoices still owe
         created_at:
           type: string
           format: date-time
@@ -8300,6 +9323,7 @@ components:
       - id
       - member_count
       - name
+      - owed_paise
       - owner_email
       - owner_name
       - owner_new_login
@@ -8534,6 +9558,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Branch'
+    PaginatedChargeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Charge'
     PaginatedCheckInList:
       type: object
       required:
@@ -8580,6 +9627,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ConsoleBranchAsk'
+    PaginatedConsoleInvoiceRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleInvoiceRow'
     PaginatedDeviceList:
       type: object
       required:
@@ -8695,6 +9765,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GymRow'
+    PaginatedInvoiceRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceRow'
     PaginatedMemberList:
       type: object
       required:
@@ -10171,6 +11264,20 @@ components:
           description: The code printed on the branch's wall QR
       required:
       - code
+    RacklinePayMethodEnum:
+      enum:
+      - bank
+      - upi
+      - cheque
+      - card
+      - cash
+      type: string
+      description: |-
+        * `bank` - Bank transfer
+        * `upi` - UPI
+        * `cheque` - Cheque
+        * `card` - Card
+        * `cash` - Cash
     ReconcileRequest:
       type: object
       properties:
@@ -10205,6 +11312,28 @@ components:
       - bank_balance_paise
       - by_name
       - up_to
+    RecordPaymentRequest:
+      type: object
+      properties:
+        amount_paise:
+          type: integer
+          maximum: 1000000000
+          minimum: 1
+        method:
+          $ref: '#/components/schemas/RacklinePayMethodEnum'
+        reference:
+          type: string
+          default: ''
+          description: UTR, cheque or transaction number
+          maxLength: 80
+        paid_on:
+          type: string
+          format: date
+          description: The day the money came in
+      required:
+      - amount_paise
+      - method
+      - paid_on
     RecurringExpense:
       type: object
       properties:

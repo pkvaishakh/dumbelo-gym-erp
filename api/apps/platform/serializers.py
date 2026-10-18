@@ -35,10 +35,11 @@ class GymRowSerializer(serializers.ModelSerializer):
     member_count = serializers.IntegerField(read_only=True, help_text="Members, leaving out archived ones")
     owner_name = serializers.CharField(read_only=True, allow_null=True)
     owner_email = serializers.CharField(read_only=True, allow_null=True)
+    owed_paise = serializers.IntegerField(read_only=True, help_text="What its open Rackline invoices still owe")
 
     class Meta:
         model = Gym
-        fields = ["id", "name", "slug", "status", "timezone", "billing_email", "branch_count", "member_count", "owner_name", "owner_email", "created_at"]
+        fields = ["id", "name", "slug", "status", "timezone", "billing_email", "branch_count", "member_count", "owner_name", "owner_email", "owed_paise", "created_at"]
         read_only_fields = fields  # output only: New Gym and edits have their own serializers
 
 
