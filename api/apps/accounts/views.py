@@ -101,11 +101,12 @@ class BranchRefSerializer(serializers.Serializer):
 class RoleSerializer(serializers.ModelSerializer):
     gym = serializers.SlugRelatedField(slug_field="slug", read_only=True)
     gym_name = serializers.CharField(source="gym.name", read_only=True)
+    timezone = serializers.CharField(source="gym.timezone", read_only=True, help_text="The gym's time zone, like Asia/Kolkata: its days start and end there")
     branches = serializers.SerializerMethodField()
 
     class Meta:
         model = GymRole
-        fields = ["gym", "gym_name", "role", "is_owner", "branches"]
+        fields = ["gym", "gym_name", "timezone", "role", "is_owner", "branches"]
 
     @extend_schema_field(BranchRefSerializer(many=True))
     def get_branches(self, obj):

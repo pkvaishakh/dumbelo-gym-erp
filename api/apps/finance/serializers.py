@@ -6,7 +6,7 @@ from apps.core import clock
 from apps.gyms.models import Branch
 from apps.members.serializers import GymPK
 
-from .models import Account, MoneyMove
+from .models import Account, DrawerClose, MoneyMove, StatementTick
 
 MAX_PAISE = 100_00_00_000_00  # ₹100 crore: above any gym's account, low enough to catch a slip of the keyboard
 IFSC = re.compile(r"^[A-Z]{4}0[A-Z0-9]{6}$")
@@ -24,13 +24,15 @@ class AccountSerializer(serializers.ModelSerializer):
     balance_paise = serializers.IntegerField(read_only=True)
     collected_paise = serializers.IntegerField(read_only=True, help_text="Payments taken into it since it was added")
     spent_paise = serializers.IntegerField(read_only=True, help_text="Expenses paid from it since it was added")
+    refunded_paise = serializers.IntegerField(read_only=True, help_text="Refunds given from it since it was added")
     moved_in_paise = serializers.IntegerField(read_only=True)
     moved_out_paise = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Account
         fields = ["id", "kind", "label", "name", "branch", "branch_name", "branches", "branch_names", "bank_name", "account_number", "ifsc",
-                  "opening_balance_paise", "opened_on", "is_active", "balance_paise", "collected_paise", "spent_paise", "moved_in_paise", "moved_out_paise"]
+                  "opening_balance_paise", "opened_on", "is_active", "balance_paise", "collected_paise", "spent_paise", "refunded_paise",
+                  "moved_in_paise", "moved_out_paise"]
         read_only_fields = ["opened_on", "is_active"]
 
     def get_branch_names(self, a) -> list[str]:
@@ -110,3 +112,66 @@ class MoneyMoveSerializer(serializers.ModelSerializer):
         if v > clock.today(self.context["request"].gym):
             raise serializers.ValidationError("Pick today or an earlier day")
         return v
+
+
+class DrawerCloseSerializer(serializers.ModelSerializer):
+    branch_name = serializers.CharField(source="branch.name", read_only=True)
+    difference_paise = serializers.IntegerField(read_only=True, help_text="Counted less expected: above zero is extra cash, below zero is short")
+    counted_by_name = serializers.CharField(source="counted_by.user.name", read_only=True)
+    settled_by_name = serializers.CharField(source="settled_by.user.name", read_only=True, allow_null=True, default=None)
+
+    class Meta:
+        model = DrawerClose
+        fields = ["id", "branch", "branch_name", "account", "day", "counted_paise", "expected_paise", "difference_paise", "note", "counted_by_name",
+                  "counted_at", "settled_at", "settled_by_name", "settle_reason", "settle_move"]
+        read_only_fields = fields
+
+
+class DrawerCountSerializer(serializers.Serializer):
+    branch = GymPK(Branch)
+    counted_paise = serializers.IntegerField(min_value=0, max_value=MAX_PAISE, help_text="The cash counted in the drawer")
+    note = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+    def validate_branch(self, branch):
+        ids = self.context["request"].gym_role.branch_ids()
+        if ids is not None and branch.pk not in ids:
+            raise serializers.ValidationError("You don't work at this branch")
+        return branch
+
+
+class BranchCashSerializer(serializers.Serializer):
+    """A branch's cash in hand, as the desk sees it: what it holds now and today's count."""
+
+    branch = serializers.IntegerField()
+    branch_name = serializers.CharField()
+    account = serializers.IntegerField(allow_null=True, help_text="Its cash in hand; null when it isn't set up")
+    balance_paise = serializers.IntegerField(allow_null=True, help_text="What the drawer should hold now")
+    in_paise = serializers.IntegerField(help_text="Cash that came in today: payments and money moved in")
+    out_paise = serializers.IntegerField(help_text="Cash that went out today: expenses, refunds and money moved out")
+    close = DrawerCloseSerializer(allow_null=True, help_text="Today's count, if the desk has counted")
+
+
+class EntryRef(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=StatementTick.KINDS)
+    id = serializers.IntegerField(min_value=1)
+
+
+class TickSerializer(serializers.Serializer):
+    entries = EntryRef(many=True, allow_empty=False, max_length=200)
+    ticked = serializers.BooleanField(help_text="True: on the bank's statement too. False: not (yet)")
+
+
+class ReconcileSerializer(serializers.Serializer):
+    up_to = serializers.DateField(help_text="The last day of the bank's statement")
+    bank_balance_paise = serializers.IntegerField(min_value=-MAX_PAISE, max_value=MAX_PAISE, help_text="The bank's balance at the end of that day")
+
+
+class UnreconcileSerializer(EntryRef):
+    reason = serializers.CharField(max_length=200)
+
+
+class ReconciliationSerializer(serializers.Serializer):
+    up_to = serializers.DateField()
+    bank_balance_paise = serializers.IntegerField()
+    by_name = serializers.CharField()
+    at = serializers.DateTimeField()

@@ -5,7 +5,7 @@ html, body { margin: 0; }
 body { background: var(--surface); }
 /* The design system's markup expects .rl-root on the page; the whole app is one. */
 .rl-app__main { overflow-x: clip; }
-:where(a.rl-tab, a.rl-tile, a.rl-stat, a.rl-mrow, a.rl-activity__row, a.rl-button, a.rl-remind__row, a.rl-attn__row, a.rl-shifts__row, a.rl-avatar, a.rl-pass, a.rl-sheet__item) { text-decoration: none; color: inherit; }
+:where(a.rl-tab, a.rl-tile, a.rl-stat, a.rl-card, a.rl-mrow, a.rl-activity__row, a.rl-button, a.rl-remind__row, a.rl-attn__row, a.rl-shifts__row, a.rl-avatar, a.rl-pass, a.rl-sheet__item) { text-decoration: none; color: inherit; }
 @media print {
   .rl-noprint, .rl-tabbar { display: none !important; }
   .rl-app { padding: 0 !important; background: #fff; }
@@ -58,3 +58,25 @@ body { background: var(--surface); }
 .rl-sheet .rl-checkin-sheet .rl-searchbar { top: calc(var(--space-2) * -1); margin: 0 calc(var(--space-4) * -1); padding: var(--space-2) var(--space-4); background: var(--ground); box-shadow: none; }
 .rl-checkin-sheet .rl-section { margin: 0; }
 .rl-checkin__hint { margin: 0; padding: 0 var(--space-1); }
+
+/* Figure tiles in pairs or fours: the figure shrinks to fit its tile instead of running out of it (₹12,85,577 at
+   360px, four across at 768px). Sized against the tile itself, so the same rule holds at every width. */
+.rl-kpis .rl-stat { container-type: inline-size; }
+.rl-kpis .rl-stat__value { font-size: clamp(18px, 15cqw, 26px); }
+
+/* Reports (data-rscreen="reports"). Five periods are wider than a small phone: the row scrolls sideways, its edge
+   cutting into the next choice to show there's more, and no label wraps onto two lines. */
+[data-rscreen="reports"] .rl-searchbar--period .rl-seg { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+[data-rscreen="reports"] .rl-searchbar--period .rl-seg::-webkit-scrollbar { display: none; }
+[data-rscreen="reports"] .rl-searchbar--period .rl-seg__btn { flex: 1 0 auto; white-space: nowrap; }
+/* Where they don't all fit, the track runs to the screen's edge, so the cut always falls inside the next choice. */
+@media (max-width: 419px) {
+  [data-rscreen="reports"] .rl-searchbar--period .rl-seg {
+    margin-right: calc(var(--space-4) * -1); padding-right: var(--space-4); border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+}
+/* Labels wrap; figures keep their width and never break mid-number. */
+[data-rscreen="reports"] .rl-facts { grid-template-columns: minmax(0, 1fr) auto; }
+[data-rscreen="reports"] .rl-facts dd { white-space: nowrap; }
+/* The custom days sit side by side from 390px; at 360px a date field needs the whole width. */
+[data-rscreen="reports"] .rl-pair { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }

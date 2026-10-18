@@ -18,10 +18,10 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.expenses.models import Expense, ExpenseDue, RecurringExpense
 from apps.finance import services as money
-from apps.finance.models import Account, MoneyMove
+from apps.finance.models import Account, DrawerClose, MoneyMove, Reconciliation, StatementTick
 from apps.expenses.services import pay_due, sync_dues
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
-from apps.members.models import Member, Offer, Plan
+from apps.members.models import Member, Offer, Plan, Refund
 from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
 from apps.messages.models import Message
@@ -294,6 +294,10 @@ class Command(BaseCommand):
         ExpenseDue.objects.filter(gym=gym).delete()
         RecurringExpense.objects.filter(gym=gym).delete()
         Expense.objects.filter(gym=gym).delete()
+        StatementTick.objects.filter(gym=gym).delete()
+        Reconciliation.objects.filter(gym=gym).delete()
+        DrawerClose.objects.filter(gym=gym).delete()
+        Refund.objects.filter(gym=gym).delete()
         Payment.objects.filter(gym=gym).delete()
         MoneyMove.objects.filter(gym=gym).delete()
         Account.objects.filter(gym=gym).delete()  # the branches they serve go with them

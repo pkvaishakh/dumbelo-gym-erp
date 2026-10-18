@@ -154,6 +154,8 @@ SPECTACULAR_SETTINGS = {
         "ExpenseDueStatusEnum": "apps.expenses.models.ExpenseDue.STATUSES",
         "AccountKindEnum": "apps.finance.models.Account.KINDS",
         "MoneyMoveKindEnum": "apps.finance.models.MoneyMove.KINDS",
+        "StatementEntryKindEnum": "apps.finance.models.StatementTick.KINDS",
+        "TaskStatusEnum": "apps.tasks.models.Task.STATUSES",
     },
 }
 # ---- Background jobs (see config/celery.py) ----

@@ -34,6 +34,7 @@ class CheckIn(GymScoped):
             models.UniqueConstraint(fields=["member", "local_date"], condition=models.Q(member__isnull=False), name="one_member_checkin_per_day"),
             models.UniqueConstraint(fields=["staff", "local_date"], condition=models.Q(staff__isnull=False), name="one_staff_checkin_per_day"),
         ]
+        indexes = [models.Index(fields=["gym", "local_date"], name="checkin_gym_local_date")]
 
 
 def _token():

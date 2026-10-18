@@ -9,8 +9,8 @@ import { Choices, Confirm, ErrorText, Field, Icon, Sheet } from "@/components/ui
 import { day, lastDigits, moveLabel, rupees } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 
-/** Every read a change to accounts or money moves can change. */
-export const MONEY = ["/api/accounts/", "/api/money-moves/"];
+/** Every read a change to accounts or money moves can change (voiding a move can un-settle a cash count). */
+export const MONEY = ["/api/accounts/", "/api/money-moves/", "/api/drawer-closes/", "/api/cash/"];
 
 export const accountIcon = (kind: string) => (kind === "cash" ? Banknote : Landmark);
 

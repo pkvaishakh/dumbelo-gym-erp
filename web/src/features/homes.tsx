@@ -1,12 +1,13 @@
 "use client";
 import {
-  AlertTriangle, CalendarCheck, CalendarX, ChevronRight, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, Receipt, ScanLine,
+  AlertTriangle, Banknote, CalendarCheck, CalendarX, ChevronRight, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, Receipt, ScanLine,
   Ticket, UserPlus, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useBranchesList } from "@/api/gen/branches/branches";
+import { useCashList } from "@/api/gen/cash/cash";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
 import { useMembersList } from "@/api/gen/members/members";
@@ -267,6 +268,8 @@ function DeskGlance() {
   const col = useGet<Collection>("/api/payments/collection/", { branch });
   const spentQ = useExpensesTodayRetrieve(branch ? { branch } : undefined);
   const spent = spentQ.data?.data;
+  const drawers = (useCashList().data?.data ?? []).filter((d) => d.balance_paise !== null);
+  const sum = (k: "balance_paise" | "in_paise" | "out_paise") => drawers.reduce((t, d) => t + (d[k] ?? 0), 0);
   const people: { n?: number; label: string; note: string; icon: LucideIcon; href: string; tone?: "attention" | "danger" }[] = [
     { n: counts.data?.totals.member, label: "Check-ins today", note: "Members so far", icon: CalendarCheck, href: "/attendance" },
     { n: expiring.data?.count, label: "Expiring this week", note: "Renew before they go", icon: AlertTriangle, href: "/members?status=expiring", tone: "attention" },
@@ -276,6 +279,17 @@ function DeskGlance() {
   return (
     <div className="rl-glance rl-glance--desk">
       <div className="rl-glance__money">
+        {drawers.length > 0 && (
+          <Link className="rl-glance__hero rl-pressable" href="/cash">
+            <span className="rl-glance__head">
+              <span className="rl-glance__chip" aria-hidden="true"><Icon as={Banknote} size="sm" /></span>
+              <span className="rl-glance__kicker">Cash in hand</span>
+              <ChevronRight className="rl-icon rl-icon--sm rl-glance__chev" strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className="rl-glance__big">{rupees(sum("balance_paise"))}</span>
+            <span className="rl-glance__note">+{rupees(sum("in_paise"))} in, −{rupees(sum("out_paise"))} out today</span>
+          </Link>
+        )}
         <div className="rl-glance__pair">
           <Link className="rl-glance__cell rl-pressable" href="/collection">
             <span className="rl-glance__label"><span className="rl-glance__chip" aria-hidden="true"><Icon as={IndianRupee} size="sm" /></span>Collection today</span>

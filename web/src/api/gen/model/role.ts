@@ -12,6 +12,8 @@ export interface Role {
   /** Sent by the app as the X-Gym header */
   readonly gym: string;
   readonly gym_name: string;
+  /** The gym's time zone, like Asia/Kolkata: its days start and end there */
+  readonly timezone: string;
   role: RoleEnum;
   /** The admin who handles Rackline billing; other admins can't remove them */
   is_owner?: boolean;

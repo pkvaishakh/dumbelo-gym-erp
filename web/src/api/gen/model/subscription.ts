@@ -21,6 +21,8 @@ export interface Subscription {
   /** What the member owes for it, after the offer */
   readonly price_paise: number;
   readonly paid_paise: number;
+  /** Given back: the price and what was paid are both that much lower */
+  readonly refunded_paise: number;
   /** @nullable */
   readonly frozen_from: string | null;
   /** @nullable */

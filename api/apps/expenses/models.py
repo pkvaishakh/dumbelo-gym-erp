@@ -24,6 +24,7 @@ class Expense(GymScoped):
 
     class Meta:
         ordering = ["-spent_on", "-created_at"]
+        indexes = [models.Index(fields=["gym", "spent_on"], name="expense_gym_spent_on")]
 
 
 class RecurringExpense(GymScoped):

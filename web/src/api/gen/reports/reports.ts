@@ -21,10 +21,22 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ReportsPeriodRetrieve200,
-  ReportsPeriodRetrieveParams,
+  AttendanceReport,
+  ExpensesReport,
+  MembersReport,
+  MoneyReport,
+  ReportsAttendanceRetrieveParams,
+  ReportsExpensesRetrieveParams,
+  ReportsMembersRetrieveParams,
+  ReportsMoneyRetrieveParams,
+  ReportsOverview,
+  ReportsOverviewRetrieveParams,
+  ReportsRevenueRetrieveParams,
   ReportsSummaryRetrieve200,
-  ReportsSummaryRetrieveParams
+  ReportsSummaryRetrieveParams,
+  ReportsTasksRetrieveParams,
+  RevenueReport,
+  TasksReport
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -35,22 +47,21 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * The admin Reports screen for any range of days (`from`, `to`; the last 7 days by default): money in and out,
-new members, check-ins and tasks, each with the period of the same length just before it to compare.
+ * Check-ins by day, session and branch, members and staff apart. Check-in time only: nobody's time inside.
  */
-export type reportsPeriodRetrieveResponse200 = {
-  data: ReportsPeriodRetrieve200
+export type reportsAttendanceRetrieveResponse200 = {
+  data: AttendanceReport
   status: 200
 }
     
-export type reportsPeriodRetrieveResponseSuccess = (reportsPeriodRetrieveResponse200) & {
+export type reportsAttendanceRetrieveResponseSuccess = (reportsAttendanceRetrieveResponse200) & {
   headers: Headers;
 };
 ;
 
-export type reportsPeriodRetrieveResponse = (reportsPeriodRetrieveResponseSuccess)
+export type reportsAttendanceRetrieveResponse = (reportsAttendanceRetrieveResponseSuccess)
 
-export const getReportsPeriodRetrieveUrl = (params?: ReportsPeriodRetrieveParams,) => {
+export const getReportsAttendanceRetrieveUrl = (params?: ReportsAttendanceRetrieveParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -62,12 +73,12 @@ export const getReportsPeriodRetrieveUrl = (params?: ReportsPeriodRetrieveParams
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/reports/period/?${stringifiedParams}` : `/api/reports/period/`
+  return stringifiedParams.length > 0 ? `/api/reports/attendance/?${stringifiedParams}` : `/api/reports/attendance/`
 }
 
-export const reportsPeriodRetrieve = async (params?: ReportsPeriodRetrieveParams, options?: RequestInit): Promise<reportsPeriodRetrieveResponse> => {
+export const reportsAttendanceRetrieve = async (params?: ReportsAttendanceRetrieveParams, options?: RequestInit): Promise<reportsAttendanceRetrieveResponse> => {
   
-  return apiFetch<reportsPeriodRetrieveResponse>(getReportsPeriodRetrieveUrl(params),
+  return apiFetch<reportsAttendanceRetrieveResponse>(getReportsAttendanceRetrieveUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -80,66 +91,652 @@ export const reportsPeriodRetrieve = async (params?: ReportsPeriodRetrieveParams
 
 
 
-export const getReportsPeriodRetrieveQueryKey = (params?: ReportsPeriodRetrieveParams,) => {
+export const getReportsAttendanceRetrieveQueryKey = (params?: ReportsAttendanceRetrieveParams,) => {
     return [
-    `/api/reports/period/`, ...(params ? [params]: [])
+    `/api/reports/attendance/`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getReportsPeriodRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getReportsAttendanceRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError = unknown>(params?: ReportsAttendanceRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getReportsPeriodRetrieveQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getReportsAttendanceRetrieveQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsPeriodRetrieve>>> = ({ signal }) => reportsPeriodRetrieve(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>> = ({ signal }) => reportsAttendanceRetrieve(params, { signal, ...requestOptions });
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type ReportsPeriodRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsPeriodRetrieve>>>
-export type ReportsPeriodRetrieveQueryError = unknown
+export type ReportsAttendanceRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>>
+export type ReportsAttendanceRetrieveQueryError = unknown
 
 
-export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
- params: undefined |  ReportsPeriodRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>> & Pick<
+export function useReportsAttendanceRetrieve<TData = Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsAttendanceRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof reportsPeriodRetrieve>>,
+          Awaited<ReturnType<typeof reportsAttendanceRetrieve>>,
           TError,
-          Awaited<ReturnType<typeof reportsPeriodRetrieve>>
+          Awaited<ReturnType<typeof reportsAttendanceRetrieve>>
         > , 'initialData'
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
- params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>> & Pick<
+export function useReportsAttendanceRetrieve<TData = Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError = unknown>(
+ params?: ReportsAttendanceRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof reportsPeriodRetrieve>>,
+          Awaited<ReturnType<typeof reportsAttendanceRetrieve>>,
           TError,
-          Awaited<ReturnType<typeof reportsPeriodRetrieve>>
+          Awaited<ReturnType<typeof reportsAttendanceRetrieve>>
         > , 'initialData'
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
- params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useReportsAttendanceRetrieve<TData = Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError = unknown>(
+ params?: ReportsAttendanceRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useReportsPeriodRetrieve<TData = Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError = unknown>(
- params?: ReportsPeriodRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsPeriodRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export function useReportsAttendanceRetrieve<TData = Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError = unknown>(
+ params?: ReportsAttendanceRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsAttendanceRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getReportsPeriodRetrieveQueryOptions(params,options)
+  const queryOptions = getReportsAttendanceRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Money spent: by day, category, method and branch; the bills paid from Dues and the salaries paid, which are
+expenses too and so inside the totals; and what the gym still owes now.
+ */
+export type reportsExpensesRetrieveResponse200 = {
+  data: ExpensesReport
+  status: 200
+}
+    
+export type reportsExpensesRetrieveResponseSuccess = (reportsExpensesRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsExpensesRetrieveResponse = (reportsExpensesRetrieveResponseSuccess)
+
+export const getReportsExpensesRetrieveUrl = (params?: ReportsExpensesRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/expenses/?${stringifiedParams}` : `/api/reports/expenses/`
+}
+
+export const reportsExpensesRetrieve = async (params?: ReportsExpensesRetrieveParams, options?: RequestInit): Promise<reportsExpensesRetrieveResponse> => {
+  
+  return apiFetch<reportsExpensesRetrieveResponse>(getReportsExpensesRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsExpensesRetrieveQueryKey = (params?: ReportsExpensesRetrieveParams,) => {
+    return [
+    `/api/reports/expenses/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsExpensesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError = unknown>(params?: ReportsExpensesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsExpensesRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsExpensesRetrieve>>> = ({ signal }) => reportsExpensesRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsExpensesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsExpensesRetrieve>>>
+export type ReportsExpensesRetrieveQueryError = unknown
+
+
+export function useReportsExpensesRetrieve<TData = Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsExpensesRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsExpensesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsExpensesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsExpensesRetrieve<TData = Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError = unknown>(
+ params?: ReportsExpensesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsExpensesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsExpensesRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsExpensesRetrieve<TData = Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError = unknown>(
+ params?: ReportsExpensesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsExpensesRetrieve<TData = Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError = unknown>(
+ params?: ReportsExpensesRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsExpensesRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsExpensesRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * New members, renewals and plans that ran out without one, by day and branch, and every member's status on the
+last day.
+ */
+export type reportsMembersRetrieveResponse200 = {
+  data: MembersReport
+  status: 200
+}
+    
+export type reportsMembersRetrieveResponseSuccess = (reportsMembersRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsMembersRetrieveResponse = (reportsMembersRetrieveResponseSuccess)
+
+export const getReportsMembersRetrieveUrl = (params?: ReportsMembersRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/members/?${stringifiedParams}` : `/api/reports/members/`
+}
+
+export const reportsMembersRetrieve = async (params?: ReportsMembersRetrieveParams, options?: RequestInit): Promise<reportsMembersRetrieveResponse> => {
+  
+  return apiFetch<reportsMembersRetrieveResponse>(getReportsMembersRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsMembersRetrieveQueryKey = (params?: ReportsMembersRetrieveParams,) => {
+    return [
+    `/api/reports/members/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsMembersRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError = unknown>(params?: ReportsMembersRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsMembersRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsMembersRetrieve>>> = ({ signal }) => reportsMembersRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsMembersRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsMembersRetrieve>>>
+export type ReportsMembersRetrieveQueryError = unknown
+
+
+export function useReportsMembersRetrieve<TData = Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsMembersRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsMembersRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsMembersRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsMembersRetrieve<TData = Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError = unknown>(
+ params?: ReportsMembersRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsMembersRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsMembersRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsMembersRetrieve<TData = Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError = unknown>(
+ params?: ReportsMembersRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsMembersRetrieve<TData = Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError = unknown>(
+ params?: ReportsMembersRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMembersRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsMembersRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Cash and bank: each account's balance before and after the days, what came in and went out, the money moved
+between them, the desk's cash counts and each bank account's latest reconciliation. Money moves are never income
+or spending, so the other reports leave them out.
+ */
+export type reportsMoneyRetrieveResponse200 = {
+  data: MoneyReport
+  status: 200
+}
+    
+export type reportsMoneyRetrieveResponseSuccess = (reportsMoneyRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsMoneyRetrieveResponse = (reportsMoneyRetrieveResponseSuccess)
+
+export const getReportsMoneyRetrieveUrl = (params?: ReportsMoneyRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/money/?${stringifiedParams}` : `/api/reports/money/`
+}
+
+export const reportsMoneyRetrieve = async (params?: ReportsMoneyRetrieveParams, options?: RequestInit): Promise<reportsMoneyRetrieveResponse> => {
+  
+  return apiFetch<reportsMoneyRetrieveResponse>(getReportsMoneyRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsMoneyRetrieveQueryKey = (params?: ReportsMoneyRetrieveParams,) => {
+    return [
+    `/api/reports/money/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsMoneyRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError = unknown>(params?: ReportsMoneyRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsMoneyRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsMoneyRetrieve>>> = ({ signal }) => reportsMoneyRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsMoneyRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsMoneyRetrieve>>>
+export type ReportsMoneyRetrieveQueryError = unknown
+
+
+export function useReportsMoneyRetrieve<TData = Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsMoneyRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsMoneyRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsMoneyRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsMoneyRetrieve<TData = Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError = unknown>(
+ params?: ReportsMoneyRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsMoneyRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsMoneyRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsMoneyRetrieve<TData = Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError = unknown>(
+ params?: ReportsMoneyRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsMoneyRetrieve<TData = Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError = unknown>(
+ params?: ReportsMoneyRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsMoneyRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsMoneyRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * One headline for each report, with the same figure for the days just before it: the Reports list, in a fixed
+handful of queries. Each figure is the one its report leads with, so the two always agree.
+ */
+export type reportsOverviewRetrieveResponse200 = {
+  data: ReportsOverview
+  status: 200
+}
+    
+export type reportsOverviewRetrieveResponseSuccess = (reportsOverviewRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsOverviewRetrieveResponse = (reportsOverviewRetrieveResponseSuccess)
+
+export const getReportsOverviewRetrieveUrl = (params?: ReportsOverviewRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/overview/?${stringifiedParams}` : `/api/reports/overview/`
+}
+
+export const reportsOverviewRetrieve = async (params?: ReportsOverviewRetrieveParams, options?: RequestInit): Promise<reportsOverviewRetrieveResponse> => {
+  
+  return apiFetch<reportsOverviewRetrieveResponse>(getReportsOverviewRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsOverviewRetrieveQueryKey = (params?: ReportsOverviewRetrieveParams,) => {
+    return [
+    `/api/reports/overview/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsOverviewRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError = unknown>(params?: ReportsOverviewRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsOverviewRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsOverviewRetrieve>>> = ({ signal }) => reportsOverviewRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsOverviewRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsOverviewRetrieve>>>
+export type ReportsOverviewRetrieveQueryError = unknown
+
+
+export function useReportsOverviewRetrieve<TData = Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsOverviewRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsOverviewRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsOverviewRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsOverviewRetrieve<TData = Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError = unknown>(
+ params?: ReportsOverviewRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsOverviewRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsOverviewRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsOverviewRetrieve<TData = Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError = unknown>(
+ params?: ReportsOverviewRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsOverviewRetrieve<TData = Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError = unknown>(
+ params?: ReportsOverviewRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsOverviewRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsOverviewRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Money taken less money given back: by day, plan, method and branch, the refunds themselves, and what members
+owe now. A refund counts against revenue on the day it's given, as on Home.
+ */
+export type reportsRevenueRetrieveResponse200 = {
+  data: RevenueReport
+  status: 200
+}
+    
+export type reportsRevenueRetrieveResponseSuccess = (reportsRevenueRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsRevenueRetrieveResponse = (reportsRevenueRetrieveResponseSuccess)
+
+export const getReportsRevenueRetrieveUrl = (params?: ReportsRevenueRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/revenue/?${stringifiedParams}` : `/api/reports/revenue/`
+}
+
+export const reportsRevenueRetrieve = async (params?: ReportsRevenueRetrieveParams, options?: RequestInit): Promise<reportsRevenueRetrieveResponse> => {
+  
+  return apiFetch<reportsRevenueRetrieveResponse>(getReportsRevenueRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsRevenueRetrieveQueryKey = (params?: ReportsRevenueRetrieveParams,) => {
+    return [
+    `/api/reports/revenue/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsRevenueRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError = unknown>(params?: ReportsRevenueRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsRevenueRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsRevenueRetrieve>>> = ({ signal }) => reportsRevenueRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsRevenueRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsRevenueRetrieve>>>
+export type ReportsRevenueRetrieveQueryError = unknown
+
+
+export function useReportsRevenueRetrieve<TData = Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsRevenueRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsRevenueRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsRevenueRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsRevenueRetrieve<TData = Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError = unknown>(
+ params?: ReportsRevenueRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsRevenueRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsRevenueRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsRevenueRetrieve<TData = Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError = unknown>(
+ params?: ReportsRevenueRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsRevenueRetrieve<TData = Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError = unknown>(
+ params?: ReportsRevenueRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsRevenueRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsRevenueRetrieveQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -257,6 +854,122 @@ export function useReportsSummaryRetrieve<TData = Awaited<ReturnType<typeof repo
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getReportsSummaryRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Tasks due in these days: where they stand, each person's share, and the oldest overdue ones to chase.
+ */
+export type reportsTasksRetrieveResponse200 = {
+  data: TasksReport
+  status: 200
+}
+    
+export type reportsTasksRetrieveResponseSuccess = (reportsTasksRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type reportsTasksRetrieveResponse = (reportsTasksRetrieveResponseSuccess)
+
+export const getReportsTasksRetrieveUrl = (params?: ReportsTasksRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/tasks/?${stringifiedParams}` : `/api/reports/tasks/`
+}
+
+export const reportsTasksRetrieve = async (params?: ReportsTasksRetrieveParams, options?: RequestInit): Promise<reportsTasksRetrieveResponse> => {
+  
+  return apiFetch<reportsTasksRetrieveResponse>(getReportsTasksRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getReportsTasksRetrieveQueryKey = (params?: ReportsTasksRetrieveParams,) => {
+    return [
+    `/api/reports/tasks/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getReportsTasksRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError = unknown>(params?: ReportsTasksRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReportsTasksRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reportsTasksRetrieve>>> = ({ signal }) => reportsTasksRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReportsTasksRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof reportsTasksRetrieve>>>
+export type ReportsTasksRetrieveQueryError = unknown
+
+
+export function useReportsTasksRetrieve<TData = Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError = unknown>(
+ params: undefined |  ReportsTasksRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsTasksRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsTasksRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsTasksRetrieve<TData = Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError = unknown>(
+ params?: ReportsTasksRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof reportsTasksRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof reportsTasksRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReportsTasksRetrieve<TData = Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError = unknown>(
+ params?: ReportsTasksRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useReportsTasksRetrieve<TData = Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError = unknown>(
+ params?: ReportsTasksRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof reportsTasksRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReportsTasksRetrieveQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

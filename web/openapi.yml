@@ -204,6 +204,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Account'
           description: ''
+  /api/accounts/{id}/reconcile/:
+    post:
+      operationId: accounts_reconcile_create
+      description: 'The bank''s statement agrees up to a day: the ticked entries up
+        to then are locked.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReconcileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReconcileRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+          description: ''
   /api/accounts/{id}/statement/:
     get:
       operationId: accounts_statement_retrieve
@@ -233,6 +268,68 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountStatement'
           description: ''
+  /api/accounts/{id}/tick/:
+    post:
+      operationId: accounts_tick_create
+      description: Tick entries on this bank account's statement as on the bank's
+        statement too, or untick them.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TickRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TickRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TickRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/accounts/{id}/unreconcile/:
+    post:
+      operationId: accounts_unreconcile_create
+      description: Unlock one reconciled entry, with the reason, so it can be corrected
+        or voided.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this account.
+        required: true
+      tags:
+      - accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnreconcileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UnreconcileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UnreconcileRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/accounts/branch/:
     post:
       operationId: accounts_branch_create
@@ -519,6 +616,30 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/cash/:
+    get:
+      operationId: cash_list
+      description: |-
+        Each of the caller's branches' cash in hand: what it should hold now and today's count. The desk sees its own
+        branches' cash only (never the bank: a shared account would show other branches' takings). Admins pass ?branch=.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      tags:
+      - cash
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BranchCash'
+          description: ''
   /api/checkins/:
     get:
       operationId: checkins_list
@@ -947,6 +1068,151 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/drawer-closes/:
+    get:
+      operationId: drawer_closes_list
+      description: |-
+        The desk's end-of-day cash counts: counted, expected and the difference. The desk counts its branches' cash
+        and sees one day at a time (today by default), like the day's payments; only admins settle a difference.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - in: query
+        name: date
+        schema:
+          type: string
+        description: 'YYYY-MM-DD: counts for that local day'
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. Admins only when it spans more than
+          a day
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - to_settle
+        description: 'to_settle: counts that didn''t match and aren''t settled yet'
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: Last local day, YYYY-MM-DD
+      tags:
+      - drawer-closes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDrawerCloseList'
+          description: ''
+    post:
+      operationId: drawer_closes_create
+      description: |-
+        Count the drawer: today's count for the branch, against what its cash in hand holds now. Counting again
+        the same day replaces it, until an admin settles the difference.
+      tags:
+      - drawer-closes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrawerCountRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DrawerCountRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DrawerCountRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrawerClose'
+          description: ''
+  /api/drawer-closes/{id}/:
+    get:
+      operationId: drawer_closes_retrieve
+      description: |-
+        The desk's end-of-day cash counts: counted, expected and the difference. The desk counts its branches' cash
+        and sees one day at a time (today by default), like the day's payments; only admins settle a difference.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this drawer close.
+        required: true
+      tags:
+      - drawer-closes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrawerClose'
+          description: ''
+  /api/drawer-closes/{id}/settle/:
+    post:
+      operationId: drawer_closes_settle_create
+      description: |-
+        Square a count that didn't match: the extra cash goes in as a deposit, the missing cash out as a withdrawal,
+        with the reason, so the cash in hand holds what was counted.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this drawer close.
+        required: true
+      tags:
+      - drawer-closes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DrawerClose'
           description: ''
   /api/expense-dues/:
     get:
@@ -3283,25 +3549,156 @@ paths:
               schema:
                 $ref: '#/components/schemas/RecurringExpense'
           description: ''
-  /api/reports/period/:
+  /api/refunds/:
     get:
-      operationId: reports_period_retrieve
+      operationId: refunds_list
       description: |-
-        The admin Reports screen for any range of days (`from`, `to`; the last 7 days by default): money in and out,
-        new members, check-ins and tasks, each with the period of the same length just before it to compare.
+        Money given back to members for plans they paid for. Admins give and void refunds; the desk sees its
+        branches' refunds on a member's profile (`?member=`).
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: subscription
+        schema:
+          type: integer
+      - in: query
+        name: voided
+        schema:
+          type: boolean
+      tags:
+      - refunds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRefundList'
+          description: ''
+    post:
+      operationId: refunds_create
+      description: 'Give money back for a plan: never more than was paid for it. It
+        can end the plan today, or keep it.'
+      tags:
+      - refunds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+          description: ''
+  /api/refunds/{id}/:
+    get:
+      operationId: refunds_retrieve
+      description: |-
+        Money given back to members for plans they paid for. Admins give and void refunds; the desk sees its
+        branches' refunds on a member's profile (`?member=`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this refund.
+        required: true
+      tags:
+      - refunds
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+          description: ''
+  /api/refunds/{id}/void/:
+    post:
+      operationId: refunds_void_create
+      description: 'It was wrong: the money counts as paid again, and a plan it ended
+        or cancelled is put back.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this refund.
+        required: true
+      tags:
+      - refunds
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+          description: ''
+  /api/reports/attendance/:
+    get:
+      operationId: reports_attendance_retrieve
+      description: 'Check-ins by day, session and branch, members and staff apart.
+        Check-in time only: nobody''s time inside.'
       parameters:
       - in: query
         name: branch
         schema:
           type: integer
+        description: One branch; every branch when left out
       - in: query
         name: from
         schema:
           type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
       - in: query
         name: to
         schema:
           type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
       tags:
       - reports
       security:
@@ -3311,8 +3708,178 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: {}
+                $ref: '#/components/schemas/AttendanceReport'
+          description: ''
+  /api/reports/expenses/:
+    get:
+      operationId: reports_expenses_retrieve
+      description: |-
+        Money spent: by day, category, method and branch; the bills paid from Dues and the salaries paid, which are
+        expenses too and so inside the totals; and what the gym still owes now.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: One branch; every branch when left out
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpensesReport'
+          description: ''
+  /api/reports/members/:
+    get:
+      operationId: reports_members_retrieve
+      description: |-
+        New members, renewals and plans that ran out without one, by day and branch, and every member's status on the
+        last day.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: One branch; every branch when left out
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembersReport'
+          description: ''
+  /api/reports/money/:
+    get:
+      operationId: reports_money_retrieve
+      description: |-
+        Cash and bank: each account's balance before and after the days, what came in and went out, the money moved
+        between them, the desk's cash counts and each bank account's latest reconciliation. Money moves are never income
+        or spending, so the other reports leave them out.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: One branch; every branch when left out
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoneyReport'
+          description: ''
+  /api/reports/overview/:
+    get:
+      operationId: reports_overview_retrieve
+      description: |-
+        One headline for each report, with the same figure for the days just before it: the Reports list, in a fixed
+        handful of queries. Each figure is the one its report leads with, so the two always agree.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: One branch; every branch when left out
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsOverview'
+          description: ''
+  /api/reports/revenue/:
+    get:
+      operationId: reports_revenue_retrieve
+      description: |-
+        Money taken less money given back: by day, plan, method and branch, the refunds themselves, and what members
+        owe now. A refund counts against revenue on the day it's given, as on Home.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: One branch; every branch when left out
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueReport'
           description: ''
   /api/reports/summary/:
     get:
@@ -3340,6 +3907,39 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/reports/tasks/:
+    get:
+      operationId: reports_tasks_retrieve
+      description: 'Tasks due in these days: where they stand, each person''s share,
+        and the oldest overdue ones to chase.'
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+        description: One branch; every branch when left out
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: First local day, YYYY-MM-DD. 6 days before `to` when left out
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'Last local day, YYYY-MM-DD: the gym''s today or earlier. Today
+          when left out'
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksReport'
           description: ''
   /api/salary-rules/:
     get:
@@ -4442,6 +5042,10 @@ components:
           type: integer
           readOnly: true
           description: Expenses paid from it since it was added
+        refunded_paise:
+          type: integer
+          readOnly: true
+          description: Refunds given from it since it was added
         moved_in_paise:
           type: integer
           readOnly: true
@@ -4460,6 +5064,7 @@ components:
       - moved_in_paise
       - moved_out_paise
       - opened_on
+      - refunded_paise
       - spent_paise
     AccountBrief:
       type: object
@@ -4545,18 +5150,145 @@ components:
           type: integer
         out_paise:
           type: integer
+        cleared_paise:
+          type: integer
+          description: 'Bank accounts: the opening balance and the ticked entries
+            up to the last day shown'
+        reconciled:
+          allOf:
+          - $ref: '#/components/schemas/Reconciliation'
+          nullable: true
+          description: The latest check against the bank's statement
         entries:
           type: array
           items:
             $ref: '#/components/schemas/StatementEntry'
       required:
+      - cleared_paise
       - closing_paise
       - entries
       - from
       - in_paise
       - opening_paise
       - out_paise
+      - reconciled
       - to
+    AttendanceBefore:
+      type: object
+      properties:
+        member:
+          type: integer
+      required:
+      - member
+    AttendanceBranch:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        member:
+          type: integer
+        staff:
+          type: integer
+      required:
+      - id
+      - member
+      - name
+      - staff
+    AttendanceDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        member:
+          type: integer
+        staff:
+          type: integer
+      required:
+      - date
+      - member
+      - staff
+    AttendanceReport:
+      type: object
+      properties:
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/ReportPrevious'
+          description: The same number of days just before, which trends compare against
+        totals:
+          $ref: '#/components/schemas/AttendanceTotals'
+        before:
+          $ref: '#/components/schemas/AttendanceBefore'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceDay'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceSession'
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceBranch'
+          description: Every branch, when the report covers them all; empty for one
+            branch
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - before
+      - branches
+      - days
+      - from
+      - previous
+      - series
+      - sessions
+      - to
+      - totals
+    AttendanceSession:
+      type: object
+      properties:
+        session:
+          type: string
+        member:
+          type: integer
+        trainer:
+          type: integer
+        receptionist:
+          type: integer
+        admin:
+          type: integer
+      required:
+      - admin
+      - member
+      - receptionist
+      - session
+      - trainer
+    AttendanceTotals:
+      type: object
+      properties:
+        member:
+          type: integer
+        trainer:
+          type: integer
+        receptionist:
+          type: integer
+        admin:
+          type: integer
+      required:
+      - admin
+      - member
+      - receptionist
+      - trainer
     BillsDue:
       type: object
       properties:
@@ -4615,6 +5347,43 @@ components:
       required:
       - account
       - branch
+    BranchCash:
+      type: object
+      description: 'A branch''s cash in hand, as the desk sees it: what it holds now
+        and today''s count.'
+      properties:
+        branch:
+          type: integer
+        branch_name:
+          type: string
+        account:
+          type: integer
+          nullable: true
+          description: Its cash in hand; null when it isn't set up
+        balance_paise:
+          type: integer
+          nullable: true
+          description: What the drawer should hold now
+        in_paise:
+          type: integer
+          description: 'Cash that came in today: payments and money moved in'
+        out_paise:
+          type: integer
+          description: 'Cash that went out today: expenses, refunds and money moved
+            out'
+        close:
+          allOf:
+          - $ref: '#/components/schemas/DrawerClose'
+          nullable: true
+          description: Today's count, if the desk has counted
+      required:
+      - account
+      - balance_paise
+      - branch
+      - branch_name
+      - close
+      - in_paise
+      - out_paise
     BranchMoney:
       type: object
       properties:
@@ -4956,6 +5725,110 @@ components:
         note:
           type: string
           description: A last update, posted before it's marked done
+    DrawerClose:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        branch_name:
+          type: string
+          readOnly: true
+        account:
+          type: integer
+          readOnly: true
+          description: The branch's cash in hand, as counted
+        day:
+          type: string
+          format: date
+          readOnly: true
+          description: The gym's local day it closes
+        counted_paise:
+          type: integer
+          readOnly: true
+        expected_paise:
+          type: integer
+          readOnly: true
+          description: The cash in hand's balance when it was counted
+        difference_paise:
+          type: integer
+          readOnly: true
+          description: 'Counted less expected: above zero is extra cash, below zero
+            is short'
+        note:
+          type: string
+          readOnly: true
+        counted_by_name:
+          type: string
+          readOnly: true
+        counted_at:
+          type: string
+          format: date-time
+          readOnly: true
+        settled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        settled_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        settle_reason:
+          type: string
+          readOnly: true
+        settle_move:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: The deposit or withdrawal that settled the difference
+      required:
+      - account
+      - branch
+      - branch_name
+      - counted_at
+      - counted_by_name
+      - counted_paise
+      - day
+      - difference_paise
+      - expected_paise
+      - id
+      - note
+      - settle_move
+      - settle_reason
+      - settled_at
+      - settled_by_name
+    DrawerCountRequest:
+      type: object
+      properties:
+        branch:
+          type: integer
+        counted_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: 0
+          format: int64
+          description: The cash counted in the drawer
+        note:
+          type: string
+          maxLength: 200
+      required:
+      - branch
+      - counted_paise
+    EntryRefRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/StatementEntryKindEnum'
+        id:
+          type: integer
+          minimum: 1
+      required:
+      - id
+      - kind
     Expense:
       type: object
       properties:
@@ -5102,6 +5975,177 @@ components:
       - branch
       - category
       - method
+    ExpensesBefore:
+      type: object
+      properties:
+        spent_paise:
+          type: integer
+      required:
+      - spent_paise
+    ExpensesBills:
+      type: object
+      properties:
+        count:
+          type: integer
+        paid_paise:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportBill'
+      required:
+      - count
+      - paid_paise
+      - rows
+    ExpensesByBranch:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        paise:
+          type: integer
+      required:
+      - key
+      - label
+      - paise
+    ExpensesByCategory:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        paise:
+          type: integer
+      required:
+      - key
+      - label
+      - paise
+    ExpensesByMethod:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        paise:
+          type: integer
+      required:
+      - key
+      - label
+      - paise
+    ExpensesDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        spent_paise:
+          type: integer
+      required:
+      - date
+      - spent_paise
+    ExpensesOwed:
+      type: object
+      properties:
+        bills:
+          type: integer
+          description: Bills inside their reminder days
+        overdue_bills:
+          type: integer
+        bills_paise:
+          type: integer
+        salaries:
+          type: integer
+          description: Approved salaries not paid in full
+        salaries_paise:
+          type: integer
+      required:
+      - bills
+      - bills_paise
+      - overdue_bills
+      - salaries
+      - salaries_paise
+    ExpensesReport:
+      type: object
+      properties:
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/ReportPrevious'
+          description: The same number of days just before, which trends compare against
+        totals:
+          $ref: '#/components/schemas/ExpensesTotals'
+        before:
+          $ref: '#/components/schemas/ExpensesBefore'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpensesDay'
+        by_category:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpensesByCategory'
+        by_method:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpensesByMethod'
+        by_branch:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpensesByBranch'
+        bills:
+          allOf:
+          - $ref: '#/components/schemas/ExpensesBills'
+          description: Recurring bills paid from Dues in these days (at most 50 rows)
+        salaries:
+          allOf:
+          - $ref: '#/components/schemas/ExpensesSalaries'
+          description: Salaries paid in these days, by person
+        owed:
+          allOf:
+          - $ref: '#/components/schemas/ExpensesOwed'
+          description: What the gym owes now, whatever the days
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - before
+      - bills
+      - by_branch
+      - by_category
+      - by_method
+      - days
+      - from
+      - owed
+      - previous
+      - salaries
+      - series
+      - to
+      - totals
+    ExpensesSalaries:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Salary payments
+        paid_paise:
+          type: integer
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportSalary'
+      required:
+      - count
+      - paid_paise
+      - people
     ExpensesToday:
       type: object
       properties:
@@ -5116,6 +6160,16 @@ components:
       - count
       - date
       - total_paise
+    ExpensesTotals:
+      type: object
+      properties:
+        spent_paise:
+          type: integer
+        count:
+          type: integer
+      required:
+      - count
+      - spent_paise
     FreezeRequest:
       type: object
       properties:
@@ -5369,6 +6423,130 @@ components:
         * `frozen` - frozen
         * `expired` - expired
         * `none` - none
+    MembersBefore:
+      type: object
+      properties:
+        new:
+          type: integer
+        renewals:
+          type: integer
+      required:
+      - new
+      - renewals
+    MembersBranch:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        new:
+          type: integer
+        renewals:
+          type: integer
+        active:
+          type: integer
+          description: Active, expiring or payment due on the last day
+      required:
+      - active
+      - id
+      - name
+      - new
+      - renewals
+    MembersDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        new:
+          type: integer
+      required:
+      - date
+      - new
+    MembersReport:
+      type: object
+      properties:
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/ReportPrevious'
+          description: The same number of days just before, which trends compare against
+        totals:
+          $ref: '#/components/schemas/MembersTotals'
+        before:
+          $ref: '#/components/schemas/MembersBefore'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembersDay'
+        statuses:
+          allOf:
+          - $ref: '#/components/schemas/MembersStatuses'
+          description: Every member by status on the last day
+        branches:
+          type: array
+          items:
+            $ref: '#/components/schemas/MembersBranch'
+          description: Every branch, when the report covers them all; empty for one
+            branch
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - before
+      - branches
+      - days
+      - from
+      - previous
+      - series
+      - statuses
+      - to
+      - totals
+    MembersStatuses:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        expiring:
+          type: integer
+        due:
+          type: integer
+        frozen:
+          type: integer
+        expired:
+          type: integer
+        none:
+          type: integer
+      required:
+      - active
+      - due
+      - expired
+      - expiring
+      - frozen
+      - none
+      - total
+    MembersTotals:
+      type: object
+      properties:
+        new:
+          type: integer
+        renewals:
+          type: integer
+        lapsed:
+          type: integer
+          description: Plans that ran out and weren't renewed
+      required:
+      - lapsed
+      - new
+      - renewals
     Message:
       type: object
       description: 'A reminder as the desk sees it: when it went, what it said, and
@@ -5568,6 +6746,64 @@ components:
       - accounts
       - branches
       - totals
+    MoneyReport:
+      type: object
+      properties:
+        totals:
+          allOf:
+          - $ref: '#/components/schemas/MoneyReportTotals'
+          description: Each account counted once, however many branches share it
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportAccount'
+        moves:
+          allOf:
+          - $ref: '#/components/schemas/ReportMoves'
+          description: Money moves in these days (at most 50 rows)
+        counts:
+          allOf:
+          - $ref: '#/components/schemas/ReportCounts'
+          description: The desk's cash counts in these days (at most 50 rows)
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - accounts
+      - counts
+      - days
+      - from
+      - moves
+      - to
+      - totals
+    MoneyReportTotals:
+      type: object
+      properties:
+        cash_opening_paise:
+          type: integer
+        cash_closing_paise:
+          type: integer
+        bank_opening_paise:
+          type: integer
+        bank_closing_paise:
+          type: integer
+        opening_paise:
+          type: integer
+        closing_paise:
+          type: integer
+      required:
+      - bank_closing_paise
+      - bank_opening_paise
+      - cash_closing_paise
+      - cash_opening_paise
+      - closing_paise
+      - opening_paise
     MoneyTotals:
       type: object
       properties:
@@ -5699,6 +6935,77 @@ components:
       - ends
       - name
       - starts
+    OverviewAttendance:
+      type: object
+      properties:
+        value:
+          type: integer
+        before:
+          type: integer
+          description: The same figure for the days just before
+      required:
+      - before
+      - value
+    OverviewExpenses:
+      type: object
+      properties:
+        value:
+          type: integer
+        before:
+          type: integer
+          description: The same figure for the days just before
+      required:
+      - before
+      - value
+    OverviewMembers:
+      type: object
+      properties:
+        value:
+          type: integer
+        before:
+          type: integer
+          description: The same figure for the days just before
+      required:
+      - before
+      - value
+    OverviewMoney:
+      type: object
+      properties:
+        value:
+          type: integer
+        before:
+          type: integer
+          description: The same figure for the days just before
+      required:
+      - before
+      - value
+    OverviewRevenue:
+      type: object
+      properties:
+        value:
+          type: integer
+        before:
+          type: integer
+          description: The same figure for the days just before
+      required:
+      - before
+      - value
+    OverviewTasks:
+      type: object
+      properties:
+        value:
+          type: integer
+          description: Done
+        before:
+          type: integer
+          description: Done in the days just before
+        total:
+          type: integer
+          description: Due in these days
+      required:
+      - before
+      - total
+      - value
     PaginatedBranchList:
       type: object
       required:
@@ -5768,6 +7075,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Device'
+    PaginatedDrawerCloseList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DrawerClose'
     PaginatedExpenseDueList:
       type: object
       required:
@@ -5998,6 +7328,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RecurringExpense'
+    PaginatedRefundList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Refund'
     PaginatedStaffList:
       type: object
       required:
@@ -7080,6 +8433,40 @@ components:
           description: The code printed on the branch's wall QR
       required:
       - code
+    ReconcileRequest:
+      type: object
+      properties:
+        up_to:
+          type: string
+          format: date
+          description: The last day of the bank's statement
+        bank_balance_paise:
+          type: integer
+          maximum: 100000000000
+          minimum: -100000000000
+          format: int64
+          description: The bank's balance at the end of that day
+      required:
+      - bank_balance_paise
+      - up_to
+    Reconciliation:
+      type: object
+      properties:
+        up_to:
+          type: string
+          format: date
+        bank_balance_paise:
+          type: integer
+        by_name:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - bank_balance_paise
+      - by_name
+      - up_to
     RecurringExpense:
       type: object
       properties:
@@ -7240,6 +8627,112 @@ components:
           minLength: 1
       required:
       - refresh
+    Refund:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        member:
+          type: integer
+          readOnly: true
+        member_name:
+          type: string
+          readOnly: true
+        subscription:
+          type: integer
+          readOnly: true
+        plan_name:
+          type: string
+          readOnly: true
+        branch:
+          type: integer
+          readOnly: true
+        amount_paise:
+          type: integer
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        ended_plan:
+          type: boolean
+          readOnly: true
+          description: The plan ended today because of it
+        cancelled_plan:
+          type: boolean
+          readOnly: true
+          description: The plan hadn't started, so it was cancelled
+        refunded_by_name:
+          type: string
+          readOnly: true
+        refunded_at:
+          type: string
+          format: date-time
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+      required:
+      - amount_paise
+      - branch
+      - cancelled_plan
+      - ended_plan
+      - id
+      - member
+      - member_name
+      - method
+      - plan_name
+      - reason
+      - refunded_at
+      - refunded_by_name
+      - subscription
+      - void_reason
+      - voided
+    RefundCreateRequest:
+      type: object
+      properties:
+        subscription:
+          type: integer
+          description: The plan the money was paid for
+        amount_paise:
+          type: integer
+          maximum: 10000000000
+          minimum: 1
+          format: int64
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            How the money goes back: cash from the drawer, or from the bank
+
+            * `cash` - Cash
+            * `upi` - UPI
+            * `card` - Card
+            * `bank` - Bank transfer
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+        end_plan:
+          type: boolean
+          description: End the plan today (cancel it if it hasn't started), or keep
+            it
+        branch:
+          type: integer
+          description: Where it's given back; the member's home branch when left out
+      required:
+      - amount_paise
+      - end_plan
+      - method
+      - reason
+      - subscription
     RemoveLineRequest:
       type: object
       properties:
@@ -7247,6 +8740,440 @@ components:
           type: integer
       required:
       - line
+    ReportAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AccountKindEnum'
+        is_active:
+          type: boolean
+        opened_on:
+          type: string
+          format: date
+        shared_with:
+          type: array
+          items:
+            type: string
+          description: 'Bank accounts: the other branches that use it'
+        opening_paise:
+          type: integer
+          description: Before the first day
+        closing_paise:
+          type: integer
+          description: After the last day
+        in_paise:
+          type: integer
+          description: Payments and money moved in
+        out_paise:
+          type: integer
+          description: Expenses, refunds and money moved out
+        moved_in_paise:
+          type: integer
+        moved_out_paise:
+          type: integer
+        reconciled:
+          allOf:
+          - $ref: '#/components/schemas/ReportReconciled'
+          nullable: true
+          description: 'Bank accounts: the latest reconciliation up to the last day'
+      required:
+      - closing_paise
+      - id
+      - in_paise
+      - is_active
+      - kind
+      - moved_in_paise
+      - moved_out_paise
+      - name
+      - opened_on
+      - opening_paise
+      - out_paise
+      - reconciled
+      - shared_with
+    ReportBill:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        due_on:
+          type: string
+          format: date
+        paid_on:
+          type: string
+          format: date
+        amount_paise:
+          type: integer
+      required:
+      - amount_paise
+      - due_on
+      - id
+      - name
+      - paid_on
+    ReportCount:
+      type: object
+      properties:
+        id:
+          type: integer
+        day:
+          type: string
+          format: date
+        branch_name:
+          type: string
+        counted_paise:
+          type: integer
+        expected_paise:
+          type: integer
+        difference_paise:
+          type: integer
+          description: 'Above zero: extra cash. Below zero: short'
+        settled:
+          type: boolean
+      required:
+      - branch_name
+      - counted_paise
+      - day
+      - difference_paise
+      - expected_paise
+      - id
+      - settled
+    ReportCounts:
+      type: object
+      properties:
+        count:
+          type: integer
+        short_paise:
+          type: integer
+          description: Counted less than expected, in all
+        over_paise:
+          type: integer
+          description: Counted more than expected, in all
+        to_settle:
+          type: integer
+          description: Differences an admin hasn't settled yet
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportCount'
+      required:
+      - count
+      - over_paise
+      - rows
+      - short_paise
+      - to_settle
+    ReportMove:
+      type: object
+      properties:
+        id:
+          type: integer
+        'on':
+          type: string
+          format: date
+        kind:
+          $ref: '#/components/schemas/MoneyMoveKindEnum'
+        from_name:
+          type: string
+          nullable: true
+        to_name:
+          type: string
+          nullable: true
+        amount_paise:
+          type: integer
+        note:
+          type: string
+      required:
+      - amount_paise
+      - from_name
+      - id
+      - kind
+      - note
+      - 'on'
+      - to_name
+    ReportMoves:
+      type: object
+      properties:
+        count:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportMove'
+      required:
+      - count
+      - rows
+    ReportPrevious:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+      required:
+      - from
+      - to
+    ReportReconciled:
+      type: object
+      properties:
+        up_to:
+          type: string
+          format: date
+        bank_balance_paise:
+          type: integer
+        by_name:
+          type: string
+      required:
+      - bank_balance_paise
+      - by_name
+      - up_to
+    ReportRefund:
+      type: object
+      properties:
+        id:
+          type: integer
+        'on':
+          type: string
+          format: date
+        member:
+          type: integer
+        member_name:
+          type: string
+        plan:
+          type: string
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        branch_name:
+          type: string
+        amount_paise:
+          type: integer
+        reason:
+          type: string
+      required:
+      - amount_paise
+      - branch_name
+      - id
+      - member
+      - member_name
+      - method
+      - 'on'
+      - plan
+      - reason
+    ReportSalary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        paid_paise:
+          type: integer
+        payments:
+          type: integer
+      required:
+      - id
+      - name
+      - paid_paise
+      - payments
+    ReportsOverview:
+      type: object
+      properties:
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/ReportPrevious'
+          description: The same number of days just before, which trends compare against
+        revenue:
+          allOf:
+          - $ref: '#/components/schemas/OverviewRevenue'
+          description: Collected less refunds
+        expenses:
+          allOf:
+          - $ref: '#/components/schemas/OverviewExpenses'
+          description: Spent, salaries and bills included
+        money:
+          allOf:
+          - $ref: '#/components/schemas/OverviewMoney'
+          description: Cash and bank on the last day; `before` is what they held before
+            the first
+        members:
+          allOf:
+          - $ref: '#/components/schemas/OverviewMembers'
+          description: New members
+        attendance:
+          allOf:
+          - $ref: '#/components/schemas/OverviewAttendance'
+          description: Member check-ins
+        tasks:
+          $ref: '#/components/schemas/OverviewTasks'
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - attendance
+      - days
+      - expenses
+      - from
+      - members
+      - money
+      - previous
+      - revenue
+      - tasks
+      - to
+    RevenueBefore:
+      type: object
+      properties:
+        revenue_paise:
+          type: integer
+      required:
+      - revenue_paise
+    RevenueByBranch:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        paise:
+          type: integer
+      required:
+      - key
+      - label
+      - paise
+    RevenueByMethod:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        paise:
+          type: integer
+      required:
+      - key
+      - label
+      - paise
+    RevenueByPlan:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        paise:
+          type: integer
+      required:
+      - key
+      - label
+      - paise
+    RevenueDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue_paise:
+          type: integer
+      required:
+      - date
+      - revenue_paise
+    RevenueDues:
+      type: object
+      properties:
+        members:
+          type: integer
+        total_paise:
+          type: integer
+      required:
+      - members
+      - total_paise
+    RevenueReport:
+      type: object
+      properties:
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/ReportPrevious'
+          description: The same number of days just before, which trends compare against
+        totals:
+          $ref: '#/components/schemas/RevenueTotals'
+        before:
+          $ref: '#/components/schemas/RevenueBefore'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueDay'
+        by_plan:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueByPlan'
+        by_method:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueByMethod'
+        by_branch:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueByBranch'
+        refund_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportRefund'
+          description: 'The latest refunds, at most 50: `totals.refunds` says how
+            many there were'
+        dues:
+          allOf:
+          - $ref: '#/components/schemas/RevenueDues'
+          description: What members owe now, whatever the days
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - before
+      - by_branch
+      - by_method
+      - by_plan
+      - days
+      - dues
+      - from
+      - previous
+      - refund_list
+      - series
+      - to
+      - totals
+    RevenueTotals:
+      type: object
+      properties:
+        revenue_paise:
+          type: integer
+          description: Collected less refunds
+        collected_paise:
+          type: integer
+        refunds_paise:
+          type: integer
+        refunds:
+          type: integer
+          description: How many refunds
+      required:
+      - collected_paise
+      - refunds
+      - refunds_paise
+      - revenue_paise
     Role:
       type: object
       properties:
@@ -7257,6 +9184,11 @@ components:
         gym_name:
           type: string
           readOnly: true
+        timezone:
+          type: string
+          readOnly: true
+          description: 'The gym''s time zone, like Asia/Kolkata: its days start and
+            end there'
         role:
           $ref: '#/components/schemas/RoleEnum'
         is_owner:
@@ -7273,6 +9205,7 @@ components:
       - gym
       - gym_name
       - role
+      - timezone
     RoleEnum:
       enum:
       - admin
@@ -7623,6 +9556,13 @@ components:
         balance_paise:
           type: integer
           description: The balance after this entry
+        ticked:
+          type: boolean
+          description: Matched with the bank's statement
+        reconciled:
+          type: boolean
+          description: 'Locked by a reconciliation: un-reconcile it to correct or
+            void it'
       required:
       - amount_paise
       - balance_paise
@@ -7631,17 +9571,21 @@ components:
       - member
       - meta
       - 'on'
+      - reconciled
+      - ticked
       - title
     StatementEntryKindEnum:
       enum:
       - payment
       - expense
       - move
+      - refund
       type: string
       description: |-
-        * `payment` - payment
-        * `expense` - expense
-        * `move` - move
+        * `payment` - Payment
+        * `expense` - Expense
+        * `move` - Money move
+        * `refund` - Refund
     Subscription:
       type: object
       properties:
@@ -7679,6 +9623,11 @@ components:
         paid_paise:
           type: integer
           readOnly: true
+        refunded_paise:
+          type: integer
+          readOnly: true
+          description: 'Given back: the price and what was paid are both that much
+            lower'
         frozen_from:
           type: string
           format: date
@@ -7705,6 +9654,7 @@ components:
       - plan
       - plan_name
       - price_paise
+      - refunded_paise
     SubscriptionRequest:
       type: object
       properties:
@@ -7898,6 +9848,130 @@ components:
           minLength: 1
       required:
       - text
+    TasksBefore:
+      type: object
+      properties:
+        done:
+          type: integer
+      required:
+      - done
+    TasksLate:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        assignee_name:
+          type: string
+        due_date:
+          type: string
+          format: date
+        due_time:
+          type: string
+          format: time
+          nullable: true
+        status:
+          $ref: '#/components/schemas/TaskStatusEnum'
+      required:
+      - assignee_name
+      - due_date
+      - due_time
+      - id
+      - status
+      - title
+    TasksPerson:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        total:
+          type: integer
+        done:
+          type: integer
+        overdue:
+          type: integer
+      required:
+      - done
+      - id
+      - name
+      - overdue
+      - role
+      - total
+    TasksReport:
+      type: object
+      properties:
+        previous:
+          allOf:
+          - $ref: '#/components/schemas/ReportPrevious'
+          description: The same number of days just before, which trends compare against
+        totals:
+          $ref: '#/components/schemas/TasksTotals'
+        before:
+          $ref: '#/components/schemas/TasksBefore'
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/TasksPerson'
+        late:
+          type: array
+          items:
+            $ref: '#/components/schemas/TasksLate'
+          description: The oldest overdue tasks, at most 5
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        days:
+          type: integer
+          description: Days counted, both ends included
+      required:
+      - before
+      - days
+      - from
+      - late
+      - people
+      - previous
+      - to
+      - totals
+    TasksTotals:
+      type: object
+      properties:
+        total:
+          type: integer
+        todo:
+          type: integer
+        doing:
+          type: integer
+        done:
+          type: integer
+        overdue:
+          type: integer
+      required:
+      - doing
+      - done
+      - overdue
+      - todo
+      - total
+    TickRequest:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryRefRequest'
+        ticked:
+          type: boolean
+          description: 'True: on the bank''s statement too. False: not (yet)'
+      required:
+      - entries
+      - ticked
     TokenBlacklistRequest:
       type: object
       properties:
@@ -7917,6 +9991,22 @@ components:
       required:
       - access
       - refresh
+    UnreconcileRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/StatementEntryKindEnum'
+        id:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - id
+      - kind
+      - reason
     VoidRequest:
       type: object
       properties:

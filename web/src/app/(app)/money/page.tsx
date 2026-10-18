@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useAccountsOverviewRetrieve } from "@/api/gen/accounts/accounts";
-import type { BranchMoney, MoneyMove } from "@/api/gen/model";
+import { useDrawerClosesList } from "@/api/gen/drawer-closes/drawer-closes";
+import type { BranchMoney, DrawerClose, MoneyMove } from "@/api/gen/model";
 import { useMoneyMovesListInfinite } from "@/api/gen/money-moves/money-moves";
 import { PageBar } from "@/components/shell";
 import { AddButton, Empty, ErrorText, Icon, LoadMore, Section, SkeletonRows, Stat, Status } from "@/components/ui";
+import { CountRow, CountSheet } from "@/features/drawer";
 import { accountIcon, accountMeta, BranchMoneySheet, MoveRow, MoveSheet } from "@/features/money";
 import { plural, rupees } from "@/lib/format";
 import { paged, pages } from "@/lib/hooks";
@@ -27,6 +29,9 @@ export default function MoneyPage() {
   const { rows, count } = pages(moves);
   const [branch, setBranch] = useState<BranchMoney | null>(null);
   const [move, setMove] = useState<MoneyMove | null>(null);
+  const counts = useDrawerClosesList({ state: "to_settle", limit: 20 });
+  const toSettle = counts.data?.data.results ?? [];
+  const [countOpen, setCountOpen] = useState<DrawerClose | null>(null);
   const accounts = o?.accounts ?? [];
   const live = accounts.filter((a) => a.is_active);
   const off = accounts.length - live.length;
@@ -41,6 +46,20 @@ export default function MoneyPage() {
             <Stat icon={Landmark} value={o ? rupees(o.totals.bank_paise) : "–"} label="In the bank" />
           </div>
           {q.isError && <ErrorText>Your accounts couldn&apos;t be loaded. Check your connection and try again.</ErrorText>}
+        </Section>
+
+        <Section title="Cash counts" aside={<Link className="rl-link" href="/cash/new"><span>Count Cash</span></Link>}>
+          {counts.isLoading ? <SkeletonRows n={2} /> : toSettle.length ? (
+            <>
+              <ul className="rl-card rl-activity">{toSettle.map((c) => <CountRow key={c.id} c={c} onOpen={() => setCountOpen(c)} />)}</ul>
+              <p className="rl-field__hint">{plural(counts.data?.data.count ?? 0, "count")} to settle. Settling records the difference as a deposit or withdrawal, so the cash holds what was counted.</p>
+            </>
+          ) : (
+            <div className="rl-card rl-card--pad">
+              <p className="rl-row__meta" style={{ margin: 0 }}>Nothing to settle. When the desk&apos;s count of a drawer doesn&apos;t match, it shows here.</p>
+            </div>
+          )}
+          {counts.isError && <ErrorText>The cash counts couldn&apos;t be loaded. Check your connection and try again.</ErrorText>}
         </Section>
 
         <Section title="Branches">
@@ -93,6 +112,7 @@ export default function MoneyPage() {
       </main>
       {branch && o && <BranchMoneySheet key={branch.id} branch={o.branches.find((b) => b.id === branch.id) ?? branch} accounts={accounts} onClose={() => setBranch(null)} />}
       {move && <MoveSheet key={move.id} m={move} onClose={() => setMove(null)} />}
+      {countOpen && <CountSheet key={countOpen.id} c={countOpen} admin onClose={() => setCountOpen(null)} />}
     </div>
   );
 }

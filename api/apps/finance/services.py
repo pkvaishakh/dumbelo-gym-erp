@@ -4,15 +4,16 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.db.models import BigIntegerField, F, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.expenses.models import Expense
 from apps.gyms.models import Branch
-from apps.members.models import Payment
+from apps.members.models import Payment, Refund
 
-from .models import Account, BranchAccount, MoneyMove
+from .models import Account, BranchAccount, DrawerClose, MoneyMove, Reconciliation, StatementTick
 
 
 def _total(model, fk: str, **only):
@@ -24,14 +25,38 @@ def _total(model, fk: str, **only):
 def with_balance(qs):
     """Each account with what moved it and its balance, in the same query: lists never ask per row.
 
-    A voided payment or money move never happened; an expense is removed outright, so it leaves the balance too.
+    A voided payment, refund or money move never happened; an expense is removed outright, so it leaves the balance
+    too. Refunds count as money spent out of the account.
     """
     return qs.annotate(
         collected_paise=_total(Payment, "account", voided=False),
         spent_paise=_total(Expense, "account"),
+        refunded_paise=_total(Refund, "account", voided=False),
         moved_in_paise=_total(MoneyMove, "to_account", voided=False),
         moved_out_paise=_total(MoneyMove, "from_account", voided=False),
-    ).annotate(balance_paise=F("opening_balance_paise") + F("collected_paise") - F("spent_paise") + F("moved_in_paise") - F("moved_out_paise"))
+    ).annotate(balance_paise=F("opening_balance_paise") + F("collected_paise") - F("spent_paise") - F("refunded_paise") + F("moved_in_paise")
+                - F("moved_out_paise"))
+
+
+def with_period(qs, gym, first: date, last: date):
+    """Each account's balance before `first`, what came in and went out from `first` to `last` (the gym's days) and its
+    balance after `last`, in the same query: `with_balance` cut at the period's two ends, with the same rules. In is
+    payments and money moved in; out is expenses, refunds and money moved out."""
+    lo, hi = clock.day_bounds(gym, first)[0], clock.day_bounds(gym, last)[1]
+    return qs.annotate(
+        opening_paise=F("opening_balance_paise")
+        + _total(Payment, "account", voided=False, taken_at__lt=lo) - _total(Refund, "account", voided=False, refunded_at__lt=lo)
+        - _total(Expense, "account", spent_on__lt=first)
+        + _total(MoneyMove, "to_account", voided=False, moved_on__lt=first) - _total(MoneyMove, "from_account", voided=False, moved_on__lt=first),
+        collected_paise=_total(Payment, "account", voided=False, taken_at__gte=lo, taken_at__lt=hi),
+        refunded_paise=_total(Refund, "account", voided=False, refunded_at__gte=lo, refunded_at__lt=hi),
+        spent_paise=_total(Expense, "account", spent_on__range=(first, last)),
+        moved_in_paise=_total(MoneyMove, "to_account", voided=False, moved_on__range=(first, last)),
+        moved_out_paise=_total(MoneyMove, "from_account", voided=False, moved_on__range=(first, last)),
+    ).annotate(
+        in_paise=F("collected_paise") + F("moved_in_paise"),
+        out_paise=F("spent_paise") + F("refunded_paise") + F("moved_out_paise"),
+    ).annotate(closing_paise=F("opening_paise") + F("in_paise") - F("out_paise"))
 
 
 def listed(gym):
@@ -54,6 +79,16 @@ def _lock(*accounts: Account | None) -> None:
     for a in accounts:
         if a is not None and not live[a.pk]:
             raise RuleBroken("inactive", f"{a.label} is deactivated. Reactivate it first.")
+
+
+def before_change(kind: str, entry_id: int) -> None:
+    """Call inside the transaction that corrects, voids or removes a payment, expense or money move. A reconciled one
+    is refused until an admin un-reconciles it; a tick not reconciled yet is dropped, since the entry no longer looks
+    the way it did when it was matched with the bank."""
+    ticks = list(StatementTick.objects.select_for_update().filter(kind=kind, entry_id=entry_id))
+    if any(t.reconciliation_id for t in ticks):
+        raise RuleBroken("reconciled", "This is reconciled with the bank's statement. Un-reconcile it on the account's statement first.")
+    StatementTick.objects.filter(pk__in=[t.pk for t in ticks]).delete()
 
 
 @transaction.atomic
@@ -100,6 +135,19 @@ def set_branch_account(branch: Branch, account: Account | None) -> int | None:
     else:
         BranchAccount.objects.create(branch=branch, account=account)
     return before
+
+
+def check_opening(account: Account, opening_paise: int) -> None:
+    """A new opening balance, checked under the account's lock before it's saved: lowering it can't leave the account
+    below zero, since money already spent or moved out of it was really there. Raising it is always fine, even when
+    expenses have it below zero already."""
+    if opening_paise >= account.opening_balance_paise:
+        return
+    _lock(account)
+    after = balance_of(account) - account.opening_balance_paise + opening_paise
+    if after < 0:
+        least = opening_paise - after
+        raise RuleBroken("below_zero", f"That would leave {account.label} at −{rupees(-after)}. Enter {rupees(least)} or more.")
 
 
 @transaction.atomic
@@ -149,10 +197,13 @@ def void(m: MoneyMove, reason: str) -> MoneyMove:
     m = MoneyMove.objects.select_for_update(of=("self",)).select_related("to_account__branch").get(pk=m.pk)
     if m.voided:
         raise RuleBroken("voided", "This one is already voided")
+    before_change(StatementTick.MOVE, m.pk)
     if m.to_account is not None and (held := balance_of(m.to_account)) < m.amount_paise:
         raise RuleBroken("not_enough", f"{m.to_account.label} holds {rupees(max(held, 0))}, less than this brought in. Move money back to it first.")
     m.voided, m.void_reason = True, reason
     m.save(update_fields=["voided", "void_reason", "updated_at"])
+    # It settled a cash count: the difference is open again, for the admin to settle the right way.
+    DrawerClose.objects.filter(settle_move=m).update(settle_move=None, settled_by=None, settled_at=None, settle_reason="", updated_at=timezone.now())
     return m
 
 
@@ -181,6 +232,12 @@ def overview(gym) -> dict:
     return {"totals": {"cash_paise": cash, "bank_paise": bank, "total_paise": cash + bank}, "branches": branches, "accounts": accounts}
 
 
+def cleared(account: Account, up_to: date) -> int:
+    """What the bank should say the account held at the end of `up_to`: its opening balance and every entry ticked as
+    on the bank's statement, dated up to then."""
+    return account.opening_balance_paise + (StatementTick.objects.filter(account=account, on__lte=up_to).aggregate(t=Sum("amount_paise"))["t"] or 0)
+
+
 def statement(account: Account, month: date) -> dict:
     """One account's month, entry by entry, to check against the bank's statement or the drawer: every payment taken
     in, expense paid out and money moved, oldest first, with the balance after each. It opens with the balance the
@@ -190,13 +247,15 @@ def statement(account: Account, month: date) -> dict:
     first, last = max(month, account.opened_on), min(clock.add_months(month, 1) - timedelta(days=1), clock.today(gym))
     start, end = clock.day_bounds(gym, first)[0], clock.day_bounds(gym, last)[1]
     payments = Payment.objects.filter(account=account, voided=False)
+    refunds = Refund.objects.filter(account=account, voided=False)
     expenses = Expense.objects.filter(account=account)
     moves = MoneyMove.objects.filter(Q(from_account=account) | Q(to_account=account), voided=False)
 
     def total(qs, **before):
         return qs.filter(**before).aggregate(t=Sum("amount_paise"))["t"] or 0
 
-    opening = (account.opening_balance_paise + total(payments, taken_at__lt=start) - total(expenses, spent_on__lt=first)
+    opening = (account.opening_balance_paise + total(payments, taken_at__lt=start) - total(refunds, refunded_at__lt=start)
+               - total(expenses, spent_on__lt=first)
                + total(moves.filter(to_account=account), moved_on__lt=first) - total(moves.filter(from_account=account), moved_on__lt=first))
     entries = []
     if first <= last:
@@ -204,6 +263,10 @@ def statement(account: Account, month: date) -> dict:
             entries.append((clock.local(gym, p.taken_at).date(), p.taken_at, {
                 "kind": "payment", "id": p.pk, "member": p.member_id, "title": p.member.name,
                 "meta": f"Payment by {p.get_method_display()}", "amount_paise": p.amount_paise}))
+        for r in refunds.filter(refunded_at__gte=start, refunded_at__lt=end).select_related("member"):
+            entries.append((clock.local(gym, r.refunded_at).date(), r.refunded_at, {
+                "kind": "refund", "id": r.pk, "member": r.member_id, "title": r.member.name,
+                "meta": f"Refund by {r.get_method_display()}", "amount_paise": -r.amount_paise}))
         for e in expenses.filter(spent_on__gte=first, spent_on__lte=last):
             entries.append((e.spent_on, e.created_at, {
                 "kind": "expense", "id": e.pk, "member": None, "title": e.paid_to or e.get_category_display(),
@@ -216,12 +279,88 @@ def statement(account: Account, month: date) -> dict:
                 "kind": "move", "id": m.pk, "member": None, "title": title, "meta": m.note or m.get_kind_display(),
                 "amount_paise": m.amount_paise if into else -m.amount_paise}))
     entries.sort(key=lambda x: (x[0], x[1]))
+    ticks = dict(((t.kind, t.entry_id), t.reconciliation_id is not None)
+                 for t in StatementTick.objects.filter(account=account, on__gte=first, on__lte=last).only("kind", "entry_id", "reconciliation"))
     balance, rows = opening, []
     for on, _, row in entries:
         balance += row["amount_paise"]
-        rows.append({**row, "on": on, "balance_paise": balance})
+        mark = ticks.get((row["kind"], row["id"]))
+        rows.append({**row, "on": on, "balance_paise": balance, "ticked": mark is not None, "reconciled": bool(mark)})
+    last_check = Reconciliation.objects.filter(account=account).select_related("by__user").first()
     return {
         "from": first, "to": last, "opening_paise": opening, "closing_paise": balance,
+        "cleared_paise": cleared(account, last),
+        "reconciled": {"up_to": last_check.up_to, "bank_balance_paise": last_check.bank_balance_paise, "by_name": last_check.by.user.name,
+                       "at": last_check.created_at} if last_check else None,
         "in_paise": sum(r["amount_paise"] for r in rows if r["amount_paise"] > 0),
         "out_paise": -sum(r["amount_paise"] for r in rows if r["amount_paise"] < 0), "entries": rows,
     }
+
+
+def cash_of(branch: Branch) -> Account | None:
+    """The branch's cash in hand, while it is in use."""
+    return Account.objects.filter(gym_id=branch.gym_id, kind=Account.CASH, branch=branch, is_active=True).select_related("branch").first()
+
+
+@transaction.atomic
+def close_drawer(branch: Branch, *, counted_paise: int, by, note: str = "") -> tuple[DrawerClose, dict | None]:
+    """The desk's count of a branch's cash today, against its balance this moment. Counting again the same day
+    replaces the count until an admin settles it. Answers the count and, when it replaced one, what that one said."""
+    account = cash_of(branch)
+    if account is None:
+        raise RuleBroken("no_cash_account", f"{branch.name}'s cash isn't set up yet. Ask an admin to set it up in Cash and bank.")
+    if counted_paise < 0:
+        raise RuleBroken("amount_invalid", "Enter what you counted, or 0")
+    _lock(account)  # the balance and the count belong to the same moment, and two desks counting at once take turns
+    day = clock.today(branch.gym)
+    close = DrawerClose.objects.filter(branch=branch, day=day).first()
+    if close is not None and close.settled_at is not None:
+        raise RuleBroken("settled", "Today's count is settled already. Ask an admin if the drawer has changed since.")
+    before = None if close is None else {"counted_paise": close.counted_paise, "expected_paise": close.expected_paise, "note": close.note}
+    close = close or DrawerClose(gym_id=branch.gym_id, branch=branch, day=day)
+    close.account, close.counted_paise, close.expected_paise = account, counted_paise, balance_of(account)
+    close.note, close.counted_by, close.counted_at = note, by, timezone.now()
+    close.save()
+    return close, before
+
+
+@transaction.atomic
+def settle_close(close: DrawerClose, *, reason: str, by) -> DrawerClose:
+    """An admin squares a count that didn't match: a deposit of the extra cash, or a withdrawal of what's missing,
+    dated the day it was counted, so the cash in hand's balance is what the desk counted."""
+    _lock(close.account)  # before the count, in the order close_drawer takes them, so a recount and this never deadlock
+    close = DrawerClose.objects.select_for_update(of=("self",)).select_related("account__branch", "branch__gym").get(pk=close.pk)
+    if close.settled_at is not None:
+        raise RuleBroken("settled", "This count is settled already")
+    diff = close.difference_paise
+    if diff == 0:
+        raise RuleBroken("nothing_to_settle", "This count matched. There's nothing to settle.")
+    note = f"Cash count, {clock.date_label(close.day)}: {reason}"[:200]
+    side = {"to_account": close.account} if diff > 0 else {"from_account": close.account}
+    m = move(close.branch.gym, kind=MoneyMove.DEPOSIT if diff > 0 else MoneyMove.WITHDRAWAL, amount_paise=abs(diff), moved_on=close.day,
+             by=by, note=note, **side)
+    close.settle_move, close.settled_by, close.settled_at, close.settle_reason = m, by, timezone.now(), reason
+    close.save(update_fields=["settle_move", "settled_by", "settled_at", "settle_reason", "updated_at"])
+    return close
+
+
+def cash_today(gym, branches) -> list[dict]:
+    """Each branch's cash in hand for the desk: its balance now, what came in and went out of it today, and today's
+    count, in a fixed number of queries."""
+    branches = list(branches)
+    today = clock.today(gym)
+    start, end = clock.day_bounds(gym, today)
+    accounts = with_balance(Account.objects.filter(gym=gym, kind=Account.CASH, is_active=True, branch__in=branches)).annotate(
+        in_today=_total(Payment, "account", voided=False, taken_at__gte=start, taken_at__lt=end) + _total(MoneyMove, "to_account", voided=False, moved_on=today),
+        out_today=_total(Expense, "account", spent_on=today) + _total(Refund, "account", voided=False, refunded_at__gte=start, refunded_at__lt=end)
+        + _total(MoneyMove, "from_account", voided=False, moved_on=today),
+    )
+    accounts = {a.branch_id: a for a in accounts}
+    closes = {c.branch_id: c for c in DrawerClose.objects.filter(gym=gym, day=today, branch__in=branches)
+              .select_related("branch", "counted_by__user", "settled_by__user")}
+    rows = []
+    for b in branches:
+        a = accounts.get(b.pk)
+        rows.append({"branch": b.pk, "branch_name": b.name, "account": a and a.pk, "balance_paise": a and a.balance_paise,
+                     "in_paise": a.in_today if a else 0, "out_paise": a.out_today if a else 0, "close": closes.get(b.pk)})
+    return rows

@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Count, Exists, Min, OuterRef, Q, Sum
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import mixins, serializers, viewsets
@@ -10,6 +11,8 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.params import int_param
 from apps.core.tenancy import ADMIN, DESK, GymViewMixin
+from apps.finance.models import StatementTick
+from apps.finance.services import before_change
 from apps.gyms.models import GymRole
 
 from . import services
@@ -67,12 +70,18 @@ class ExpenseViewSet(GymViewMixin, viewsets.ModelViewSet):
         if kind == "salary":
             raise RuleBroken("paid_a_salary", "This expense paid a salary. Change it from Payroll.")
 
+    @transaction.atomic
     def perform_update(self, serializer):
-        self._not_linked(serializer.instance)
+        e = serializer.instance
+        self._not_linked(e)
+        if any(f in serializer.validated_data and serializer.validated_data[f] != getattr(e, f) for f in ("amount_paise", "method", "branch", "spent_on")):
+            before_change(StatementTick.EXPENSE, e.pk)  # what it was paid with, from where or when: no longer what the bank showed
         serializer.save()
 
+    @transaction.atomic
     def perform_destroy(self, expense):
         self._not_linked(expense)
+        before_change(StatementTick.EXPENSE, expense.pk)
         expense.delete()
 
     @action(detail=False, methods=["get"])

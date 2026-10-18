@@ -1,12 +1,15 @@
 """One check-in rule book for the desk, the wall QR and the turnstile."""
 from collections import defaultdict
+from datetime import time
 
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Min
+from django.db.models.functions import ExtractHour, ExtractMinute
 from django.utils import timezone
 
 from apps.core import clock
 from apps.core.errors import RuleBroken
-from apps.gyms.models import GymRole
+from apps.gyms.models import Branch, BranchSession, GymRole
 
 from .models import CheckIn, _token
 
@@ -53,23 +56,38 @@ def session_name(checkin, gym):
     return s.name if s else None
 
 
-def count_by_session(checkins, gym):
-    """Check-ins counted by session and by who came (member, trainer, receptionist, admin), sessions in the order
-    of the day. Shared by the Attendance and Home screens. Returns (totals, sessions)."""
-    from django.db.models import Min
-
-    from apps.gyms.models import BranchSession
-
+def _tally(rows, gym):
+    """(session, who came, how many) rows into totals and sessions in the order of the day: Morning before Evening,
+    by the earliest start of a session with that name anywhere in the gym, and "Other" last."""
     zero = lambda: {"member": 0, "trainer": 0, "receptionist": 0, "admin": 0}  # noqa: E731
     totals, by_session = zero(), defaultdict(zero)
-    for c in checkins:
-        kind = "member" if c.member_id else c.staff.role
-        by_session[session_name(c, gym) or "Other"][kind] += 1
-        totals[kind] += 1
-    # Morning before Evening: by the earliest start of a session with that name anywhere in the gym; "Other" last.
+    for name, kind, n in rows:
+        by_session[name][kind] += n
+        totals[kind] += n
     starts = dict(BranchSession.objects.filter(branch__gym=gym).values("name").annotate(m=Min("starts")).values_list("name", "m"))
     order = sorted(by_session, key=lambda name: (name not in starts, starts.get(name) or name))
     return totals, [{"session": name, **by_session[name]} for name in order]
+
+
+def count_by_session(checkins, gym):
+    """Check-ins counted by session and by who came (member, trainer, receptionist, admin), sessions in the order
+    of the day. Shared by the Attendance and Home screens. Returns (totals, sessions)."""
+    return _tally(((session_name(c, gym) or "Other", "member" if c.member_id else c.staff.role, 1) for c in checkins), gym)
+
+
+def count_by_session_over(checkins, gym):
+    """The same counts as `count_by_session` for any number of days, without loading each check-in: grouped by
+    branch, local time to the minute and who came, so the work grows with the minutes in a day, not the visits."""
+    zone = clock.tz(gym)
+    rows = (checkins.order_by().annotate(h=ExtractHour("at", tzinfo=zone), m=ExtractMinute("at", tzinfo=zone))
+            .values_list("branch_id", "h", "m", "staff__role").annotate(n=Count("id")))
+    branches = {b.pk: b for b in Branch.objects.filter(gym=gym).prefetch_related("sessions")}
+
+    def name(branch_id, h, m):
+        s = branches[branch_id].session_for(time(h, m))
+        return s.name if s else "Other"
+
+    return _tally(((name(b, h, m), role or "member", n) for b, h, m, role, n in rows), gym)
 
 
 def rotate_device_token(device):

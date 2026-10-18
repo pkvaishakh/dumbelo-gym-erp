@@ -7,9 +7,10 @@
  */
 
 /**
- * * `payment` - payment
-* `expense` - expense
-* `move` - move
+ * * `payment` - Payment
+* `expense` - Expense
+* `move` - Money move
+* `refund` - Refund
  */
 export type StatementEntryKindEnum = typeof StatementEntryKindEnum[keyof typeof StatementEntryKindEnum];
 
@@ -19,4 +20,5 @@ export const StatementEntryKindEnum = {
   payment: 'payment',
   expense: 'expense',
   move: 'move',
+  refund: 'refund',
 } as const;

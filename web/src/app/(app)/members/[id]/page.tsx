@@ -1,6 +1,6 @@
 "use client";
 import {
-  BellRing, CalendarCheck, CircleCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, UserRound,
+  BellRing, CalendarCheck, CircleCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, Undo2, UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import { useSubscriptionsRetrieve } from "@/api/gen/subscriptions/subscriptions"
 import { DetailBar } from "@/components/shell";
 import { Details, ErrorText, Field, Icon, LoadMore, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { CheckInResult, useCheckIn } from "@/features/checkin";
+import { RefundRows, RefundSheet } from "@/features/refunds";
 import { day, daysLeft, isoDate, phone, rupees } from "@/lib/format";
 import { paged, pages, useAction, useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -37,7 +38,7 @@ export default function MemberProfile() {
   const visits = useCheckinsList({ member: mid, limit: 10 });
   const notes = useGet<Note[]>(`/api/members/${mid}/notes/`, undefined, role.role !== "member");
   const { checkIn, outcome, busy, close } = useCheckIn();
-  const [sheet, setSheet] = useState<null | "more" | "note" | "freeze" | "login" | "edit" | "archive" | { void: Payment }>(null);
+  const [sheet, setSheet] = useState<null | "more" | "note" | "freeze" | "login" | "edit" | "archive" | "refund" | { void: Payment }>(null);
   const today = isoDate(new Date());
   const inToday = visits.data?.data.results.find((c) => c.local_date === today);
 
@@ -95,6 +96,7 @@ export default function MemberProfile() {
                     <div className="rl-sub">
                       {sub && <span><strong>Price:</strong> {rupees(sub.price_paise)}{sub.offer_name ? ` with ${sub.offer_name} (was ${rupees(sub.list_price_paise)})` : ""}</span>}
                       {sub && <span><strong>Paid:</strong> {rupees(sub.paid_paise)}{sub.paid_paise < sub.price_paise ? ` of ${rupees(sub.price_paise)}` : " in full"}</span>}
+                      {sub && sub.refunded_paise > 0 && <span><strong>Refunded:</strong> {rupees(sub.refunded_paise)}</span>}
                       {balance > 0 && <span><strong>Payment due:</strong> {rupees(balance)}</span>}
                     </div>
                   )}
@@ -128,6 +130,7 @@ export default function MemberProfile() {
                     ))}
                   </ul><LoadMore q={paysQ} /></>
                 ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No payments yet.</p></div>}
+                <RefundRows member={mid} admin={role.role === "admin"} />
               </Section>
             )}
             <Section title="Recent visits">
@@ -167,6 +170,7 @@ export default function MemberProfile() {
             ? <SheetItem icon={Play} label="Unfreeze Membership" onClick={() => setSheet("freeze")} />
             : <SheetItem icon={Pause} label="Freeze Membership" onClick={() => setSheet("freeze")} />)}
           <SheetItem icon={KeyRound} label={m.has_login ? "Reset App Password" : "Set Up App Login"} onClick={() => setSheet("login")} />
+          {role.role === "admin" && pays.length > 0 && <SheetItem icon={Undo2} label="Refund Money" onClick={() => setSheet("refund")} />}
           {role.role === "admin" && <SheetItem icon={Trash2} label="Archive Member" onClick={() => setSheet("archive")} />}
         </ul>
       </Sheet>
@@ -175,6 +179,7 @@ export default function MemberProfile() {
       <LoginSheet open={sheet === "login"} member={m} onClose={() => setSheet(null)} />
       {desk && <EditSheet open={sheet === "edit"} member={m} onClose={() => setSheet(null)} />}
       <ArchiveSheet open={sheet === "archive"} member={m} onClose={() => setSheet(null)} />
+      {sheet === "refund" && <RefundSheet member={mid} name={m.name} onClose={() => setSheet(null)} />}
       <VoidSheet payment={typeof sheet === "object" && sheet ? sheet.void : null} onClose={() => setSheet(null)} />
     </div>
   );

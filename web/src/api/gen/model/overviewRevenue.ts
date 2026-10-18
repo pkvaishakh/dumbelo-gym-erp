@@ -6,4 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ReportsPeriodRetrieve200 = {[key: string]: unknown};
+export interface OverviewRevenue {
+  value: number;
+  /** The same figure for the days just before */
+  before: number;
+}

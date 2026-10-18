@@ -32,16 +32,24 @@ export function Greeting() {
   );
 }
 
+type BranchPick = {
+  /** The branch shown, when a screen keeps its own (Reports keep it in the URL); the session's otherwise. */
+  value?: number | null;
+  /** Called after a pick, besides changing the session's branch. */
+  onPick?: (id: number | null) => void;
+};
+
 /** The admin's branch switcher: a chip naming the branch, opening the branch sheet. */
-export function BranchChip() {
-  const { branchName } = useSession();
+export function BranchChip({ value, onPick }: BranchPick) {
+  const { branchName, role } = useSession();
   const [open, setOpen] = useState(false);
+  const name = value === undefined ? branchName : value === null ? "All branches" : role.branches.find((b) => b.id === value)?.name ?? branchName;
   return (
     <>
-      <button className="rl-chip" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Branch: ${branchName}. Switch branch`}>
-        {branchName}<Icon as={ChevronDown} size="xs" />
+      <button className="rl-chip" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Branch: ${name}. Switch branch`}>
+        {name}<Icon as={ChevronDown} size="xs" />
       </button>
-      <BranchSheet open={open} onClose={() => setOpen(false)} />
+      <BranchSheet open={open} onClose={() => setOpen(false)} value={value} onPick={onPick} />
     </>
   );
 }
@@ -59,9 +67,10 @@ export function HomeBar() {
   );
 }
 
-export function BranchSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { role, branch, setBranch } = useSession();
-  const pick = (id: number | null) => { setBranch(id); onClose(); };
+export function BranchSheet({ open, onClose, value, onPick }: { open: boolean; onClose: () => void } & BranchPick) {
+  const { role, branch: current, setBranch } = useSession();
+  const branch = value === undefined ? current : value;
+  const pick = (id: number | null) => { setBranch(id); onPick?.(id); onClose(); };
   return (
     <Sheet open={open} onClose={onClose} title="Branch">
       <ul className="rl-sheet__list">
@@ -161,7 +170,7 @@ export function TabBar() {
   const tabs = TABS[role.role];
   if (/\/(new|edit)(\/|$)/.test(path)) return null; // task screens have their own action bar
   const hasCreate = role.role === "admin" || role.role === "receptionist";
-  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|payroll|money|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && path.startsWith("/expenses") && role.role === "receptionist") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
+  const current = (href: string) => path === href || (href !== "/home" && path.startsWith(href + "/")) || (href === "/more" && /^\/(staff|plans|offers|branches|devices|expenses|payroll|money|cash|support|tasks)/.test(path) && role.role === "admin") || (href === "/more" && /^\/(expenses|cash)/.test(path) && role.role === "receptionist") || (href === "/more" && path.startsWith("/members") && role.role === "admin");
   const render = (t: Tab) => (
     <Link key={t.href} className="rl-tab" href={t.href} aria-current={current(t.href) ? "page" : undefined}>
       <span className="rl-tab__icon"><Icon as={t.icon} /></span>{t.label}

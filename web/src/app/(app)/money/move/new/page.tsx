@@ -10,8 +10,9 @@ import { TaskBar } from "@/components/shell";
 import { Choices, Confirm, ErrorText, Field, Sheet } from "@/components/ui";
 import { MONEY } from "@/features/money";
 import { ActionBar } from "@/features/sell";
-import { isoDate, rupees, toPaise } from "@/lib/format";
+import { gymToday, rupees, toPaise } from "@/lib/format";
 import { fieldError, useAction } from "@/lib/hooks";
+import { useSession } from "@/lib/session";
 
 type Kind = "transfer" | "deposit" | "withdrawal";
 const KINDS = [
@@ -24,7 +25,7 @@ const VERB: Record<Kind, [string, string]> = { transfer: ["Move", "moved"], depo
 function MoveMoney() {
   const start = Number(useSearchParams().get("account")) || 0;
   const accounts = useAccountsList({ is_active: true }).data?.data ?? [];
-  const today = isoDate(new Date());
+  const today = gymToday(useSession().role.timezone); // the API refuses a day after the gym's today
   const [f, setF] = useState({ kind: "transfer" as Kind, from: start, to: 0, amount: "", moved_on: today, note: "" });
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [done, setDone] = useState<MoneyMove | null>(null);

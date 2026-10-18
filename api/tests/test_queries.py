@@ -61,7 +61,7 @@ def test_list_queries_dont_grow_with_rows(w, who, url):
 
 #: Home's summary is many figures in one call; since it shows expense dues it also writes any new bill dates
 #: (one read, one insert at most) and counts bills and salaries owed.
-BUDGET = {"/api/reports/summary/": 15}
+BUDGET = {"/api/reports/summary/": 17}  # +2: refunds come off today's and the month's revenue
 
 
 @pytest.mark.parametrize("who,url", LISTS)

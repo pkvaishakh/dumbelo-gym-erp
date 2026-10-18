@@ -5,6 +5,7 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { AccountStatementReconciled } from './accountStatementReconciled';
 import type { StatementEntry } from './statementEntry';
 
 export interface AccountStatement {
@@ -18,5 +19,12 @@ export interface AccountStatement {
   closing_paise: number;
   in_paise: number;
   out_paise: number;
+  /** Bank accounts: the opening balance and the ticked entries up to the last day shown */
+  cleared_paise: number;
+  /**
+   * The latest check against the bank's statement
+   * @nullable
+   */
+  reconciled: AccountStatementReconciled;
   entries: StatementEntry[];
 }

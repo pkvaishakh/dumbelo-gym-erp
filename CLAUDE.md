@@ -28,8 +28,8 @@ Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptio
 
 | Role | Can | Can't |
 |---|---|---|
-| Admin | Everything in every branch: plans, offers, staff, branches, reports, expenses, recurring bills, payroll, correct/void payments, tasks | Remove the account owner |
-| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, payments and expenses one day at a time (and add expenses), their tasks | Revenue totals, reports, staff data, expenses over longer spans, edit expenses, make offers, correct/void |
+| Admin | Everything in every branch: plans, offers, staff, branches, reports, expenses, recurring bills, payroll, cash and bank, correct/void payments, refunds, settle cash counts, reconcile, tasks | Remove the account owner |
+| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, payments and expenses one day at a time (and add expenses), their branches' cash in hand (read-only) and counting it at close, their tasks | Revenue totals, reports, staff data, the bank, expenses over longer spans, edit expenses, make offers, correct/void, refunds, move money, settle a count |
 | Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in | See any amount |
 | Member | Their own membership and visits, self check-in by wall QR | See anyone else |
 

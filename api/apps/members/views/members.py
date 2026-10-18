@@ -11,12 +11,14 @@ from rest_framework.response import Response
 from apps.audit.models import record
 from apps.core import clock
 from apps.core.errors import RuleBroken
-from apps.core.params import int_param
+from apps.core.params import day_range, int_param
 from apps.core.tenancy import ADMIN, ALL, DESK, STAFF, GymViewMixin
+from apps.finance.models import StatementTick
+from apps.finance.services import before_change
 from apps.gyms.models import GymRole
 
-from .models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Subscription
-from .serializers import (
+from ..models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Subscription
+from ..serializers import (
     FreezeSerializer, MemberSelfSerializer, MemberSerializer, NoteSerializer, OfferSerializer, PasswordSerializer, PaymentCorrectSerializer,
     PaymentSerializer, PlanSerializer, SubscriptionSerializer, TrainerMemberSerializer, VoidSerializer, set_login,
 )
@@ -238,8 +240,8 @@ class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMode
         sub = self.get_object()
         s = VoidSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        if sub.paid_paise() > 0:
-            raise RuleBroken("has_payments", "Void this plan's payments first")
+        if sub.paid_paise() - sub.refunded_paise() > 0:
+            raise RuleBroken("has_payments", "Refund or void this plan's payments first")
         sub.cancelled = True
         sub.save(update_fields=["cancelled"])
         record(request, "subscription.cancelled", sub, None, {"reason": s.validated_data["reason"]})
@@ -275,27 +277,17 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         return qs
 
     def _days(self):
-        """The first and last local day asked for: ?date= for one day, or ?from=&to= for a range (either end may be
-        left out). Receptionists see one day's money at a time; totals over longer spans are for admins."""
-        p = self.request.query_params
-        if day := clock.parse_date(p.get("date"), None):
-            return day, day
-        first = clock.parse_date(p.get("from"), None, field="from")
-        last = clock.parse_date(p.get("to"), None, field="to")
-        if not first and not last:
-            return None
-        today = clock.today(self.gym)
-        first, last = first or last or today, last or today
-        if first > last:
-            raise ValidationError({"from": ["Pick a start date on or before the end date"]})
-        if first != last and self.me.role not in (GymRole.ADMIN, "support"):
-            raise RuleBroken("not_allowed", "You can see one day's collection at a time")
-        return first, last
+        """Receptionists see one day's money at a time; totals over longer spans are for admins."""
+        return day_range(self.request, clock.today(self.gym), many_days=self.me.role in (GymRole.ADMIN, "support"), what="collection")
 
+    @transaction.atomic
     def perform_update(self, serializer):
         p = serializer.instance
         if p.voided:
             raise RuleBroken("voided", "This payment was voided")
+        d = serializer.validated_data
+        if d.get("amount_paise", p.amount_paise) != p.amount_paise or d.get("method", p.method) != p.method:
+            before_change(StatementTick.PAYMENT, p.pk)
         before = {"amount_paise": p.amount_paise, "method": p.method, "note": p.note}
         reason = serializer.validated_data.pop("reason")
         p = serializer.save()
@@ -303,12 +295,14 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
 
     @extend_schema(request=VoidSerializer, responses=PaymentSerializer)
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def void(self, request, pk=None):
         p = self.get_object()
         s = VoidSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         if p.voided:
             raise RuleBroken("voided", "Already voided")
+        before_change(StatementTick.PAYMENT, p.pk)
         p.voided, p.void_reason = True, s.validated_data["reason"]
         p.save(update_fields=["voided", "void_reason", "updated_at"])
         record(request, "payment.voided", p, {"voided": False}, {"voided": True, "reason": p.void_reason})

@@ -169,6 +169,63 @@ test("admin: cash and bank, a shared account, and banking a branch's cash", asyn
   await page.getByRole("link", { name: "Statement" }).click();
   await expect(page.getByRole("heading", { name: "Statement" })).toBeVisible();
   await expect(page.getByText("From Indiranagar cash").first()).toBeVisible();
+  // Ticking an entry as on the bank's statement too, and unticking it again.
+  const first = page.getByRole("button", { name: /on the bank's statement/ }).first();
+  await first.click();
+  await expect(first).toHaveAttribute("aria-pressed", "true");
+  await first.click();
+  await expect(first).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("heading", { name: "Check against the bank" })).toBeVisible();
+  // The month as a CSV for the accountant, and as a page to print or save as a PDF.
+  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download CSV" }).click()]);
+  expect(file.suggestedFilename()).toMatch(/^HDFC current \d{4}-\d{2}\.csv$/);
+  await page.getByRole("link", { name: "Print or PDF" }).click();
+  await expect(page.getByText(/^Closing balance/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print Statement" })).toBeVisible();
+});
+
+test("receptionist counts the cash short, and an admin settles it", async ({ page }) => {
+  await signIn(page, "arjun@rackline.demo");
+  // Home shows the drawers' cash; More leads to each drawer, then Count Cash.
+  await expect(page.getByRole("link", { name: /Cash in hand/ })).toBeVisible();
+  await page.goto("/more");
+  await page.getByRole("link", { name: /Cash in hand/ }).click();
+  await expect(page.getByText("Should be in the drawer").first()).toBeVisible();
+  await page.getByRole("link", { name: /^Count (Cash|Again)$/ }).first().click();
+  await page.getByRole("radio", { name: "Indiranagar" }).check();
+  const expected = (await page.getByText(/Should be in Indiranagar's drawer/).locator("..").locator(".rl-stat__value").textContent())!;
+  const short = Number(expected.replace(/[^\d]/g, "")) - 100; // ₹100 short
+  await page.getByLabel("Cash counted in rupees").fill(String(short));
+  await expect(page.getByText("₹100 short: an admin settles the difference.")).toBeVisible();
+  await page.getByRole("button", { name: "Save Count" }).click();
+  await expect(page.getByText("Cash counted: ₹100 short")).toBeVisible();
+
+  await page.getByRole("link", { name: "Done" }).click();
+  await page.evaluate(() => localStorage.clear());
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/money");
+  await page.getByRole("button", { name: /Indiranagar cash.*₹100 short/ }).click();
+  await page.getByLabel("What happened").fill("Change given twice");
+  await page.getByRole("button", { name: "Settle ₹100" }).click();
+  await expect(page.getByText("Nothing to settle.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Withdrawal.*Cash count/ }).first()).toBeVisible();
+});
+
+test("admin: refunds part of a plan, and the member owes nothing because of it", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/members?status=active");
+  await page.locator("a.rl-mrow").first().click();
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("button", { name: "Refund Money" }).click();
+  const sheet = page.getByRole("dialog", { name: "Refund Money" });
+  await sheet.locator("input[name=refund-plan]").first().check({ force: true });
+  await sheet.getByLabel("Amount to refund in rupees").fill("100");
+  await sheet.getByLabel("Reason").fill("Goodwill");
+  await sheet.getByRole("button", { name: "Refund ₹100" }).click();
+  await expect(page.getByText("₹100 refunded")).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("−₹100 by CASH")).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Collect/ })).toHaveCount(0);
 });
 
 test("trainer: no cash and bank in More", async ({ page }) => {
@@ -176,4 +233,43 @@ test("trainer: no cash and bank in More", async ({ page }) => {
   await page.goto("/more");
   await expect(page.getByRole("heading", { name: "Your work" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Cash and bank/ })).toHaveCount(0);
+});
+
+test("admin: reports by category, 30 days, a custom range over 3 months, and downloads", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" }).click();
+  await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
+  for (const name of ["Revenue", "Expenses", "Members", "Attendance", "Tasks"]) await expect(page.getByRole("main").getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
+
+  await page.getByRole("main").getByRole("link", { name: /^Cash and bank/ }).click();
+  await expect(page).toHaveURL(/\/reports\/money/);
+  await expect(page.getByRole("heading", { name: "Total funds" })).toBeVisible();
+  await page.getByRole("button", { name: "30 days", exact: true }).click();
+  await expect(page).toHaveURL(/period=30d/);
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+
+  // Four months back is more than 3: the API's words, under From, before anything is asked for.
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  const back = new Date();
+  back.setMonth(back.getMonth() - 4);
+  await page.getByLabel("From", { exact: true }).fill(back.toISOString().slice(0, 10));
+  await page.getByRole("button", { name: "Show Report" }).click();
+  await expect(page.getByText("Pick a range of 3 months or less")).toBeVisible();
+
+  await page.getByRole("button", { name: "30 days", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download CSV" }).click()]);
+  expect(file.suggestedFilename()).toMatch(/^Cash and bank \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}\.csv$/);
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await page.getByRole("link", { name: "Print or PDF" }).click();
+  await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print Report" })).toBeVisible();
+});
+
+test("receptionist: no Reports", async ({ page }) => {
+  await signIn(page, "arjun@rackline.demo");
+  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" })).toHaveCount(0);
+  await page.goto("/reports");
+  await expect(page.getByText("Reports are for admins")).toBeVisible();
 });

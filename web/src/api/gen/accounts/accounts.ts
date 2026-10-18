@@ -32,7 +32,11 @@ import type {
   AccountsStatementRetrieveParams,
   BranchAccountRequest,
   MoneyOverview,
-  PatchedAccountRequest
+  PatchedAccountRequest,
+  ReconcileRequest,
+  Reconciliation,
+  TickRequest,
+  UnreconcileRequest
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -674,6 +678,87 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
+ * The bank's statement agrees up to a day: the ticked entries up to then are locked.
+ */
+export type accountsReconcileCreateResponse200 = {
+  data: Reconciliation
+  status: 200
+}
+    
+export type accountsReconcileCreateResponseSuccess = (accountsReconcileCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type accountsReconcileCreateResponse = (accountsReconcileCreateResponseSuccess)
+
+export const getAccountsReconcileCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/accounts/${id}/reconcile/`
+}
+
+export const accountsReconcileCreate = async (id: number,
+    reconcileRequest: ReconcileRequest, options?: RequestInit): Promise<accountsReconcileCreateResponse> => {
+  
+  return apiFetch<accountsReconcileCreateResponse>(getAccountsReconcileCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      reconcileRequest,)
+  }
+);}
+
+
+
+
+export const getAccountsReconcileCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountsReconcileCreate>>, TError,{id: number;data: ReconcileRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof accountsReconcileCreate>>, TError,{id: number;data: ReconcileRequest}, TContext> => {
+
+const mutationKey = ['accountsReconcileCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof accountsReconcileCreate>>, {id: number;data: ReconcileRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  accountsReconcileCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AccountsReconcileCreateMutationResult = NonNullable<Awaited<ReturnType<typeof accountsReconcileCreate>>>
+    export type AccountsReconcileCreateMutationBody = ReconcileRequest
+    export type AccountsReconcileCreateMutationError = unknown
+
+    export const useAccountsReconcileCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountsReconcileCreate>>, TError,{id: number;data: ReconcileRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof accountsReconcileCreate>>,
+        TError,
+        {id: number;data: ReconcileRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAccountsReconcileCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * One month of this account, entry by entry with the balance after each, to check against the bank's
 statement or the cash counted at the desk.
  */
@@ -799,6 +884,168 @@ export function useAccountsStatementRetrieve<TData = Awaited<ReturnType<typeof a
 
 
 /**
+ * Tick entries on this bank account's statement as on the bank's statement too, or untick them.
+ */
+export type accountsTickCreateResponse204 = {
+  data: void
+  status: 204
+}
+    
+export type accountsTickCreateResponseSuccess = (accountsTickCreateResponse204) & {
+  headers: Headers;
+};
+;
+
+export type accountsTickCreateResponse = (accountsTickCreateResponseSuccess)
+
+export const getAccountsTickCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/accounts/${id}/tick/`
+}
+
+export const accountsTickCreate = async (id: number,
+    tickRequest: TickRequest, options?: RequestInit): Promise<accountsTickCreateResponse> => {
+  
+  return apiFetch<accountsTickCreateResponse>(getAccountsTickCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      tickRequest,)
+  }
+);}
+
+
+
+
+export const getAccountsTickCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountsTickCreate>>, TError,{id: number;data: TickRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof accountsTickCreate>>, TError,{id: number;data: TickRequest}, TContext> => {
+
+const mutationKey = ['accountsTickCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof accountsTickCreate>>, {id: number;data: TickRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  accountsTickCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AccountsTickCreateMutationResult = NonNullable<Awaited<ReturnType<typeof accountsTickCreate>>>
+    export type AccountsTickCreateMutationBody = TickRequest
+    export type AccountsTickCreateMutationError = unknown
+
+    export const useAccountsTickCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountsTickCreate>>, TError,{id: number;data: TickRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof accountsTickCreate>>,
+        TError,
+        {id: number;data: TickRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAccountsTickCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Unlock one reconciled entry, with the reason, so it can be corrected or voided.
+ */
+export type accountsUnreconcileCreateResponse204 = {
+  data: void
+  status: 204
+}
+    
+export type accountsUnreconcileCreateResponseSuccess = (accountsUnreconcileCreateResponse204) & {
+  headers: Headers;
+};
+;
+
+export type accountsUnreconcileCreateResponse = (accountsUnreconcileCreateResponseSuccess)
+
+export const getAccountsUnreconcileCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/accounts/${id}/unreconcile/`
+}
+
+export const accountsUnreconcileCreate = async (id: number,
+    unreconcileRequest: UnreconcileRequest, options?: RequestInit): Promise<accountsUnreconcileCreateResponse> => {
+  
+  return apiFetch<accountsUnreconcileCreateResponse>(getAccountsUnreconcileCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      unreconcileRequest,)
+  }
+);}
+
+
+
+
+export const getAccountsUnreconcileCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountsUnreconcileCreate>>, TError,{id: number;data: UnreconcileRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof accountsUnreconcileCreate>>, TError,{id: number;data: UnreconcileRequest}, TContext> => {
+
+const mutationKey = ['accountsUnreconcileCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof accountsUnreconcileCreate>>, {id: number;data: UnreconcileRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  accountsUnreconcileCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AccountsUnreconcileCreateMutationResult = NonNullable<Awaited<ReturnType<typeof accountsUnreconcileCreate>>>
+    export type AccountsUnreconcileCreateMutationBody = UnreconcileRequest
+    export type AccountsUnreconcileCreateMutationError = unknown
+
+    export const useAccountsUnreconcileCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof accountsUnreconcileCreate>>, TError,{id: number;data: UnreconcileRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof accountsUnreconcileCreate>>,
+        TError,
+        {id: number;data: UnreconcileRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAccountsUnreconcileCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Give a branch the bank account its new UPI, card and bank money goes into (or none). Old money stays put.
  */
 export type accountsBranchCreateResponse200 = {
