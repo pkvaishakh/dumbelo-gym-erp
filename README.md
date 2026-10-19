@@ -1,6 +1,6 @@
 # Dumbelo
 
-[![CI](https://github.com/pkvaishakh/rackline-gym-erp/actions/workflows/ci.yml/badge.svg)](https://github.com/pkvaishakh/rackline-gym-erp/actions/workflows/ci.yml)
+[![CI](https://github.com/pkvaishakh/dumbelo-gym-erp/actions/workflows/ci.yml/badge.svg)](https://github.com/pkvaishakh/dumbelo-gym-erp/actions/workflows/ci.yml)
 
 Gym management for many gyms: members, plans and payments, check-ins (desk, wall QR, turnstile), staff and tasks.
 
