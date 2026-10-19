@@ -19,7 +19,7 @@ NOT_FOUND = {"error": {"code": "not_found", "message": "Not found."}}
 
 
 class WhatsAppWebhookView(APIView):
-    """GET is Meta's one-time handshake; POST is every status and reply after that. Without a slug, Rackline's
+    """GET is Meta's one-time handshake; POST is every status and reply after that. Without a slug, Dumbelo's
     shared number; with one, a gym's own."""
 
     authentication_classes = []

@@ -155,18 +155,18 @@ export const GYM_STATUS: Record<string, { label: string; badge: string }> = {
   suspended: { label: "Suspended", badge: "expired" },
 };
 
-/** "1st", "22nd": the day of the month a gym's Rackline invoice is written. */
+/** "1st", "22nd": the day of the month a gym's Dumbelo invoice is written. */
 export function ordinal(n: number) {
   const tens = n % 100;
   const end = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
   return `${n}${end}`;
 }
 
-/** "2 of 3 branches": how much of a gym's Rackline plan is in use. */
+/** "2 of 3 branches": how much of a gym's Dumbelo plan is in use. */
 export const branchesOf = (inUse: number, quota: number) => `${inUse} of ${plural(quota, "branch", "branches")}`;
 
 export const WHATSAPP_MODE: Record<string, { label: string; note: string }> = {
-  shared: { label: "Rackline's number", note: "Messages go from Rackline's WhatsApp number, billed by the message" },
+  shared: { label: "Dumbelo's number", note: "Messages go from Dumbelo's WhatsApp number, billed by the message" },
   own: { label: "The gym's own number", note: "Messages go from the gym's own WhatsApp account; it pays Meta itself" },
   off: { label: "Off", note: "No WhatsApp messages are sent" },
 };
@@ -195,7 +195,7 @@ export const BRANCH_ASK_STATUS: Record<string, { label: string; badge: string }>
   declined: { label: "Declined", badge: "expired" },
 };
 
-/** A Rackline invoice's state as a badge. An open invoice past its due day is "Overdue". */
+/** A Dumbelo invoice's state as a badge. An open invoice past its due day is "Overdue". */
 export const INVOICE_STATUS: Record<string, { label: string; badge: string }> = {
   open: { label: "To pay", badge: "expiring" },
   overdue: { label: "Overdue", badge: "expired" },
@@ -204,8 +204,8 @@ export const INVOICE_STATUS: Record<string, { label: string; badge: string }> = 
 };
 export const invoiceState = (inv: { status: string; overdue: boolean }) => (inv.status === "open" && inv.overdue ? "overdue" : inv.status);
 
-/** How a gym paid Rackline. */
-export const RACKLINE_PAY_METHOD: Record<string, string> = { bank: "Bank transfer", upi: "UPI", cheque: "Cheque", card: "Card", cash: "Cash" };
+/** How a gym paid Dumbelo. */
+export const DUMBELO_PAY_METHOD: Record<string, string> = { bank: "Bank transfer", upi: "UPI", cheque: "Cheque", card: "Card", cash: "Cash" };
 
 /** The Console's Server screen: a check's state, and a job run's. */
 export const SERVER_STATE: Record<string, { label: string; badge: string }> = {

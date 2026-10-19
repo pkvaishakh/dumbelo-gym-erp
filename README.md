@@ -1,11 +1,11 @@
-# Rackline
+# Dumbelo
 
 [![CI](https://github.com/pkvaishakh/rackline-gym-erp/actions/workflows/ci.yml/badge.svg)](https://github.com/pkvaishakh/rackline-gym-erp/actions/workflows/ci.yml)
 
 Gym management for many gyms: members, plans and payments, check-ins (desk, wall QR, turnstile), staff and tasks.
 
 ```
-rackline/
+dumbelo/
   api/   Django + DRF backend
   web/   Next.js PWA: the app every role uses (see web/README.md)
 ```
@@ -18,7 +18,7 @@ every component's rules and markup) is in `docs/design/`. `CLAUDE.md` files brie
 You need Python 3.12+ and either Docker Desktop or a local PostgreSQL 16.
 
 ```powershell
-cd D:\dev\freelance-projects\rackline
+cd D:\dev\freelance-projects\dumbelo
 docker compose up -d                     # Postgres + Redis
 
 cd api
@@ -32,7 +32,7 @@ python manage.py runserver
 ```
 
 Open http://localhost:8000/api/docs/ for every endpoint. To try one there: call `POST /api/auth/login/`,
-press **Authorize** and paste the `access` token, and send the header `X-Gym: rackline-fitness`.
+press **Authorize** and paste the `access` token, and send the header `X-Gym: dumbelo-fitness`.
 
 No Docker? Remove the `DATABASE_URL` line from `.env` and the API uses a local SQLite file instead.
 
@@ -76,17 +76,17 @@ cd api; python manage.py shell
 >>> sweep_reminders(at=timezone.now().isoformat())   # 0 unless some gym's clock says 6
 ```
 
-### Demo logins (password `rackline-demo`)
+### Demo logins (password `dumbelo-demo`)
 
 | Who | Sign in with | Role |
 |---|---|---|
-| Meera Iyer | meera@rackline.demo | Admin, account owner |
-| Arjun Rao | arjun@rackline.demo | Receptionist · Indiranagar, Koramangala |
-| Kavya Nair | kavya@rackline.demo | Receptionist · HSR Layout, Whitefield |
-| Neha Sharma | neha@rackline.demo | Trainer · Indiranagar |
-| Neeraj, Alex, Imran | neeraj@ / alex@ / imran@rackline.demo | Trainers |
+| Meera Iyer | meera@dumbelo.demo | Admin, account owner |
+| Arjun Rao | arjun@dumbelo.demo | Receptionist · Indiranagar, Koramangala |
+| Kavya Nair | kavya@dumbelo.demo | Receptionist · HSR Layout, Whitefield |
+| Neha Sharma | neha@dumbelo.demo | Trainer · Indiranagar |
+| Neeraj, Alex, Imran | neeraj@ / alex@ / imran@dumbelo.demo | Trainers |
 | Aarav Reddy | 9800000001 | Member (first 10 members have logins) |
-| Rackline Admin | rackline@rackline.demo | Rackline admin: the Console at `/console` (no role in the gym) |
+| Dumbelo Admin | dumbelo@dumbelo.demo | Dumbelo admin: the Console at `/console` (no role in the gym) |
 
 `python manage.py seed_demo --reset` rebuilds the demo gym. It also sends yesterday's and today's reminders
 through the fake sender, so the Reminders card on a member's profile has something in it.
@@ -98,7 +98,7 @@ through the fake sender, so the Reminders card on a member's profile has somethi
 - **One gym per request:** send `X-Gym: <slug>`. A gym you have no role in answers 404, as if it didn't exist.
 - **Roles:** admin (everything, every branch), receptionist (desk work in their branches, today's collection, fixed
   offers only), trainer (their own members' status and phone, "payment due" without amounts; their tasks),
-  member (themselves). Rackline support can only read, and only inside a window an admin grants (`/api/support-access/`).
+  member (themselves). Dumbelo support can only read, and only inside a window an admin grants (`/api/support-access/`).
 - **Money** is whole paise (`150000` = ₹1,500). **Times** are stored in UTC and worked out in the gym's time zone.
 - **Errors** always look like `{"error": {"code": "...", "message": "...", "fields": {...}}}`. Business rules answer
   409 with a code the app can act on: `membership_expired`, `membership_frozen`, `already_checked_in`, `overpaid`,
@@ -134,7 +134,7 @@ it counts toward the next session. Turnstiles (ZKTeco/eSSL) post punches to `/ap
 With the API running, in a second terminal:
 
 ```powershell
-cd D:\dev\freelance-projects\rackline\web
+cd D:\dev\freelance-projects\dumbelo\web
 npm install
 copy .env.example .env.local
 npm run dev

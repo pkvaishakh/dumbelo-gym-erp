@@ -10,7 +10,7 @@ export function GymStatus({ status }: { status: string }) {
   return <span className={`rl-status rl-status--${s.badge}`}>{s.label}</span>;
 }
 
-// Where Rackline's gyms are; the browser's own list follows them, for a gym anywhere else.
+// Where Dumbelo's gyms are; the browser's own list follows them, for a gym anywhere else.
 const NEAR = ["Asia/Kolkata", "Asia/Kathmandu", "Asia/Dhaka", "Asia/Colombo", "Asia/Dubai", "Asia/Singapore"];
 
 /** The gym's time zone: its days start and end there. India's comes first. */

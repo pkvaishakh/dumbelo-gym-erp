@@ -1,5 +1,5 @@
 @import "../styles/tokens.css";
-@import "../styles/rackline.css";
+@import "../styles/dumbelo.css";
 
 html, body { margin: 0; }
 body { background: var(--surface); }

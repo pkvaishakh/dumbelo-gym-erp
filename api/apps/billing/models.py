@@ -1,7 +1,7 @@
-"""What a gym pays Rackline: the price list, each gym's Rackline plan, the branches it asks to add, and its
+"""What a gym pays Dumbelo: the price list, each gym's Dumbelo plan, the branches it asks to add, and its
 invoices and payments.
 
-"Rackline plan" in code and copy, never just "plan": `members.Plan` is what a member buys from the gym.
+"Dumbelo plan" in code and copy, never just "plan": `members.Plan` is what a member buys from the gym.
 """
 from datetime import date
 
@@ -19,13 +19,13 @@ LAST_BILLING_DAY = 28
 
 
 class Prices(models.Model):
-    """Rackline's prices, all in paise. A price list holds them; each gym's plan keeps its own copy."""
+    """Dumbelo's prices, all in paise. A price list holds them; each gym's plan keeps its own copy."""
 
     base_paise = models.PositiveIntegerField(help_text="Monthly base fee")
     per_branch_paise = models.PositiveIntegerField(help_text="Monthly fee for each branch the plan has room for")
     whatsapp_setup_paise = models.PositiveIntegerField(help_text="One time, for setting up WhatsApp")
     machine_setup_paise = models.PositiveIntegerField(help_text="One time, for each attendance machine")
-    # A delivered message on Rackline's shared number, by Meta's category
+    # A delivered message on Dumbelo's shared number, by Meta's category
     utility_message_paise = models.PositiveIntegerField(help_text="Reminders and receipts (Meta's utility category)")
     marketing_message_paise = models.PositiveIntegerField(help_text="Offers and news (Meta's marketing category)")
     authentication_message_paise = models.PositiveIntegerField(help_text="Sign-in codes (Meta's authentication category)")
@@ -41,8 +41,8 @@ class Prices(models.Model):
 
 
 class PriceList(Prices):
-    """Rackline's prices from a day on. Never changed once added: new prices are a new list. A new list never
-    reprices a gym by itself; a Rackline admin moves each gym to it."""
+    """Dumbelo's prices from a day on. Never changed once added: new prices are a new list. A new list never
+    reprices a gym by itself; a Dumbelo admin moves each gym to it."""
 
     active_from = models.DateField(unique=True)
     note = models.CharField(max_length=200, blank=True)
@@ -57,16 +57,16 @@ class PriceList(Prices):
 
     @classmethod
     def current(cls, on=None):
-        """The list in force on `on` (Rackline's today): the latest one that has started. None before the first."""
+        """The list in force on `on` (Dumbelo's today): the latest one that has started. None before the first."""
         return cls.objects.filter(active_from__lte=on or timezone.localdate()).order_by("-active_from").first()
 
 
 class GymBilling(Prices, TimeStamped):
-    """A gym's Rackline plan: its prices (copied from a price list), how many branches it pays for, its billing day
+    """A gym's Dumbelo plan: its prices (copied from a price list), how many branches it pays for, its billing day
     and how it sends WhatsApp. The monthly charge is the base fee plus the per-branch fee times the quota."""
 
     SHARED, OWN, OFF = "shared", "own", "off"
-    WHATSAPP_MODES = [(SHARED, "Rackline's number"), (OWN, "The gym's own number"), (OFF, "Off")]
+    WHATSAPP_MODES = [(SHARED, "Dumbelo's number"), (OWN, "The gym's own number"), (OFF, "Off")]
 
     gym = models.OneToOneField("gyms.Gym", on_delete=models.CASCADE, related_name="billing")
     price_list = models.ForeignKey(PriceList, on_delete=models.PROTECT, related_name="gyms", help_text="Where its prices were copied from")
@@ -85,7 +85,7 @@ class GymBilling(Prices, TimeStamped):
         ]
 
     def __str__(self):
-        return f"Rackline plan of {self.gym}"
+        return f"Dumbelo plan of {self.gym}"
 
     @property
     def monthly_paise(self) -> int:
@@ -93,16 +93,16 @@ class GymBilling(Prices, TimeStamped):
 
 
 class BranchRequest(TimeStamped):
-    """A gym's admin asking for room for more branches. A Rackline admin approves (the quota goes up at once and
+    """A gym's admin asking for room for more branches. A Dumbelo admin approves (the quota goes up at once and
     the rest of the billing month is charged on the next invoice) or declines it. Never deleted."""
 
     ASKED, APPROVED, DECLINED = "asked", "approved", "declined"
     STATUS = [(ASKED, "Asked"), (APPROVED, "Approved"), (DECLINED, "Declined")]
-    MAX = 5  # more than this at once is a conversation with Rackline, not a tap
+    MAX = 5  # more than this at once is a conversation with Dumbelo, not a tap
 
     gym = models.ForeignKey("gyms.Gym", on_delete=models.CASCADE, related_name="branch_requests")
     count = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(MAX)])
-    note = models.CharField(max_length=200, blank=True, help_text="What the admin told Rackline, e.g. where it opens")
+    note = models.CharField(max_length=200, blank=True, help_text="What the admin told Dumbelo, e.g. where it opens")
     asked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     status = models.CharField(max_length=10, choices=STATUS, default=ASKED)
     decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
@@ -159,14 +159,14 @@ class InvoiceQuerySet(models.QuerySet):
 
 
 class Invoice(TimeStamped):
-    """What a gym owes Rackline for one billing month, written on its billing day for the month ahead. Never
-    deleted: a wrong one is voided with a reason. Tax fields are there and zero until Rackline charges GST, so
+    """What a gym owes Dumbelo for one billing month, written on its billing day for the month ahead. Never
+    deleted: a wrong one is voided with a reason. Tax fields are there and zero until Dumbelo charges GST, so
     turning it on later changes no old invoice."""
 
     OPEN, PAID, VOID = "open", "paid", "void"
     STATUS = [(OPEN, "Open"), (PAID, "Paid"), (VOID, "Void")]
 
-    gym = models.ForeignKey("gyms.Gym", on_delete=models.PROTECT, related_name="rackline_invoices")
+    gym = models.ForeignKey("gyms.Gym", on_delete=models.PROTECT, related_name="dumbelo_invoices")
     number = models.CharField(max_length=24, unique=True, help_text="RL/2026-27/0001: one series per financial year")
     period_from = models.DateField(help_text="The billing day it was written for: the first day it covers")
     period_to = models.DateField(help_text="The day before the next billing day")
@@ -174,7 +174,7 @@ class Invoice(TimeStamped):
     due_on = models.DateField()
     status = models.CharField(max_length=6, choices=STATUS, default=OPEN)
     subtotal_paise = models.PositiveIntegerField(default=0)
-    tax_paise = models.PositiveIntegerField(default=0, help_text="GST: zero until Rackline charges it")
+    tax_paise = models.PositiveIntegerField(default=0, help_text="GST: zero until Dumbelo charges it")
     total_paise = models.PositiveIntegerField(default=0)
     void_reason = models.CharField(max_length=200, blank=True)
     voided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
@@ -200,7 +200,7 @@ class Invoice(TimeStamped):
 
 
 class InvoiceLine(TimeStamped):
-    """One thing on an invoice. A line with no invoice yet is pending: a setup fee or charge a Rackline admin
+    """One thing on an invoice. A line with no invoice yet is pending: a setup fee or charge a Dumbelo admin
     added, or the pro-rata cost of branches approved during the month. The next invoice picks them up."""
 
     BASE, BRANCHES, BRANCHES_PRO_RATA = "base", "branches", "branches_pro_rata"
@@ -210,7 +210,7 @@ class InvoiceLine(TimeStamped):
         (WHATSAPP_USAGE, "WhatsApp messages"), (WHATSAPP_SETUP, "WhatsApp setup"), (MACHINE_SETUP, "Attendance machine setup"),
         (ADJUSTMENT, "Other charge"),
     ]
-    CHARGES = (WHATSAPP_SETUP, MACHINE_SETUP, ADJUSTMENT)  # what a Rackline admin adds by hand (Add Charge)
+    CHARGES = (WHATSAPP_SETUP, MACHINE_SETUP, ADJUSTMENT)  # what a Dumbelo admin adds by hand (Add Charge)
 
     gym = models.ForeignKey("gyms.Gym", on_delete=models.PROTECT, related_name="+")
     invoice = models.ForeignKey(Invoice, null=True, blank=True, on_delete=models.PROTECT, related_name="lines")
@@ -235,7 +235,7 @@ class InvoiceLine(TimeStamped):
 
 
 class InvoicePayment(TimeStamped):
-    """Money a gym paid Rackline against one invoice, in full or in part. Recorded by a Rackline admin (no payment
+    """Money a gym paid Dumbelo against one invoice, in full or in part. Recorded by a Dumbelo admin (no payment
     gateway). Never deleted: a wrong one is voided with a reason and keeps its receipt number."""
 
     METHODS = [("bank", "Bank transfer"), ("upi", "UPI"), ("cheque", "Cheque"), ("card", "Card"), ("cash", "Cash")]

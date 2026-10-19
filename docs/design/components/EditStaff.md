@@ -29,7 +29,7 @@ Opened from Edit Details on a Staff Profile. The title reads "Edit Trainer" or "
 </div>
   <div class="rl-field">
   <label class="rl-field__label" for="as-email">Email <span class="rl-optional">(optional)</span></label>
-  <div class="rl-field__control"><input class="rl-field__input" id="as-email" name="as-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="name@example.com" value="arjun.rao@rackline.example"></div>
+  <div class="rl-field__control"><input class="rl-field__input" id="as-email" name="as-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="name@example.com" value="arjun.rao@dumbelo.example"></div>
   <p class="rl-field__error" role="alert" hidden><Icon/><span></span></p>
 </div>
   <fieldset class="rl-fieldset"><legend>Branch</legend><div class="rl-chips"><label class="rl-chipopt"><input type="radio" name="as-branch" value="Indiranagar" data-label="Indiranagar" checked><span>Indiranagar</span></label><label class="rl-chipopt"><input type="radio" name="as-branch" value="Koramangala" data-label="Koramangala"><span>Koramangala</span></label><label class="rl-chipopt"><input type="radio" name="as-branch" value="HSR Layout" data-label="HSR Layout"><span>HSR Layout</span></label><label class="rl-chipopt"><input type="radio" name="as-branch" value="Whitefield" data-label="Whitefield"><span>Whitefield</span></label></div></fieldset>

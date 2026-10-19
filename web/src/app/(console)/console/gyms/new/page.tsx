@@ -63,16 +63,16 @@ export default function NewGymPage() {
           </Field>
           <fieldset className="rl-fieldset"><legend>Owner</legend>
             <div className="rl-form">
-              <Field label="Owner's email" error={err("owner_email")} hint="They sign in with it and look after the gym's Rackline plan.">
+              <Field label="Owner's email" error={err("owner_email")} hint="They sign in with it and look after the gym's Dumbelo plan.">
                 {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} type="email" inputMode="email" autoComplete="off" autoCapitalize="none" value={f.owner_email} placeholder="owner@gym.in" onChange={set("owner_email")} />}
               </Field>
-              <Field label="Owner's name" error={err("owner_name")} hint="Leave it empty if they already sign in to Rackline at another gym.">
+              <Field label="Owner's name" error={err("owner_name")} hint="Leave it empty if they already sign in to Dumbelo at another gym.">
                 {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} value={f.owner_name} autoComplete="off" autoCapitalize="words" onChange={set("owner_name")} />}
               </Field>
-              <Field label="First password" error={err("owner_password")} hint="For someone new to Rackline: tell them, and they change it from More. Leave it empty if they already sign in.">
+              <Field label="First password" error={err("owner_password")} hint="For someone new to Dumbelo: tell them, and they change it from More. Leave it empty if they already sign in.">
                 {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} type="text" autoComplete="new-password" autoCapitalize="none" spellCheck={false} value={f.owner_password} onChange={set("owner_password")} />}
               </Field>
-              <Field label="Billing email" optional error={err("billing_email")} hint="Where Rackline's invoices go. The owner's email if you leave it empty.">
+              <Field label="Billing email" optional error={err("billing_email")} hint="Where Dumbelo's invoices go. The owner's email if you leave it empty.">
                 {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} type="email" inputMode="email" autoComplete="off" autoCapitalize="none" value={f.billing_email} onChange={set("billing_email")} />}
               </Field>
             </div>
@@ -86,7 +86,7 @@ export default function NewGymPage() {
           <>
             <Confirm title={`${made.name} is ready`} text={made.owner_new_login
               ? `${made.owner_name} signs in with ${made.owner_email} and the first password you set. The gym is on trial until you activate it.`
-              : `${made.owner_name} already signs in to Rackline, so they'll find ${made.name} with their other gyms. It's on trial until you activate it.`} />
+              : `${made.owner_name} already signs in to Dumbelo, so they'll find ${made.name} with their other gyms. It's on trial until you activate it.`} />
             <div className="rl-sheet__actions">
               <button className="rl-button rl-button--block" type="button" onClick={() => router.push(`/console/gyms/${made.id}`)}>Open Gym</button>
               <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => router.push("/console/gyms")}>Done</button>

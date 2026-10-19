@@ -18,7 +18,7 @@ export function Badge({ of, status }: { of: "account" | "template"; status: stri
   return <span className={`rl-status rl-status--${s.badge}`}>{s.label}</span>;
 }
 
-export const accountTitle = (a: Pick<WhatsAppAccount, "is_shared" | "gym_name">) => (a.is_shared ? "Rackline's shared number" : a.gym_name ?? "A gym's own number");
+export const accountTitle = (a: Pick<WhatsAppAccount, "is_shared" | "gym_name">) => (a.is_shared ? "Dumbelo's shared number" : a.gym_name ?? "A gym's own number");
 
 export type Where = { waba_id: string; phone_number_id: string; display_number: string };
 const DIGITS = /^\d{5,32}$/;

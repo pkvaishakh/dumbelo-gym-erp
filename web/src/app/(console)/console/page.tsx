@@ -14,13 +14,13 @@ import { useWho } from "@/lib/session";
 
 const count = (n: number) => n.toLocaleString("en-IN");
 
-/** Console → Home, where a Rackline admin lands: the gyms, what they owe Rackline, what needs you, today's WhatsApp
- *  messages and the server, from one summary. Counts and Rackline's own money only, never inside a gym. */
+/** Console → Home, where a Dumbelo admin lands: the gyms, what they owe Dumbelo, what needs you, today's WhatsApp
+ *  messages and the server, from one summary. Counts and Dumbelo's own money only, never inside a gym. */
 export default function ConsoleHome() {
   const { me } = useWho();
   const q = usePlatformSummaryRetrieve({ query: { refetchInterval: 60_000 } });
   const s = q.data?.data;
-  const sub = s ? (s.gyms.new_this_month ? `${plural(s.gyms.new_this_month, "new gym")} this month` : "No new gyms this month") : "Rackline Console";
+  const sub = s ? (s.gyms.new_this_month ? `${plural(s.gyms.new_this_month, "new gym")} this month` : "No new gyms this month") : "Dumbelo Console";
   return (
     <div className="rl-app rl-root">
       <HomeBar home="/console" />
@@ -35,7 +35,7 @@ export default function ConsoleHome() {
           </Empty>
         ) : (
           <>
-            <Section label="Rackline at a glance">
+            <Section label="Dumbelo at a glance">
               <div aria-busy={!s}>{s ? <Glance s={s} /> : <GlanceLoading />}</div>
             </Section>
             <div className="rl-app__cols">
@@ -66,7 +66,7 @@ export default function ConsoleHome() {
   );
 }
 
-/** What gyms owe Rackline on the ink card (overdue and the shared number's month beside it), then the gyms by status.
+/** What gyms owe Dumbelo on the ink card (overdue and the shared number's month beside it), then the gyms by status.
  *  Each figure opens the gyms or messages it counts. */
 function Glance({ s }: { s: PlatformSummary }) {
   const m = s.money;
@@ -81,7 +81,7 @@ function Glance({ s }: { s: PlatformSummary }) {
         <Link className="rl-glance__hero rl-pressable" href="/console/gyms?owes=any">
           <span className="rl-glance__head">
             <span className="rl-glance__chip" aria-hidden="true"><Icon as={IndianRupee} size="sm" /></span>
-            <span className="rl-glance__kicker">Owed to Rackline</span>
+            <span className="rl-glance__kicker">Owed to Dumbelo</span>
             <ChevronRight className="rl-icon rl-icon--sm rl-glance__chev" strokeWidth={1.75} aria-hidden />
           </span>
           <span className="rl-glance__big">{rupees(m.owed_paise)}</span>

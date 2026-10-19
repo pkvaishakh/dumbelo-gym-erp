@@ -9,7 +9,7 @@ import { AutomationSheet } from "@/features/console/messages";
 import { ago } from "@/lib/format";
 import { daysLabel, hourLabel } from "@/lib/messages";
 
-/** Console → Automation: when Rackline's jobs run for every gym. A gym with its own times (set on its screen) keeps
+/** Console → Automation: when Dumbelo's jobs run for every gym. A gym with its own times (set on its screen) keeps
  *  them. Changes apply on each job's next run, with nothing to restart. */
 export default function Automation() {
   const q = usePlatformAutomationRetrieve();
@@ -31,7 +31,7 @@ export default function Automation() {
                 { icon: CalendarClock, label: "Plan ending soon", value: `${daysLabel(s.days_ahead)} before it ends` },
               ]} />
             </Section>
-            <Section title="Rackline invoices">
+            <Section title="Dumbelo invoices">
               <Details rows={[{ icon: FileText, label: "Written on a billing day at", value: hourLabel(s.invoice_hour) }]} />
             </Section>
             <button className="rl-button rl-button--secondary rl-button--block" type="button" aria-haspopup="dialog" onClick={() => setEditing(true)}>Edit Times</button>

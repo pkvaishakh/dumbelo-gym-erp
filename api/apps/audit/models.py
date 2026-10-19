@@ -6,7 +6,7 @@ class AuditLog(models.Model):
     """Who changed what, when, with the before and after. Payments corrected or voided, roles changed, support views."""
 
     gym = models.ForeignKey("gyms.Gym", null=True, blank=True, on_delete=models.CASCADE, related_name="audit_log",
-                            help_text="Empty for Rackline changes that belong to no gym (a price list)")
+                            help_text="Empty for Dumbelo changes that belong to no gym (a price list)")
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     action = models.CharField(max_length=40)
     object_type = models.CharField(max_length=40)
@@ -21,7 +21,7 @@ class AuditLog(models.Model):
 
 
 def record(request, action, obj, before=None, after=None, gym=None):
-    """`gym` is for the Console, which has no X-Gym: the gym a change belongs to (none for Rackline's own rows).
+    """`gym` is for the Console, which has no X-Gym: the gym a change belongs to (none for Dumbelo's own rows).
     `request` is None for a change made from the command line, which has no one signed in."""
     role = getattr(request, "gym_role", None)
     user = getattr(request, "user", None)

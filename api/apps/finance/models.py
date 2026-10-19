@@ -65,7 +65,7 @@ class Account(GymScoped):
     account_number = models.CharField(max_length=20, blank=True)
     ifsc = models.CharField(max_length=11, blank=True)
     opening_balance_paise = models.BigIntegerField(default=0, validators=[MinValueValidator(0)], help_text="What it held the day it was added")
-    opened_on = models.DateField(help_text="The day it was added to Rackline: money recorded from then on moves its balance")
+    opened_on = models.DateField(help_text="The day it was added to Dumbelo: money recorded from then on moves its balance")
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey("gyms.GymRole", on_delete=models.PROTECT, related_name="+")
 

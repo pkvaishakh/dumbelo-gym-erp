@@ -43,7 +43,7 @@ class PriceListRefSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
-    """A gym's Rackline plan as both its admins and the Console see it. `branches_in_use`, `owed_paise` and
+    """A gym's Dumbelo plan as both its admins and the Console see it. `branches_in_use`, `owed_paise` and
     `current_prices` are filled in by the view (one query each)."""
 
     monthly_paise = serializers.IntegerField(read_only=True, help_text="Base fee + per-branch fee × quota, billed in advance")
@@ -139,7 +139,7 @@ class InvoiceLineSerializer(serializers.ModelSerializer):
 
 
 class InvoicePaymentSerializer(serializers.ModelSerializer):
-    """A payment to Rackline and its receipt, as the gym's admins see it."""
+    """A payment to Dumbelo and its receipt, as the gym's admins see it."""
 
     method = serializers.ChoiceField(choices=InvoicePayment.METHODS, read_only=True)
 
@@ -222,7 +222,7 @@ class InvoiceVoidSerializer(serializers.Serializer):
 
 
 class ChargeSerializer(InvoiceLineSerializer):
-    """A charge waiting for the gym's next invoice: added by a Rackline admin, or branches approved in the month."""
+    """A charge waiting for the gym's next invoice: added by a Dumbelo admin, or branches approved in the month."""
 
     gym = serializers.IntegerField(source="gym_id", read_only=True)
     added_by_name = serializers.CharField(source="added_by.name", read_only=True, allow_null=True)

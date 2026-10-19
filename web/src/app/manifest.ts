@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Rackline",
-    short_name: "Rackline",
+    name: "Dumbelo",
+    short_name: "Dumbelo",
     description: "Members, check-ins and payments for your gym.",
     start_url: "/home",
     display: "standalone",

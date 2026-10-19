@@ -16,7 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 
 from apps.core.errors import RuleBroken
-from apps.core.rackline import is_rackline_admin
+from apps.core.dumbelo import is_dumbelo_admin
 from apps.gyms.models import Gym, GymRole
 
 from . import services
@@ -124,7 +124,7 @@ class MeSerializer(serializers.Serializer):
     email = serializers.EmailField(allow_null=True)
     phone = serializers.CharField(allow_null=True)
     roles = RoleSerializer(many=True)
-    is_rackline_admin = serializers.BooleanField(help_text="Runs the Console (/console): gyms, their admins, prices")
+    is_dumbelo_admin = serializers.BooleanField(help_text="Runs the Console (/console): gyms, their admins, prices")
 
 
 class MeEditSerializer(serializers.ModelSerializer):
@@ -174,7 +174,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 def me_data(u):
     roles = GymRole.objects.filter(user=u, is_active=True).select_related("gym")
     return MeSerializer({"id": u.id, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles,
-                         "is_rackline_admin": is_rackline_admin(u)}).data
+                         "is_dumbelo_admin": is_dumbelo_admin(u)}).data
 
 
 class MeView(APIView):

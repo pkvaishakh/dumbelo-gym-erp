@@ -9,7 +9,7 @@ Four actions, the ones this role may take: Check In, Add Member, Collect Payment
 ```html
 <div class="rl-app rl-root">
 <header class="rl-appbar rl-appbar--scroll" id="rl-appbar"><div class="rl-appbar__in">
-  <a class="rl-logo" href="#" aria-label="Rackline home"><Mark/></a>
+  <a class="rl-logo" href="#" aria-label="Dumbelo home"><Mark/></a>
   <div class="rl-appbar__who"><h1 class="rl-appbar__hello">Good morning, Alex 👋</h1><p class="rl-appbar__branch">Indiranagar branch</p></div>
   <button class="rl-iconbtn" type="button" aria-label="Notifications, 3 unread"><Icon class="rl-icon"/><span class="rl-badge" aria-hidden="true">3</span></button>
   <button class="rl-avatar rl-pressable" type="button" aria-label="Profile: Alex D’Souza">AD</button>

@@ -15,9 +15,9 @@ const PRICES = [
   { key: "per_branch_paise", label: "Per branch, a month", hint: "For each branch a gym's plan has room for, open or not." },
   { key: "whatsapp_setup_paise", label: "WhatsApp setup", hint: "Once, when a gym's WhatsApp is set up." },
   { key: "machine_setup_paise", label: "Attendance machine setup", hint: "Once, for each machine." },
-  { key: "utility_message_paise", label: "Reminder or receipt message", hint: "Each one delivered from Rackline's number (Meta's utility category)." },
-  { key: "marketing_message_paise", label: "Offer message", hint: "Each one delivered from Rackline's number (Meta's marketing category)." },
-  { key: "authentication_message_paise", label: "Sign-in code message", hint: "Each one delivered from Rackline's number (Meta's authentication category)." },
+  { key: "utility_message_paise", label: "Reminder or receipt message", hint: "Each one delivered from Dumbelo's number (Meta's utility category)." },
+  { key: "marketing_message_paise", label: "Offer message", hint: "Each one delivered from Dumbelo's number (Meta's marketing category)." },
+  { key: "authentication_message_paise", label: "Sign-in code message", hint: "Each one delivered from Dumbelo's number (Meta's authentication category)." },
 ] as const;
 type Key = (typeof PRICES)[number]["key"];
 
@@ -54,7 +54,7 @@ export default function NewPricesPage() {
       <TaskBar title="Add Price List" />
       <main className="rl-app__main">
         <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
-          <Field label="Starts on" error={err("active_from")} hint="Gyms keep their prices until you move each one, from its Rackline plan.">
+          <Field label="Starts on" error={err("active_from")} hint="Gyms keep their prices until you move each one, from its Dumbelo plan.">
             {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} type="date" min={today} value={from} onChange={(e) => setFrom(e.target.value)} />}
           </Field>
           {PRICES.map((p) => (
@@ -63,7 +63,7 @@ export default function NewPricesPage() {
                 onChange={(e) => setF({ ...values, [p.key]: e.target.value.replace(/[^\d.]/g, "") })} />}
             </Field>
           ))}
-          <Field label="Note" optional error={err("note")} hint="For Rackline's team: why the prices changed.">
+          <Field label="Note" optional error={err("note")} hint="For Dumbelo's team: why the prices changed.">
             {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} value={note} maxLength={200} placeholder="New prices for 2027" onChange={(e) => setNote(e.target.value)} />}
           </Field>
           <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
@@ -74,7 +74,7 @@ export default function NewPricesPage() {
         {made && (
           <>
             <Confirm title={`Prices from ${day(made.active_from)} added`}
-              text="No gym pays them yet. Open a gym and use Move to Current Prices on its Rackline plan once they start." />
+              text="No gym pays them yet. Open a gym and use Move to Current Prices on its Dumbelo plan once they start." />
             <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={() => router.push("/console/prices")}>Done</button></div>
           </>
         )}

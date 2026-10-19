@@ -13,7 +13,7 @@ type Session = {
   me: Me;
   role: Role & { role: RoleName };
   gym: string;
-  /** Rackline has suspended this gym: everyone sees the paused screen, and its admins can still open More. */
+  /** Dumbelo has suspended this gym: everyone sees the paused screen, and its admins can still open More. */
   paused: boolean;
   /** Admin's chosen branch (null = all branches). Always null for everyone else: they see all their branches. */
   branch: number | null;
@@ -82,21 +82,21 @@ function trouble(meQ: UseQueryResult<Me>) {
   if (!meQ.isError || meQ.isFetching || signedOut) return null;
   return (
     <div className="rl-root" style={{ padding: 24 }}>
-      <h1 className="rl-display">Can&apos;t reach Rackline</h1>
+      <h1 className="rl-display">Can&apos;t reach Dumbelo</h1>
       <p className="rl-lede">{meQ.error instanceof ApiError && meQ.error.status ? meQ.error.message : "Check your connection and try again."}</p>
       <button className="rl-button" style={{ marginTop: 24 }} onClick={() => meQ.refetch()}>Try Again</button>
     </div>
   );
 }
 
-/** The gym app's session: who, which gym and which branch. Rackline admins with no gym of their own go to the Console. */
+/** The gym app's session: who, which gym and which branch. Dumbelo admins with no gym of their own go to the Console. */
 export function SessionProvider({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
   const router = useRouter();
   const qc = useQueryClient();
   const { meQ, signOut } = useSignedIn();
   const [gym, setGym] = useState<string | null>(null);
   const [branch, setBranchState] = useState<number | null>(null);
-  const consoleOnly = !!meQ.data?.is_rackline_admin && !meQ.data.roles.length;
+  const consoleOnly = !!meQ.data?.is_dumbelo_admin && !meQ.data.roles.length;
 
   useEffect(() => { if (consoleOnly) router.replace("/console"); }, [consoleOnly, router]);
 
@@ -162,12 +162,12 @@ export function SessionProvider({ children, fallback }: { children: React.ReactN
   return <WhoCtx.Provider value={who}><Ctx.Provider value={value}>{children}</Ctx.Provider></WhoCtx.Provider>;
 }
 
-/** The Console's session: Rackline admins only. Anyone else is sent to their gym. */
+/** The Console's session: Dumbelo admins only. Anyone else is sent to their gym. */
 export function ConsoleProvider({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
   const router = useRouter();
   const { meQ, signOut } = useSignedIn();
   const me = meQ.data;
-  const allowed = !!me?.is_rackline_admin;
+  const allowed = !!me?.is_dumbelo_admin;
   useEffect(() => { if (me && !allowed) router.replace("/home"); }, [me, allowed, router]);
   const who = useMemo(() => (me ? { me, signOut, moreHref: "/console/more" } : null), [me, signOut]);
   const problem = trouble(meQ);

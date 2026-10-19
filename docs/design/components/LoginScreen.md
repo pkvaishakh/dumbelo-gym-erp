@@ -22,7 +22,7 @@ You provide the form's submit handler. The script in `preview.html` is a demo: i
     </div>
   </aside>
   <div class="rl-auth__app">
-    <header class="rl-auth__top"><a class="rl-logo" href="#" aria-label="Rackline home"><Mark/><span class="rl-logo__name">Rackline</span></a></header>
+    <header class="rl-auth__top"><a class="rl-logo" href="#" aria-label="Dumbelo home"><Mark/><span class="rl-logo__name">Dumbelo</span></a></header>
     <div class="rl-auth__art"><div class="rl-barbell rl-barbell--bleed rl-barbell--load" aria-hidden="true"><span class="rl-barbell__tip"></span><span class="rl-plate rl-plate--sm"></span><span class="rl-plate rl-plate--md"></span><span class="rl-plate rl-plate--lg"></span><span class="rl-plate"></span><span class="rl-plate rl-plate--volt"></span><span class="rl-barbell__collar"></span><span class="rl-barbell__shaft"></span></div></div>
     <section class="rl-auth__body" aria-labelledby="rl-title">
       <h1 class="rl-display" id="rl-title">Let’s get moving</h1>

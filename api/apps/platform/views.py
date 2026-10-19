@@ -1,7 +1,7 @@
 """The Console's Home (`/api/platform/summary/`), gyms and their admin accounts (`/api/platform/gyms/`,
 `/api/platform/gyms/<id>/admins/`), and its Server screen (`/api/platform/status/`, `/api/platform/jobs/<job>/run/`).
 
-Rackline admins only (`RacklineViewMixin`), with no X-Gym: these views work across gyms. They never show what is
+Dumbelo admins only (`DumbeloViewMixin`), with no X-Gym: these views work across gyms. They never show what is
 inside a gym (members' details, payments, check-ins): only counts, branches and admin accounts. Every change is
 audited against the gym it belongs to.
 """
@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 
 from apps.audit.models import record
 from apps.core.queries import count_of
-from apps.core.rackline import RacklineViewMixin
+from apps.core.dumbelo import DumbeloViewMixin
 from apps.gyms.models import Gym, GymRole
 from apps.gyms.serializers import StaffPasswordSerializer
 
@@ -33,9 +33,9 @@ def _audit_status(gym):
 
 
 @extend_schema(tags=["platform"])
-class GymViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+class GymViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
                  mixins.UpdateModelMixin, viewsets.GenericViewSet):
-    """Every gym on Rackline. Gyms are never deleted: a gym that stops paying is suspended."""
+    """Every gym on Dumbelo. Gyms are never deleted: a gym that stops paying is suspended."""
 
     filterset_class = GymFilter
     http_method_names = ["get", "post", "patch"]
@@ -102,7 +102,7 @@ class GymViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelM
     @extend_schema(request=StatusChangeSerializer, responses=GymDetailSerializer)
     @action(detail=True, methods=["post"])
     def suspend(self, request, pk=None):
-        """Pause the gym: staff and members are refused at once, admins keep their Rackline plan, messages stop."""
+        """Pause the gym: staff and members are refused at once, admins keep their Dumbelo plan, messages stop."""
         return self._status(request, services.suspend, "gym.suspended")
 
     @extend_schema(request=StatusChangeSerializer, responses=GymDetailSerializer)
@@ -113,7 +113,7 @@ class GymViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelM
 
 
 @extend_schema(tags=["platform"], parameters=[OpenApiParameter("gym_id", int, OpenApiParameter.PATH, description="The gym's id")])
-class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
+class GymAdminViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     """A gym's admin accounts: Add Admin, Reset Password, Deactivate (never the owner), Reactivate, Make Owner."""
 
     serializer_class = GymAdminSerializer
@@ -137,7 +137,7 @@ class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateMod
 
     @extend_schema(request=GymAdminAddSerializer, responses={201: GymAdminSerializer})
     def create(self, request, *args, **kwargs):
-        """Add Admin: someone new to Rackline gets a login with the first password you set; someone who already
+        """Add Admin: someone new to Dumbelo gets a login with the first password you set; someone who already
         signs in (at another gym) keeps theirs. A deactivated admin is turned back on."""
         s = GymAdminAddSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -174,7 +174,7 @@ class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateMod
     @extend_schema(request=None, responses=GymAdminSerializer)
     @action(detail=True, methods=["post"], url_path="make-owner")
     def make_owner(self, request, gym_id=None, pk=None):
-        """Make this admin the account owner: they handle Rackline billing. The old owner stays an admin."""
+        """Make this admin the account owner: they handle Dumbelo billing. The old owner stays an admin."""
         role = self.get_object()
         before = services.make_owner(role)
         record(request, "admin.made_owner", role, {"owner": before.user.email if before else None}, {"owner": role.user.email}, gym=self.gym)
@@ -182,8 +182,8 @@ class GymAdminViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateMod
 
 
 @extend_schema(tags=["platform"])
-class PlatformSummaryView(RacklineViewMixin, APIView):
-    """Console → Home: gyms by status, what they owe Rackline, branch requests waiting, today's WhatsApp messages
+class PlatformSummaryView(DumbeloViewMixin, APIView):
+    """Console → Home: gyms by status, what they owe Dumbelo, branch requests waiting, today's WhatsApp messages
     and the shared number's month, and what on the server is down or failed. A fixed number of queries."""
 
     @extend_schema(responses=PlatformSummarySerializer)
@@ -192,7 +192,7 @@ class PlatformSummaryView(RacklineViewMixin, APIView):
 
 
 @extend_schema(tags=["platform"])
-class ServerStatusView(RacklineViewMixin, APIView):
+class ServerStatusView(DumbeloViewMixin, APIView):
     """Console → Server: the version running, whether the database, Redis, the worker and beat answer, each job's
     last run, messages waiting or failed, and Meta's webhook calls. Something down shows as down, never as a 500."""
 
@@ -203,7 +203,7 @@ class ServerStatusView(RacklineViewMixin, APIView):
 
 @extend_schema(tags=["platform"], parameters=[
     OpenApiParameter("job", str, OpenApiParameter.PATH, enum=[j for j, spec in server.JOBS.items() if spec.task])])
-class JobRunNowView(RacklineViewMixin, APIView):
+class JobRunNowView(DumbeloViewMixin, APIView):
     @extend_schema(request=None, responses={202: JobRunSerializer})
     def post(self, request, job):
         """Run Now: queue one run of reminders, invoices or the webhook replay on the worker. They are safe to

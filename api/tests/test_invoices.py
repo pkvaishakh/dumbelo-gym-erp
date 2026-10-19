@@ -1,4 +1,4 @@
-"""Rackline invoices: the billing-day job, what goes on an invoice, numbers, payments, voids and who can see them."""
+"""Dumbelo invoices: the billing-day job, what goes on an invoice, numbers, payments, voids and who can see them."""
 import importlib
 from datetime import date, timedelta
 
@@ -18,7 +18,7 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.gyms.models import Gym
 from tests.conftest import PRICES, World
-from tests.test_billing import _overlap, rackline
+from tests.test_billing import _overlap, dumbelo
 
 INVOICES = "/api/billing/invoices/"
 CONSOLE = "/api/platform/invoices/"
@@ -34,7 +34,7 @@ def write(w, starts=date(2026, 11, 1)) -> Invoice:
 
 def approve(w, count=1):
     req = services.ask_for_branches(w.gym, count=count, note="", by=w.admin.user)
-    approver = User.objects.get_or_create(email="approver@rackline.in", defaults={"name": "Approver", "is_superuser": True})[0]
+    approver = User.objects.get_or_create(email="approver@dumbelo.com", defaults={"name": "Approver", "is_superuser": True})[0]
     return services.approve(req, by=approver)
 
 
@@ -52,7 +52,7 @@ def test_an_invoice_bills_the_month_ahead_at_the_quota(w):
     assert (inv.subtotal_paise, inv.tax_paise, inv.total_paise) == (MONTH, 0, MONTH)
     lines = list(inv.lines.values_list("kind", "description", "quantity", "rate_paise", "amount_paise", "tax_paise"))
     assert lines == [
-        ("base", "Rackline plan, 1 Nov to 30 Nov", 1, PRICES["base_paise"], PRICES["base_paise"], 0),
+        ("base", "Dumbelo plan, 1 Nov to 30 Nov", 1, PRICES["base_paise"], PRICES["base_paise"], 0),
         ("branches", "2 branches, 1 Nov to 30 Nov", 2, PRICES["per_branch_paise"], 2 * PRICES["per_branch_paise"], 0),
     ]
 
@@ -180,13 +180,13 @@ def test_the_command_writes_a_missed_billing_day(w, capsys):
 
 def test_part_payments_never_more_than_owed_and_paid_in_full_moves_paid_until(w):
     inv = write(w)
-    c = rackline()
+    c = dumbelo()
     r = pay(c, inv, 5_000_00)
     assert r.status_code == 200, r.content
     body = r.json()
     year = financial_year(timezone.localdate())
     assert body["paid_paise"] == 5_000_00 and body["owed_paise"] == MONTH - 5_000_00 and body["status"] == "open"
-    assert body["payments"][0]["receipt_number"] == f"RLR/{year}/0001" and body["payments"][0]["recorded_by_name"] == "Rackline Ops"
+    assert body["payments"][0]["receipt_number"] == f"RLR/{year}/0001" and body["payments"][0]["recorded_by_name"] == "Dumbelo Ops"
     too_much = pay(c, inv, MONTH)
     assert too_much.status_code == 409 and too_much.json()["error"] == {"code": "overpaid", "message": f"RL/2026-27/0001 owes ₹2,199. Record that or less."}
     assert pay(c, inv, MONTH - 5_000_00).json()["status"] == "paid"
@@ -199,23 +199,23 @@ def test_part_payments_never_more_than_owed_and_paid_in_full_moves_paid_until(w)
     ({"amount_paise": 0}, "amount_paise"), ({"method": "bitcoin"}, "method"), ({"paid_on": "soon"}, "paid_on"),
 ])
 def test_payments_are_checked(w, body, field):
-    r = pay(rackline(), write(w), 100_00, **body)
+    r = pay(dumbelo(), write(w), 100_00, **body)
     assert r.status_code == 400 and field in r.json()["error"]["fields"]
 
 
 def test_a_payment_dated_in_the_future_is_refused(w):
     tomorrow = (timezone.localdate() + timedelta(days=1)).isoformat()
-    assert pay(rackline(), write(w), 100_00, paid_on=tomorrow).json()["error"]["code"] == "future_date"
+    assert pay(dumbelo(), write(w), 100_00, paid_on=tomorrow).json()["error"]["code"] == "future_date"
 
 
 def test_voids_keep_history(w):
     inv = write(w)
-    c = rackline()
+    c = dumbelo()
     paid = pay(c, inv, MONTH).json()["payments"][0]
     assert c.post(f"{CONSOLE}{inv.id}/void/", {"reason": "Wrong prices"}, format="json").json()["error"]["code"] == "has_payments"
     assert c.post(f"/api/platform/invoice-payments/{paid['id']}/void/", {"reason": ""}, format="json").status_code == 400
     r = c.post(f"/api/platform/invoice-payments/{paid['id']}/void/", {"reason": "The transfer bounced"}, format="json")
-    assert r.status_code == 200 and r.json()["voided"] and r.json()["voided_by_name"] == "Rackline Ops"
+    assert r.status_code == 200 and r.json()["voided"] and r.json()["voided_by_name"] == "Dumbelo Ops"
     assert c.post(f"/api/platform/invoice-payments/{paid['id']}/void/", {"reason": "again"}, format="json").json()["error"]["code"] == "already_void"
     after = c.get(f"{CONSOLE}{inv.id}/").json()
     assert after["status"] == "open" and after["owed_paise"] == MONTH and len(after["payments"]) == 1  # still there, voided
@@ -234,7 +234,7 @@ def test_voids_keep_history(w):
 def test_voiding_a_payment_on_a_paid_invoice_moves_paid_until_back(w):
     october = write(w, date(2026, 10, 1))
     november = write(w, date(2026, 11, 1))
-    c = rackline()
+    c = dumbelo()
     pay(c, october, MONTH)
     last = pay(c, november, MONTH).json()["payments"][0]
     assert GymBilling.objects.get(gym=w.gym).paid_until == date(2026, 11, 30)
@@ -269,10 +269,10 @@ def test_two_invoices_written_at_once_never_share_a_number():
 # Charges added by hand
 
 def test_add_charge_takes_the_gyms_prices_and_waits_for_the_next_invoice(w):
-    c = rackline()
+    c = dumbelo()
     r = c.post(CHARGES, {"gym": w.gym.id, "kind": "machine_setup", "quantity": 2}, format="json")
     assert r.status_code == 201, r.content
-    assert (r.json()["description"], r.json()["amount_paise"], r.json()["added_by_name"]) == ("Attendance machine setup, 2 machines", 2 * PRICES["machine_setup_paise"], "Rackline Ops")
+    assert (r.json()["description"], r.json()["amount_paise"], r.json()["added_by_name"]) == ("Attendance machine setup, 2 machines", 2 * PRICES["machine_setup_paise"], "Dumbelo Ops")
     assert c.post(CHARGES, {"gym": w.gym.id, "kind": "whatsapp_setup"}, format="json").json()["amount_paise"] == PRICES["whatsapp_setup_paise"]
     other = c.post(CHARGES, {"gym": w.gym.id, "kind": "adjustment", "rate_paise": 500_00, "description": "Extra training day"}, format="json")
     assert other.json()["kind"] == "adjustment" and other.json()["amount_paise"] == 500_00
@@ -281,13 +281,13 @@ def test_add_charge_takes_the_gyms_prices_and_waits_for_the_next_invoice(w):
 
 
 def test_another_charge_needs_its_amount_and_what_it_is_for(w):
-    r = rackline().post(CHARGES, {"gym": w.gym.id, "kind": "adjustment"}, format="json")
+    r = dumbelo().post(CHARGES, {"gym": w.gym.id, "kind": "adjustment"}, format="json")
     assert r.status_code == 400 and set(r.json()["error"]["fields"]) == {"rate_paise", "description"}
-    assert rackline("b@rackline.in").post(CHARGES, {"gym": w.gym.id, "kind": "base", "rate_paise": 1}, format="json").status_code == 400
+    assert dumbelo("b@dumbelo.com").post(CHARGES, {"gym": w.gym.id, "kind": "base", "rate_paise": 1}, format="json").status_code == 400
 
 
 def test_a_charge_can_be_taken_back_until_it_is_billed(w):
-    c = rackline()
+    c = dumbelo()
     charge = c.post(CHARGES, {"gym": w.gym.id, "kind": "whatsapp_setup"}, format="json").json()
     assert c.delete(f"{CHARGES}{charge['id']}/").status_code == 204
     assert AuditLog.objects.get(gym=w.gym, action="charge.removed").before["kind"] == "whatsapp_setup"
@@ -305,7 +305,7 @@ def test_a_charge_can_be_taken_back_until_it_is_billed(w):
 
 def test_a_suspended_gyms_admins_read_their_invoices_and_receipts(w):
     inv = write(w)
-    pay(rackline(), inv, 1_000_00)
+    pay(dumbelo(), inv, 1_000_00)
     Gym.objects.filter(pk=w.gym.pk).update(status=Gym.SUSPENDED)
     admin = w.client(w.admin)
     rows = admin.get(INVOICES).json()
@@ -329,10 +329,10 @@ def test_another_gyms_invoice_is_not_found(w, other):
     assert w.client(w.admin).get(INVOICES).json()["count"] == 0
 
 
-def test_only_rackline_admins_reach_invoices_in_the_console(w):
+def test_only_dumbelo_admins_reach_invoices_in_the_console(w):
     inv = write(w)
     support = APIClient()
-    support.force_authenticate(User.objects.create_user(email="support@rackline.in", password="pass12345", name="Support", is_staff=True))
+    support.force_authenticate(User.objects.create_user(email="support@dumbelo.com", password="pass12345", name="Support", is_staff=True))
     for c in (w.client(w.admin), support):
         assert c.get(CONSOLE).status_code == 403
         assert pay(c, inv, 100_00).status_code == 403
@@ -340,7 +340,7 @@ def test_only_rackline_admins_reach_invoices_in_the_console(w):
 
 
 def test_invoice_lists_keep_a_query_budget(w, other, django_assert_max_num_queries):
-    c = rackline()
+    c = dumbelo()
     for month in range(1, 6):
         inv = write(w, date(2027, month, 1))
         pay(c, inv, 1_000_00)
@@ -359,7 +359,7 @@ def test_invoice_lists_keep_a_query_budget(w, other, django_assert_max_num_queri
 
 
 def test_the_gyms_list_shows_what_every_gym_owes(w, other, django_assert_max_num_queries):
-    c = rackline()
+    c = dumbelo()
     paid = write(w, date(2026, 10, 1))
     pay(c, paid, MONTH)
     pay(c, write(w, date(2026, 11, 1)), 1_000_00)

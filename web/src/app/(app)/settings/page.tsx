@@ -14,12 +14,12 @@ const MESSAGES = "/api/gym/messages/";
 
 // The gym's own words for its WhatsApp mode (the Console's are in WHATSAPP_MODE).
 const SENDS_FROM: Record<string, { label: string; note: string }> = {
-  shared: { label: "Rackline's number", note: "Messages go from Rackline's WhatsApp number, billed on your Rackline plan by the message." },
+  shared: { label: "Dumbelo's number", note: "Messages go from Dumbelo's WhatsApp number, billed on your Dumbelo plan by the message." },
   own: { label: "Your own number", note: "Messages go from your own WhatsApp Business account, and Meta bills you for them." },
-  off: { label: "Not sending", note: "No WhatsApp messages go out. Ask Rackline to turn them on." },
+  off: { label: "Not sending", note: "No WhatsApp messages go out. Ask Dumbelo to turn them on." },
 };
 
-/** How the gym's messages go out: set up by Rackline, so only shown here. Never a credential. */
+/** How the gym's messages go out: set up by Dumbelo, so only shown here. Never a credential. */
 function WhatsAppCard({ wa }: { wa: GymWhatsApp }) {
   const from = SENDS_FROM[wa.mode] ?? { label: wa.mode, note: "" };
   const status = WHATSAPP_STATUS[wa.status] ?? { label: wa.status, badge: "frozen" };
@@ -35,13 +35,13 @@ function WhatsAppCard({ wa }: { wa: GymWhatsApp }) {
       ]} />
       <p className="rl-row__meta">
         {from.note} {wa.status === "failing" || wa.status === "not_set_up" ? "Until it works, the desk still sees who to chase on the reminders list. " : ""}
-        Rackline sets this up: to change it, contact Rackline.
+        Dumbelo sets this up: to change it, contact Dumbelo.
       </p>
     </>
   );
 }
 
-/** A switch per message the gym sends (Pause / Resume). When each goes out is Rackline's to set, so it's only said. */
+/** A switch per message the gym sends (Pause / Resume). When each goes out is Dumbelo's to set, so it's only said. */
 function MessageSwitches() {
   const q = useGymMessagesList();
   const a = useAction();
@@ -80,12 +80,12 @@ export default function SettingsPage() {
     <div className="rl-app rl-root">
       <PageBar title="Settings" sub={role.branches.length > 1 ? `For all ${role.branches.length} branches` : role.gym_name} back="/more" />
       <main className="rl-app__main">
-        <Section title="Messages" aside={<span className="rl-row__meta">Times set by Rackline</span>}>
+        <Section title="Messages" aside={<span className="rl-row__meta">Times set by Dumbelo</span>}>
           <MessageSwitches />
         </Section>
         <p className="rl-row__meta">
           Pause a message and it stops at once, at every branch; the desk still sees who to chase on the reminders list.
-          Members get one reminder a day at most. Rackline sets when messages go out, on your gym&apos;s clock. To stop
+          Members get one reminder a day at most. Dumbelo sets when messages go out, on your gym&apos;s clock. To stop
           messaging one member, turn their reminders off on their profile.
         </p>
         <Section title="WhatsApp">

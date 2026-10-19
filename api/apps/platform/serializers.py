@@ -38,7 +38,7 @@ class GymRowSerializer(serializers.ModelSerializer):
     member_count = serializers.IntegerField(read_only=True, help_text="Members, leaving out archived ones")
     owner_name = serializers.CharField(read_only=True, allow_null=True)
     owner_email = serializers.CharField(read_only=True, allow_null=True)
-    owed_paise = serializers.IntegerField(read_only=True, help_text="What its open Rackline invoices still owe")
+    owed_paise = serializers.IntegerField(read_only=True, help_text="What its open Dumbelo invoices still owe")
 
     class Meta:
         model = Gym
@@ -65,7 +65,7 @@ class GymDetailSerializer(GymRowSerializer):
 
 
 class NewGymSerializer(GymDetailSerializer):
-    owner_new_login = serializers.BooleanField(read_only=True, help_text="False: the owner already had a Rackline login and keeps their password")
+    owner_new_login = serializers.BooleanField(read_only=True, help_text="False: the owner already had a Dumbelo login and keeps their password")
 
     class Meta(GymDetailSerializer.Meta):
         fields = GymDetailSerializer.Meta.fields + ["owner_new_login"]
@@ -114,7 +114,7 @@ class GymCreateSerializer(serializers.Serializer):
             if not data.get("owner_name", "").strip():
                 errors["owner_name"] = "Enter the owner's name"
             if not data.get("owner_password"):
-                errors["owner_password"] = "They don't sign in to Rackline yet: set a first password and tell them"
+                errors["owner_password"] = "They don't sign in to Dumbelo yet: set a first password and tell them"
             if errors:
                 raise serializers.ValidationError(errors)
         return data
@@ -158,7 +158,7 @@ class GymAdminSerializer(serializers.ModelSerializer):
 
 
 class GymAdminAddSerializer(serializers.Serializer):
-    """Add Admin: their email, and for someone new to Rackline, their name and a first password."""
+    """Add Admin: their email, and for someone new to Dumbelo, their name and a first password."""
 
     email = serializers.EmailField(max_length=254)
     name = serializers.CharField(max_length=120, required=False, allow_blank=True)
@@ -173,7 +173,7 @@ class GymAdminAddSerializer(serializers.Serializer):
             if not data.get("name", "").strip():
                 errors["name"] = "Enter their name"
             if not data.get("password"):
-                errors["password"] = "They don't sign in to Rackline yet: set a first password and tell them"
+                errors["password"] = "They don't sign in to Dumbelo yet: set a first password and tell them"
             if errors:
                 raise serializers.ValidationError(errors)
         return data
@@ -277,7 +277,7 @@ class GymCountsSerializer(serializers.Serializer):
 
 
 class OwedSerializer(serializers.Serializer):
-    owed_paise = serializers.IntegerField(help_text="What every gym owes Rackline on its open invoices")
+    owed_paise = serializers.IntegerField(help_text="What every gym owes Dumbelo on its open invoices")
     gyms_owing = serializers.IntegerField()
     overdue_paise = serializers.IntegerField(help_text="The part of it on invoices past their due day")
     overdue_invoices = serializers.IntegerField()
@@ -309,7 +309,7 @@ class ServerAttentionSerializer(serializers.Serializer):
 
 
 class PlatformSummarySerializer(serializers.Serializer):
-    """Console → Home. Counts and Rackline's own money only: nothing from inside a gym."""
+    """Console → Home. Counts and Dumbelo's own money only: nothing from inside a gym."""
 
     checked_at = serializers.DateTimeField()
     gyms = GymCountsSerializer()

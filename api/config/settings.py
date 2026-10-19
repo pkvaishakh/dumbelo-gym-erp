@@ -1,4 +1,4 @@
-"""Rackline API settings. Everything that differs between machines comes from the environment (see .env.example)."""
+"""Dumbelo API settings. Everything that differs between machines comes from the environment (see .env.example)."""
 from datetime import timedelta
 from pathlib import Path
 
@@ -113,7 +113,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     # `collectstatic` writes a compressed copy of every file next to it, which is what whitenoise serves.
-    # Names are not hashed: the only static files Rackline has are the admin's and the docs page's.
+    # Names are not hashed: the only static files Dumbelo has are the admin's and the docs page's.
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 
@@ -142,7 +142,7 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,  # a used or signed-out refresh token stops working
 }
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Rackline API",
+    "TITLE": "Dumbelo API",
     "DESCRIPTION": "Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -169,14 +169,14 @@ SPECTACULAR_SETTINGS = {
         "WhatsappModeEnum": "apps.billing.models.GymBilling.WHATSAPP_MODES",
         "InvoiceStatusEnum": "apps.billing.models.Invoice.STATUS",
         "InvoiceLineKindEnum": "apps.billing.models.InvoiceLine.KINDS",
-        "RacklinePayMethodEnum": "apps.billing.models.InvoicePayment.METHODS",
+        "DumbeloPayMethodEnum": "apps.billing.models.InvoicePayment.METHODS",
         "WhatsappAccountStatusEnum": "apps.messages.models.WhatsAppAccount.STATUS",
         "WhatsappTemplateStatusEnum": "apps.messages.models.WhatsAppTemplate.STATUS",
         "WhatsappCategoryEnum": "apps.messages.models.WhatsAppTemplate.CATEGORIES",
         "CategoryEnum": "apps.expenses.models.Expense.CATEGORIES",  # named, now that templates have categories too
         "MessageKindEnum": "apps.messages.models.WhatsAppTemplate.KINDS",
         "GymWhatsappStatusEnum": "apps.messages.serializers.GymWhatsAppSerializer.STATES",
-        "MethodEnum": "apps.members.models.Payment.METHODS",  # named, now that Rackline payments have methods of their own
+        "MethodEnum": "apps.members.models.Payment.METHODS",  # named, now that Dumbelo payments have methods of their own
     },
 }
 # ---- What is running (the Console's Server screen) ----
@@ -193,16 +193,16 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TIMEZONE = "UTC"  # beat ticks in UTC; each gym's own clock decides when its day starts (apps/core/clock.py)
 CELERY_BEAT_SCHEDULE = {
     "reminders": {
-        # Writes the day's reminder list and sends it, at the hours Rackline set (apps/messages/automation.py, read
-        # each tick), and reminds owners about Rackline invoices; apps.reminders.tasks.sweep_reminders writes a
+        # Writes the day's reminder list and sends it, at the hours Dumbelo set (apps/messages/automation.py, read
+        # each tick), and reminds owners about Dumbelo invoices; apps.reminders.tasks.sweep_reminders writes a
         # list on its own, for a morning that has to be rebuilt by hand.
         "task": "apps.messages.tasks.send_reminders",
         # Every quarter hour, not every hour: India is UTC+5:30 and Nepal +5:45, so a tick on the hour would
         # reach them at 6:30 and 6:45 their own time. The sweep is safe to repeat, so the extra ticks cost nothing.
         "schedule": crontab(minute="*/15"),
     },
-    "rackline-invoices": {
-        # Each gym's Rackline invoice on its billing day, from Rackline's invoice hour on the gym's clock (read from the
+    "dumbelo-invoices": {
+        # Each gym's Dumbelo invoice on its billing day, from Dumbelo's invoice hour on the gym's clock (read from the
         # database each tick, so changing it needs no restart). Hourly: the job skips a month already written, so
         # the later ticks that day do nothing.
         "task": "apps.billing.tasks.write_invoices",
@@ -228,7 +228,7 @@ if bad := bad_encryption_keys(FIELD_ENCRYPTION_KEY):
 # ---- WhatsApp (see apps/messages/senders.py) ----
 # `fake` sends nothing and keeps what it would have sent, so a laptop and the tests need no WhatsApp account.
 # A server that really sends sets WHATSAPP_PROVIDER=whatsapp_cloud, which posts templates to Meta's Cloud API. The numbers and their keys are WhatsApp
-# accounts in the database (the Console's WhatsApp screen), not settings: Rackline's shared number is one of them.
+# accounts in the database (the Console's WhatsApp screen), not settings: Dumbelo's shared number is one of them.
 WHATSAPP_PROVIDER = env("WHATSAPP_PROVIDER", default="fake")
 WHATSAPP_API_VERSION = env("WHATSAPP_API_VERSION", default="v23.0")  # Meta's Graph API version, in every call's path
 

@@ -1,6 +1,6 @@
 # Deploy
 
-How Rackline gets onto the internet: the API and its database on AWS Mumbai (`ap-south-1`), the web app on
+How Dumbelo gets onto the internet: the API and its database on AWS Mumbai (`ap-south-1`), the web app on
 Vercel. Follow this page top to bottom once; after that, deploying again is one button
 (["Deploying again"](#deploying-again)).
 
@@ -8,7 +8,7 @@ Everything here is done with the gym owner's own AWS and Vercel accounts. Nothin
 real secret, and nothing in it has to.
 
 ```
-app.rackline.in   Vercel ──────────► api.rackline.in   App Runner (gunicorn, 2 instances)
+app.dumbelo.com   Vercel ──────────► api.dumbelo.com   App Runner (gunicorn, 2 instances)
                                             │
                                             ├── RDS Postgres 16      the gym's data
                                             └── ElastiCache Redis    rate-limit counts + the job queue
@@ -24,7 +24,7 @@ differs. App Runner runs HTTP services only, so the worker and beat run as two s
 - An AWS account with admin access, and the AWS CLI signed in to it (`aws sts get-caller-identity`).
 - Docker on your machine, to build the image the first time.
 - A Vercel account connected to the GitHub repository.
-- A domain. This page uses `rackline.in`: `api.rackline.in` for the API, `app.rackline.in` for the app.
+- A domain. This page uses `dumbelo.com`: `api.dumbelo.com` for the API, `app.dumbelo.com` for the app.
 - A WhatsApp Cloud API number with its token, phone number id and app secret, if you want reminders from day one.
   It is added in the Console once the API is up (WhatsApp → Add Account), not as a setting.
 
@@ -33,7 +33,7 @@ Set these once in your shell, and the commands below can be copied as they are:
 ```bash
 export AWS_REGION=ap-south-1
 export ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export ECR=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com/rackline-api
+export ECR=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com/dumbelo-api
 ```
 
 ## 1. The database (RDS Postgres)
@@ -45,10 +45,10 @@ the 14-day retention, encryption at rest and deletion protection are set here, a
 
 ```bash
 aws rds create-db-instance \
-  --db-instance-identifier rackline-db --db-instance-class db.t4g.micro \
+  --db-instance-identifier dumbelo-db --db-instance-class db.t4g.micro \
   --engine postgres --engine-version 16 --allocated-storage 20 --storage-type gp3 --storage-encrypted \
-  --master-username rackline --manage-master-user-password \
-  --db-name rackline --backup-retention-period 14 --preferred-backup-window 20:30-21:00 --deletion-protection \
+  --master-username dumbelo --manage-master-user-password \
+  --db-name dumbelo --backup-retention-period 14 --preferred-backup-window 20:30-21:00 --deletion-protection \
   --no-publicly-accessible
 ```
 
@@ -56,14 +56,14 @@ aws rds create-db-instance \
 (and the endpoint) when the instance is `available`:
 
 ```bash
-aws rds describe-db-instances --db-instance-identifier rackline-db \
+aws rds describe-db-instances --db-instance-identifier dumbelo-db \
   --query 'DBInstances[0].[Endpoint.Address,MasterUserSecret.SecretArn]' --output text
 ```
 
 The connection string the API wants is one value, `DATABASE_URL`:
 
 ```
-postgres://rackline:<password>@rackline-db.xxxx.ap-south-1.rds.amazonaws.com:5432/rackline
+postgres://dumbelo:<password>@dumbelo-db.xxxx.ap-south-1.rds.amazonaws.com:5432/dumbelo
 ```
 
 ## 2. Redis (ElastiCache)
@@ -76,14 +76,14 @@ and subnets as the database. That is plenty for a pilot. Use two different datab
 `FLUSHDB` of the cache can't take the job queue with it:
 
 ```
-CACHE_URL=redis://rackline-cache.xxxx.cache.amazonaws.com:6379/1
-CELERY_BROKER_URL=redis://rackline-cache.xxxx.cache.amazonaws.com:6379/0
+CACHE_URL=redis://dumbelo-cache.xxxx.cache.amazonaws.com:6379/1
+CELERY_BROKER_URL=redis://dumbelo-cache.xxxx.cache.amazonaws.com:6379/0
 ```
 
 If you turn on encryption in transit, the scheme becomes `rediss://`.
 
 Give the database and the cache a security group that allows port 5432 / 6379 **only** from the security group
-the API and the jobs run in. Nothing about Rackline is reachable from the internet except the API itself.
+the API and the jobs run in. Nothing about Dumbelo is reachable from the internet except the API itself.
 
 ## 3. The settings a server must have
 
@@ -95,11 +95,11 @@ half-configured server fails loudly at boot instead of quietly serving with a de
 |---|---|---|
 | `PRODUCTION` | `true` | Turns on HTTPS-only cookies, HSTS, the redirect and these checks |
 | `SECRET_KEY` | 50+ random characters, this server's own | Signs the sign-in tokens. Changing it signs everyone out |
-| `ALLOWED_HOSTS` | `api.rackline.in` | The names the API answers on |
+| `ALLOWED_HOSTS` | `api.dumbelo.com` | The names the API answers on |
 | `DATABASE_URL` | from step 1 | Postgres |
 | `CACHE_URL` | from step 2, db 1 | Shared rate-limit counts |
 | `CELERY_BROKER_URL` | from step 2, db 0 | The job queue. Empty means jobs run inside the request: never on a server |
-| `CORS_ALLOWED_ORIGINS` | `https://app.rackline.in` | Which site may call the API from a browser. The default is localhost, so this must be set |
+| `CORS_ALLOWED_ORIGINS` | `https://app.dumbelo.com` | Which site may call the API from a browser. The default is localhost, so this must be set |
 | `FIELD_ENCRYPTION_KEY` | a Fernet key, this server's own (below) | Encrypts the WhatsApp credentials in the database. Losing it loses them |
 | `WHATSAPP_PROVIDER` | `whatsapp_cloud` | Posts templates to Meta's Cloud API from each gym's number. `fake` (the default) sends nothing |
 | `DEBUG` | leave unset | `PRODUCTION=true` with `DEBUG=True` refuses to start |
@@ -116,20 +116,20 @@ a password — in Secrets Manager, one secret per value, and point the services 
 environment variables, readable by anyone who can open the service.
 
 ```bash
-aws secretsmanager create-secret --name rackline/secret-key \
+aws secretsmanager create-secret --name dumbelo/secret-key \
   --secret-string "$(python -c 'import secrets; print(secrets.token_urlsafe(64))')"
-aws secretsmanager create-secret --name rackline/database-url --secret-string 'postgres://...'
-aws secretsmanager create-secret --name rackline/field-encryption-key   --secret-string "$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+aws secretsmanager create-secret --name dumbelo/database-url --secret-string 'postgres://...'
+aws secretsmanager create-secret --name dumbelo/field-encryption-key   --secret-string "$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
 ```
 
-The WhatsApp numbers' own credentials (access token, app secret) are not settings: a Rackline admin pastes them
+The WhatsApp numbers' own credentials (access token, app secret) are not settings: a Dumbelo admin pastes them
 into the Console (WhatsApp → Add Account, or Replace Credentials), and they are kept encrypted with
 `FIELD_ENCRYPTION_KEY`. Nothing shows them again, only their last 4 characters. The API, the worker and beat
 all need the same key.
 
 Each number also needs Meta's webhook, so delivery, read receipts and STOP replies come back (and shared-number
 usage can be billed). In the Meta app's WhatsApp → Configuration, set the Callback URL and Verify token that the
-Console shows on the account (Rackline's shared number: `https://<api host>/api/whatsapp/webhook/`; a gym's own:
+Console shows on the account (Dumbelo's shared number: `https://<api host>/api/whatsapp/webhook/`; a gym's own:
 `.../api/whatsapp/webhook/<slug>/`), then subscribe to the `messages` field. Meta signs every call with the app
 secret, so the account's app secret in the Console must be that app's. Every signed call is kept in the database
 (`WebhookEvent`), with an error if handling it failed. To run calls again (a status that came before the send
@@ -149,7 +149,7 @@ saved Meta's id, or a call that broke on a bug since fixed): `python manage.py r
 ## 4. The image (ECR)
 
 ```bash
-aws ecr create-repository --repository-name rackline-api --image-scanning-configuration scanOnPush=true
+aws ecr create-repository --repository-name dumbelo-api --image-scanning-configuration scanOnPush=true
 aws ecr get-login-password | docker login --username AWS --password-stdin $ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
 
 cd api
@@ -167,26 +167,26 @@ Migrations run as a one-off Fargate task on the same image, in the same VPC, wit
 ECS cluster (the worker and beat will use it too) and a task definition whose command is the migration:
 
 ```bash
-aws ecs create-cluster --cluster-name rackline
+aws ecs create-cluster --cluster-name dumbelo
 ```
 
-Register `rackline-migrate` with one container **named `migrate`** (the deploy workflow overrides that
+Register `dumbelo-migrate` with one container **named `migrate`** (the deploy workflow overrides that
 container's image by name), `"command": ["python", "manage.py", "migrate", "--noinput"]`, the image from step
 4, the environment from step 3, 0.25 vCPU / 0.5 GB, awsvpc networking in the private subnets, and the log
-group `/ecs/rackline`. Then run it:
+group `/ecs/dumbelo`. Then run it:
 
 ```bash
-aws ecs run-task --cluster rackline --task-definition rackline-migrate --launch-type FARGATE \
+aws ecs run-task --cluster dumbelo --task-definition dumbelo-migrate --launch-type FARGATE \
   --network-configuration 'awsvpcConfiguration={subnets=[subnet-aaa,subnet-bbb],securityGroups=[sg-app]}'
 ```
 
-Watch it in CloudWatch under `/ecs/rackline`; it should end with `OK` for every migration and exit 0.
+Watch it in CloudWatch under `/ecs/dumbelo`; it should end with `OK` for every migration and exit 0.
 
-A gym of your own comes next. Make a Rackline superuser with the same one-off task (command
+A gym of your own comes next. Make a Dumbelo superuser with the same one-off task (command
 `["python", "manage.py", "createsuperuser", "--noinput"]` with `DJANGO_SUPERUSER_*` set), sign in to the Console
-(`/console`) and add Rackline's prices first (Prices → Add Price List): no gym opens without them. Then New Gym in
+(`/console`) and add Dumbelo's prices first (Prices → Add Price List): no gym opens without them. Then New Gym in
 the Console, or `python manage.py create_gym` from the command line, makes the gym, its first branch, its owner
-admin and its Rackline plan. Don't create gyms in the Django admin: they get no Rackline plan, so they can't add
+admin and its Dumbelo plan. Don't create gyms in the Django admin: they get no Dumbelo plan, so they can't add
 branches.
 
 Never run `seed_demo` against the pilot database. It builds the demo gym, not a real one.
@@ -197,7 +197,7 @@ Create a service from the ECR image:
 
 - **Port** 8000, and let App Runner deploy the `latest` tag manually (not automatically — the deploy workflow
   decides when).
-- **Instance role**: may read the secrets from step 3 (`secretsmanager:GetSecretValue` on `rackline/*`).
+- **Instance role**: may read the secrets from step 3 (`secretsmanager:GetSecretValue` on `dumbelo/*`).
 - **Access role**: may pull from ECR (App Runner offers to make it).
 - **VPC connector** into the private subnets with the app security group, so the service can reach Postgres
   and Redis. Those subnets need a **NAT gateway**: with a VPC connector every outbound call goes through the
@@ -210,21 +210,21 @@ Create a service from the ECR image:
 
 ### The worker and beat (ECS Fargate)
 
-Two services on the `rackline` cluster, same image, same environment, 0.25 vCPU / 0.5 GB, desired count **1**,
+Two services on the `dumbelo` cluster, same image, same environment, 0.25 vCPU / 0.5 GB, desired count **1**,
 private subnets, no load balancer:
 
 | Service | Command | Note |
 |---|---|---|
-| `rackline-worker` | `celery -A config worker --loglevel=info` | Runs the jobs |
-| `rackline-beat` | `celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule` | The clock. Exactly one |
+| `dumbelo-worker` | `celery -A config worker --loglevel=info` | Runs the jobs |
+| `dumbelo-beat` | `celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule` | The clock. Exactly one |
 
 Beat ticks every quarter hour and wakes each gym when its own clock reaches its reminder hours (6 AM unless a
-Rackline admin set others in Console → Automation, read from the database on every tick, so a change needs no
+Dumbelo admin set others in Console → Automation, read from the database on every tick, so a change needs no
 restart), so keep **one** beat instance: two would hand out the same morning twice. (Nothing breaks if they do — a
 second sweep writes no new reminder rows and sends no second message — but there is no reason to pay for it.) The
-same tick reminds gyms' owners about Rackline invoices coming due or late. Beat also runs
-`apps.billing.tasks.write_invoices` at five past every hour: each active gym's Rackline invoice on its billing day,
-from Rackline's invoice hour (midnight by default) on the gym's clock, skipped once written. If the worker was down on a billing day, write it by hand:
+same tick reminds gyms' owners about Dumbelo invoices coming due or late. Beat also runs
+`apps.billing.tasks.write_invoices` at five past every hour: each active gym's Dumbelo invoice on its billing day,
+from Dumbelo's invoice hour (midnight by default) on the gym's clock, skipped once written. If the worker was down on a billing day, write it by hand:
 `python manage.py write_invoices --day 2026-11-01`. And every minute, `apps.messages.tasks.retry_messages` tries
 again the WhatsApp messages Meta turned away for now (rate limits, Meta busy), up to 3 times with growing waits.
 A message Meta may already have taken (it didn't answer, or the worker died mid-send) is never sent again on its
@@ -232,18 +232,18 @@ own: the gym's message log says so.
 
 ### If you'd rather run the API on ECS too
 
-Same image, a third service on the `rackline` cluster behind an Application Load Balancer: target group on
+Same image, a third service on the `dumbelo` cluster behind an Application Load Balancer: target group on
 port 8000 with health check path `/api/health/` (HTTP 200), the ALB in the public subnets with an ACM
-certificate for `api.rackline.in`, HTTP redirected to HTTPS. You lose App Runner's one-click deploys and gain
+certificate for `api.dumbelo.com`, HTTP redirected to HTTPS. You lose App Runner's one-click deploys and gain
 control over scaling. Everything else on this page is unchanged.
 
 ## 7. Domains and HTTPS
 
-- `api.rackline.in`: add it as a custom domain on the App Runner service and create the CNAME records it asks
+- `api.dumbelo.com`: add it as a custom domain on the App Runner service and create the CNAME records it asks
   for. App Runner manages the certificate. (On ECS: point the record at the ALB and use ACM.)
-- `app.rackline.in`: add it in Vercel (step 8) and create the record Vercel asks for.
-- Then `ALLOWED_HOSTS=api.rackline.in` and `CORS_ALLOWED_ORIGINS=https://app.rackline.in`. HSTS is on with a
-  one-year max-age and `includeSubDomains`, so serve every `rackline.in` name over HTTPS from the start.
+- `app.dumbelo.com`: add it in Vercel (step 8) and create the record Vercel asks for.
+- Then `ALLOWED_HOSTS=api.dumbelo.com` and `CORS_ALLOWED_ORIGINS=https://app.dumbelo.com`. HSTS is on with a
+  one-year max-age and `includeSubDomains`, so serve every `dumbelo.com` name over HTTPS from the start.
 
 ## 8. The web app (Vercel)
 
@@ -251,25 +251,25 @@ Vercel builds from GitHub, so it needs no workflow of ours.
 
 1. Import the repository and set **Root Directory** to `web`. The framework (Next.js) is detected; `npm ci`
    and `npm run build` are the defaults.
-2. Environment variable, for Production and Preview: `NEXT_PUBLIC_API_URL=https://api.rackline.in`.
+2. Environment variable, for Production and Preview: `NEXT_PUBLIC_API_URL=https://api.dumbelo.com`.
    It is baked into the build, so changing it needs a redeploy.
 3. Production branch `main`. Every pull request gets its own preview URL; the API's CORS list doesn't include
    those, so a preview can't call the production API — point a preview at a staging API or test on `main`.
-4. Add the `app.rackline.in` domain.
+4. Add the `app.dumbelo.com` domain.
 
 ## 9. Check it, in this order
 
 ```bash
-curl -s https://api.rackline.in/api/health/            # {"status":"ok","database":"ok"}
-curl -s -D- -o /dev/null https://api.rackline.in/api/docs/ | grep -i strict-transport-security
-curl -s -o /dev/null -w '%{http_code}\n' https://api.rackline.in/api/me/     # 401: it wants a sign-in
+curl -s https://api.dumbelo.com/api/health/            # {"status":"ok","database":"ok"}
+curl -s -D- -o /dev/null https://api.dumbelo.com/api/docs/ | grep -i strict-transport-security
+curl -s -o /dev/null -w '%{http_code}\n' https://api.dumbelo.com/api/me/     # 401: it wants a sign-in
 ```
 
 The service's own health check should read **Healthy** in the App Runner console. That is the proof that
 `/api/health/` answers a check made to the container's address; if it reads unhealthy while the `curl` above
 works, the health check is pointed at the wrong path or port.
 
-Then in a browser, on a phone: open `https://app.rackline.in`, sign in as the gym's admin, add a member, sell a
+Then in a browser, on a phone: open `https://app.dumbelo.com`, sign in as the gym's admin, add a member, sell a
 plan, collect a payment, check someone in. Finally confirm the jobs are alive — the worker's log shows
 `celery@... ready` and beat's shows it sending `apps.messages.tasks.send_reminders` every quarter hour.
 
@@ -287,14 +287,14 @@ no AWS key to leak.
 |---|---|
 | Secret `AWS_ROLE_ARN` | A role GitHub may assume (trusts `token.actions.githubusercontent.com` for this repository) with: push to the ECR repository, `apprunner:StartDeployment` and `apprunner:ListOperations`, `ecs:RunTask`, `ecs:UpdateService`, `ecs:DescribeTasks`, and `iam:PassRole` for the task's roles |
 | Variable `AWS_REGION` | `ap-south-1` (the default if unset) |
-| Variable `ECR_REPOSITORY` | `rackline-api` |
+| Variable `ECR_REPOSITORY` | `dumbelo-api` |
 | Variable `APPRUNNER_SERVICE_ARN` | The service from step 6 |
-| Variable `ECS_CLUSTER` | `rackline` |
-| Variable `MIGRATE_TASK_DEFINITION` | `rackline-migrate` |
+| Variable `ECS_CLUSTER` | `dumbelo` |
+| Variable `MIGRATE_TASK_DEFINITION` | `dumbelo-migrate` |
 | Variable `MIGRATE_SUBNETS` | `subnet-aaa,subnet-bbb` |
 | Variable `MIGRATE_SECURITY_GROUPS` | `sg-app` |
-| Variable `WORKER_SERVICE`, `BEAT_SERVICE` | `rackline-worker`, `rackline-beat` (leave unset to not restart them) |
-| Variable `API_HEALTH_URL` | `https://api.rackline.in/api/health/` |
+| Variable `WORKER_SERVICE`, `BEAT_SERVICE` | `dumbelo-worker`, `dumbelo-beat` (leave unset to not restart them) |
+| Variable `API_HEALTH_URL` | `https://api.dumbelo.com/api/health/` |
 
 Make a GitHub **environment** called `production` and add yourself as a required reviewer if you want a deploy
 to need a second pair of eyes. Vercel deploys the web app from `main` by itself.

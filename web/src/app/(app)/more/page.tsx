@@ -37,7 +37,7 @@ export default function MorePage() {
         {r === "admin" && paused && (
           <Section title="Your gym">
             <PausedNotice />
-            <ul className="rl-card rl-remind" style={{ marginTop: "var(--space-3)" }}><MenuRow icon={BadgeIndianRupee} title="Rackline plan" href="/rackline-plan" /></ul>
+            <ul className="rl-card rl-remind" style={{ marginTop: "var(--space-3)" }}><MenuRow icon={BadgeIndianRupee} title="Dumbelo plan" href="/dumbelo-plan" /></ul>
           </Section>
         )}
         {admin && (
@@ -57,7 +57,7 @@ export default function MorePage() {
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
               <MenuRow icon={MessageCircle} title="Messages" href="/messages" />
               <MenuRow icon={SlidersHorizontal} title="Settings" href="/settings" />
-              <MenuRow icon={BadgeIndianRupee} title="Rackline plan" href="/rackline-plan" />
+              <MenuRow icon={BadgeIndianRupee} title="Dumbelo plan" href="/dumbelo-plan" />
               <MenuRow icon={LifeBuoy} title="Support access" href="/support" />
             </ul>
           </Section>
@@ -104,9 +104,9 @@ export default function MorePage() {
             </ul>
           )}
         </Section>
-        {me.is_rackline_admin && (
-          <Section title="Rackline">
-            <ul className="rl-card rl-remind"><MenuRow icon={ShieldCheck} title="Rackline Console" href="/console" /></ul>
+        {me.is_dumbelo_admin && (
+          <Section title="Dumbelo">
+            <ul className="rl-card rl-remind"><MenuRow icon={ShieldCheck} title="Dumbelo Console" href="/console" /></ul>
           </Section>
         )}
         <Section label="Sign out">

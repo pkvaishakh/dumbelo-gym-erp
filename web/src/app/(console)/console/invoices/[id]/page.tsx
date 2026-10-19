@@ -9,10 +9,10 @@ import { usePlatformInvoicesRetrieve } from "@/api/gen/platform/platform";
 import { DetailBar } from "@/components/shell";
 import { Details, Empty, Icon, Section, Sheet, SkeletonRows } from "@/components/ui";
 import { RecordPaymentSheet, VoidSheet } from "@/features/console/invoice-sheets";
-import { InvoiceCard, InvoiceLines, PaymentRows } from "@/features/rackline-invoices";
-import { day, RACKLINE_PAY_METHOD, rupees } from "@/lib/format";
+import { InvoiceCard, InvoiceLines, PaymentRows } from "@/features/dumbelo-invoices";
+import { day, DUMBELO_PAY_METHOD, rupees } from "@/lib/format";
 
-/** One gym's Rackline invoice in the Console: Record Payment, each payment's receipt and Void Payment, Void Invoice. */
+/** One gym's Dumbelo invoice in the Console: Record Payment, each payment's receipt and Void Payment, Void Invoice. */
 export default function ConsoleInvoiceScreen() {
   const { id } = useParams<{ id: string }>();
   const q = usePlatformInvoicesRetrieve(Number(id));
@@ -79,9 +79,9 @@ function PaymentSheet({ p, invoiceId, onClose, onVoid }: { p: ConsoleInvoicePaym
       {p && (
         <>
           <Details rows={[
-            { icon: Receipt, label: `Receipt ${p.receipt_number}`, value: `${RACKLINE_PAY_METHOD[p.method] ?? p.method}${p.reference ? `, ${p.reference}` : ""}` },
+            { icon: Receipt, label: `Receipt ${p.receipt_number}`, value: `${DUMBELO_PAY_METHOD[p.method] ?? p.method}${p.reference ? `, ${p.reference}` : ""}` },
             { icon: UserRound, label: "Recorded by", value: `${p.recorded_by_name}, ${day(p.created_at)}` },
-            ...(p.voided ? [{ icon: AlertCircle, label: `Voided by ${p.voided_by_name ?? "Rackline"}${p.voided_at ? `, ${day(p.voided_at)}` : ""}`, value: p.void_reason }] : []),
+            ...(p.voided ? [{ icon: AlertCircle, label: `Voided by ${p.voided_by_name ?? "Dumbelo"}${p.voided_at ? `, ${day(p.voided_at)}` : ""}`, value: p.void_reason }] : []),
           ]} />
           <div className="rl-sheet__actions">
             <Link className="rl-button rl-button--secondary rl-button--block" href={`/console/invoices/${invoiceId}/receipts/${p.id}`}><Icon as={Printer} size="sm" />Print Receipt</Link>

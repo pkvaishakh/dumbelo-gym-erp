@@ -1,4 +1,4 @@
-"""What a gym's messages on Rackline's shared number cost it: delivered billable messages, counted from the rows.
+"""What a gym's messages on Dumbelo's shared number cost it: delivered billable messages, counted from the rows.
 
 Never a running counter. A message counts once, in the month Meta says it was delivered (`delivered_at`, read in
 the gym's time zone), at the rate kept on it when it was sent. Meta repeating "delivered" sets nothing new, so it

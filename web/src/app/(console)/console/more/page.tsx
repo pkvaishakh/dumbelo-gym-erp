@@ -9,7 +9,7 @@ import { gymSlug } from "@/lib/api";
 import { phone } from "@/lib/format";
 import { useWho } from "@/lib/session";
 
-/** Prices, branch requests, Rackline's WhatsApp numbers, log, usage and automation times, the Rackline admin's own account, and the gyms
+/** Prices, branch requests, Dumbelo's WhatsApp numbers, log, usage and automation times, the Dumbelo admin's own account, and the gyms
  *  they also work at (opening one leaves the Console). */
 export default function ConsoleMore() {
   const { me, signOut } = useWho();
@@ -17,7 +17,7 @@ export default function ConsoleMore() {
   const open = (slug: string) => { gymSlug.set(slug); window.location.assign("/home"); };
   return (
     <div className="rl-app rl-root">
-      <PageBar title="More" sub={`${me.name} • Rackline admin`} />
+      <PageBar title="More" sub={`${me.name} • Dumbelo admin`} />
       <main className="rl-app__main">
         {me.roles.length > 0 && (
           <Section title="Your gyms">
@@ -26,9 +26,9 @@ export default function ConsoleMore() {
             </ul>
           </Section>
         )}
-        <Section title="Rackline">
+        <Section title="Dumbelo">
           <ul className="rl-card rl-remind">
-            <MenuRow icon={BadgeIndianRupee} title="Prices" value="What gyms pay Rackline" href="/console/prices" />
+            <MenuRow icon={BadgeIndianRupee} title="Prices" value="What gyms pay Dumbelo" href="/console/prices" />
             <MenuRow icon={Inbox} title="Branch requests" value="Gyms asking for more" href="/console/requests" />
             <MenuRow icon={MessageCircle} title="WhatsApp" value="Numbers and templates" href="/console/whatsapp" />
             <MenuRow icon={ScrollText} title="WhatsApp log" value="Every message sent" href="/console/messages" />

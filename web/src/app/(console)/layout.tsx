@@ -14,7 +14,7 @@ function Loading() {
   );
 }
 
-/** The Console: Rackline's own side, for Rackline admins. The same shell and design system as the gym app. */
+/** The Console: Dumbelo's own side, for Dumbelo admins. The same shell and design system as the gym app. */
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
     <ConsoleProvider fallback={<Loading />}>

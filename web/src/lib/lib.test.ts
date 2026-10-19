@@ -174,7 +174,7 @@ describe("gym short names", () => {
   });
 });
 
-describe("Rackline plan", () => {
+describe("Dumbelo plan", () => {
   it("names the billing day", () => {
     expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 28].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "28th"]);
   });
@@ -184,7 +184,7 @@ describe("Rackline plan", () => {
   });
 });
 
-describe("Rackline invoices", () => {
+describe("Dumbelo invoices", () => {
   it("calls an open invoice past its due day overdue", () => {
     expect(invoiceState({ status: "open", overdue: true })).toBe("overdue");
     expect(invoiceState({ status: "open", overdue: false })).toBe("open");

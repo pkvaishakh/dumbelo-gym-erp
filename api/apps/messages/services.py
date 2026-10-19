@@ -42,7 +42,7 @@ RETRY_WAITS = (timedelta(minutes=1), timedelta(minutes=5), timedelta(minutes=15)
 INTERRUPTED_AFTER = timedelta(hours=1)
 RETRY_BATCH = 500
 
-PAUSED = "Not sent: your gym's Rackline account is paused."
+PAUSED = "Not sent: your gym's Dumbelo account is paused."
 OFF = "Not sent: WhatsApp messages are off for your gym."
 NOT_SET_UP = "Not sent: WhatsApp isn't set up for your gym yet."
 OPTED_OUT = "Not sent: they asked not to get messages."
@@ -67,18 +67,18 @@ def stop_reason(gym: Gym, member: Member | None = None) -> str | None:
 
 class Route:
     """The number a gym's messages go from (by its WhatsApp mode) and that number's approved templates, read once
-    for a whole run. `rackline`: Rackline's own messages to the gym's owner, from the shared number, never billed
+    for a whole run. `dumbelo`: Dumbelo's own messages to the gym's owner, from the shared number, never billed
     to the gym."""
 
-    def __init__(self, gym: Gym, rackline: bool = False):
-        where = None if rackline else gym
+    def __init__(self, gym: Gym, dumbelo: bool = False):
+        where = None if dumbelo else gym
         approved = approved_templates(where)
         # Usually one query: the account comes with its templates. Only a number without any is looked up alone.
         self.account: WhatsAppAccount | None = approved[0].account if approved else account_for(where)
         self.templates: dict[str, WhatsAppTemplate] = {}
         for template in approved:
             self.templates.setdefault(template.kind, template)  # one language a kind for now: the first
-        self.billing = None if rackline else getattr(gym, "billing", None)
+        self.billing = None if dumbelo else getattr(gym, "billing", None)
 
     def fill_in(self, row: Message, values: dict[str, str]) -> None:
         """Put the number, the template and the words on an unsaved row, ready to send. When it can't go, mark it
@@ -263,8 +263,8 @@ def send_retries(now: datetime | None = None) -> dict[str, int]:
            .select_related("gym__billing", "member", "template").order_by("next_retry_at")[:RETRY_BATCH])
     sender = get_sender()
     for row in due:
-        # Rackline's own messages to the owner go from its number whatever the gym's account or WhatsApp mode
-        reason = None if row.kind in NotificationRule.RACKLINE_KINDS else stop_reason(row.gym, row.member)
+        # Dumbelo's own messages to the owner go from its number whatever the gym's account or WhatsApp mode
+        reason = None if row.kind in NotificationRule.DUMBELO_KINDS else stop_reason(row.gym, row.member)
         if reason:
             # Paused, switched off or opted out since it was queued: it doesn't go, and the row says why.
             if Message.objects.filter(pk=row.pk, status=Message.QUEUED, attempts=row.attempts).update(
@@ -282,8 +282,8 @@ def send_retries(now: datetime | None = None) -> dict[str, int]:
 
 #: Why Retry can't be pressed, from what stopped it going. Written for the gym's admin.
 CANT_GO = {
-    PAUSED: "Your gym's Rackline account is paused, so nothing can be sent.",
-    OFF: "WhatsApp messages are off for your gym. Ask Rackline to turn them on.",
+    PAUSED: "Your gym's Dumbelo account is paused, so nothing can be sent.",
+    OFF: "WhatsApp messages are off for your gym. Ask Dumbelo to turn them on.",
     OPTED_OUT: "They asked not to get messages. Turn their reminders back on first.",
 }
 

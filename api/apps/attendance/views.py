@@ -182,7 +182,7 @@ class QRCheckInView(APIView):
         s.is_valid(raise_exception=True)
         branch = Branch.objects.select_related("gym").filter(qr_code=s.validated_data["code"]).first()
         if branch is None:
-            raise RuleBroken("bad_qr", "This QR code isn't a Rackline check-in code")
+            raise RuleBroken("bad_qr", "This QR code isn't a Dumbelo check-in code")
         role = GymRole.objects.filter(user=request.user, gym=branch.gym, is_active=True).first()
         if role is None:
             raise RuleBroken("not_in_gym", f"You're not a member of {branch.gym.name}")

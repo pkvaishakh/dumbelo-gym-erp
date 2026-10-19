@@ -1,5 +1,5 @@
 "use client";
-/* Changing a gym's Rackline plan in the Console: Edit Plan and Move to Current Prices. */
+/* Changing a gym's Dumbelo plan in the Console: Edit Plan and Move to Current Prices. */
 import { useState } from "react";
 
 import type { ConsolePlan } from "@/api/gen/model";

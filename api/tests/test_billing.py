@@ -1,4 +1,4 @@
-"""A gym's Rackline plan: price lists, the branch quota, asking for more branches and what approving one costs."""
+"""A gym's Dumbelo plan: price lists, the branch quota, asking for more branches and what approving one costs."""
 import importlib
 import threading
 import time
@@ -27,8 +27,8 @@ CONSOLE_ASKS = "/api/platform/branch-requests/"
 BRANCH = {"sessions": [{"name": "Morning", "starts": "06:00", "ends": "10:00"}]}
 
 
-def rackline(email="ops@rackline.in"):
-    user = User.objects.create_superuser(email=email, password="pass12345", name="Rackline Ops")
+def dumbelo(email="ops@dumbelo.com"):
+    user = User.objects.create_superuser(email=email, password="pass12345", name="Dumbelo Ops")
     c = APIClient()
     c.force_authenticate(user)
     return c
@@ -138,7 +138,7 @@ def test_a_quota_lowered_while_a_branch_opens_never_ends_up_below_it():
 # The Console sets the plan
 
 def test_console_shows_and_changes_a_gyms_plan(w):
-    c = rackline()
+    c = dumbelo()
     plan = c.get(console_plan(w.gym)).json()
     assert plan["branch_quota"] == 2 and plan["branches_in_use"] == 2 and plan["billing_day"] == 1
     assert plan["whatsapp_mode"] == "shared" and plan["paid_until"] is None and plan["current_prices"] is None
@@ -155,7 +155,7 @@ def test_console_shows_and_changes_a_gyms_plan(w):
 
 
 def test_a_quota_is_never_lowered_below_the_branches_open(w):
-    c = rackline()
+    c = dumbelo()
     r = c.patch(console_plan(w.gym), {"branch_quota": 1}, format="json")
     assert r.status_code == 409 and r.json()["error"]["code"] == "below_branches"
     assert r.json()["error"]["message"] == f"{w.gym.name} has 2 branches open. Its plan can't have room for fewer."
@@ -165,11 +165,11 @@ def test_a_quota_is_never_lowered_below_the_branches_open(w):
 
 @pytest.mark.parametrize("body", [{"branch_quota": 0}, {"billing_day": 29}, {"billing_day": 0}, {"whatsapp_mode": "sms"}])
 def test_plan_changes_are_checked(w, body):
-    r = rackline().patch(console_plan(w.gym), body, format="json")
+    r = dumbelo().patch(console_plan(w.gym), body, format="json")
     assert r.status_code == 400 and list(body)[0] in r.json()["error"]["fields"]
 
 
-def test_only_rackline_admins_reach_billing_in_the_console(w):
+def test_only_dumbelo_admins_reach_billing_in_the_console(w):
     for c in (w.client(w.admin), w.client(w.desk), w.member_client()):
         assert c.get(PRICE_LISTS).status_code == 403
         assert c.post(PRICE_LISTS, {}, format="json").status_code == 403
@@ -177,7 +177,7 @@ def test_only_rackline_admins_reach_billing_in_the_console(w):
         assert c.patch(console_plan(w.gym), {"branch_quota": 9}, format="json").status_code == 403
         assert c.post(f"{console_plan(w.gym)}current-prices/").status_code == 403
         assert c.get(CONSOLE_ASKS).status_code == 403
-    assert rackline().get("/api/platform/gyms/99999/plan/").status_code == 404
+    assert dumbelo().get("/api/platform/gyms/99999/plan/").status_code == 404
 
 
 # Price lists
@@ -187,13 +187,13 @@ def price_body(active_from, **change):
 
 
 def test_price_lists_are_added_never_edited(w, other, django_assert_max_num_queries):
-    c = rackline()
+    c = dumbelo()
     today = timezone.localdate()
     r = c.post(PRICE_LISTS, price_body(today, per_branch_paise=3_500_00, note="Diwali 2026"), format="json")
     assert r.status_code == 201, r.content
     new = r.json()
     assert new["is_current"] is True and new["gym_count"] == 0 and new["per_branch_paise"] == 3_500_00
-    assert AuditLog.objects.get(action="price_list.added").gym is None  # Rackline's own, not a gym's
+    assert AuditLog.objects.get(action="price_list.added").gym is None  # Dumbelo's own, not a gym's
     later = c.post(PRICE_LISTS, price_body(today + timedelta(days=30)), format="json").json()
     assert later["is_current"] is False  # it starts later
 
@@ -207,7 +207,7 @@ def test_price_lists_are_added_never_edited(w, other, django_assert_max_num_quer
 
 
 def test_price_list_errors(w):
-    c = rackline()
+    c = dumbelo()
     today = timezone.localdate()
     assert c.post(PRICE_LISTS, price_body(today - timedelta(days=1)), format="json").json()["error"]["code"] == "past_date"
     assert c.post(PRICE_LISTS, price_body(today), format="json").status_code == 201
@@ -219,7 +219,7 @@ def test_price_list_errors(w):
 
 
 def test_move_to_current_prices(w):
-    c = rackline()
+    c = dumbelo()
     c.post(PRICE_LISTS, price_body(timezone.localdate(), base_paise=1_499_00, per_branch_paise=3_500_00), format="json")
     plan = c.get(console_plan(w.gym)).json()
     assert plan["current_prices"]["active_from"] == timezone.localdate().isoformat()
@@ -244,7 +244,7 @@ def test_a_new_gym_gets_a_plan_for_one_branch_on_todays_prices(prices):
     assert plan.billing_day == min(clock.today(made.gym).day, 28) and plan.whatsapp_mode == "shared"
 
 
-def test_no_gym_opens_before_rackline_has_prices(db):
+def test_no_gym_opens_before_dumbelo_has_prices(db):
     with pytest.raises(RuleBroken) as e:
         create_gym(name="Pulse", slug="pulse", timezone_name="Asia/Kolkata", branch="Kochi", owner_email="anil@pulse.in",
                    owner_name="Anil", owner_password="first-pass-123")
@@ -272,7 +272,7 @@ def test_existing_gyms_get_a_plan_for_their_open_branches(db):
 
 # Asking for more branches
 
-def test_admin_asks_rackline_approves_and_the_quota_goes_up_at_once(w):
+def test_admin_asks_dumbelo_approves_and_the_quota_goes_up_at_once(w):
     admin = w.client(w.admin)
     assert new_branch(admin, "C").json()["error"]["code"] == "branch_limit"
     asked = ask(w, note="Opening in Kakkanad")
@@ -281,14 +281,14 @@ def test_admin_asks_rackline_approves_and_the_quota_goes_up_at_once(w):
     again = admin.post(ASKS, {"count": 1}, format="json")
     assert again.status_code == 409 and again.json()["error"]["code"] == "already_asked"
 
-    c = rackline()
+    c = dumbelo()
     row = c.get(CONSOLE_ASKS, {"status": "asked"}).json()["results"][0]
     assert (row["gym_name"], row["branch_quota"], row["branches_in_use"], row["note"]) == (w.gym.name, 2, 2, "Opening in Kakkanad")
     r = c.post(f"{CONSOLE_ASKS}{asked['id']}/approve/")
     assert r.status_code == 200, r.content
     done = r.json()
     cost = services.pro_rata(PRICES["per_branch_paise"], 1, 1, clock.today(w.gym))
-    assert done["status"] == "approved" and done["branch_quota"] == 3 and done["decided_by_name"] == "Rackline Ops"
+    assert done["status"] == "approved" and done["branch_quota"] == 3 and done["decided_by_name"] == "Dumbelo Ops"
     assert (done["pro_rata_paise"], done["charged_from"], done["charged_to"]) == (cost.amount_paise, cost.charged_from.isoformat(), cost.charged_to.isoformat())
     assert done["days_charged"] == cost.days and done["rate_paise"] == PRICES["per_branch_paise"]
     assert new_branch(admin, "C").status_code == 201
@@ -303,9 +303,9 @@ def test_admin_asks_rackline_approves_and_the_quota_goes_up_at_once(w):
     assert log["branch_request.approved"].after == {"branch_quota": 3, "pro_rata_paise": cost.amount_paise}
 
 
-def test_rackline_declines_with_a_reason(w):
+def test_dumbelo_declines_with_a_reason(w):
     asked = ask(w, count=2)
-    c = rackline()
+    c = dumbelo()
     r = c.post(f"{CONSOLE_ASKS}{asked['id']}/decline/", {"reason": "  "}, format="json")
     assert r.status_code == 400 and r.json()["error"]["fields"]["reason"] == ["Say why, so the gym's admin knows"]
     r = c.post(f"{CONSOLE_ASKS}{asked['id']}/decline/", {"reason": "Settle the October invoice first"}, format="json")
@@ -321,8 +321,8 @@ def test_gym_admins_cant_approve_their_own(w):
     for c in (w.client(w.admin), w.client(w.desk)):
         assert c.post(f"{CONSOLE_ASKS}{asked['id']}/approve/").status_code == 403
         assert c.post(f"{CONSOLE_ASKS}{asked['id']}/decline/", {"reason": "x"}, format="json").status_code == 403
-    # A Rackline admin who also works at the gym leaves its requests to someone else.
-    ops = User.objects.create_superuser(email="ops@rackline.in", password="pass12345", name="Ops")
+    # A Dumbelo admin who also works at the gym leaves its requests to someone else.
+    ops = User.objects.create_superuser(email="ops@dumbelo.com", password="pass12345", name="Ops")
     GymRole.objects.create(user=ops, gym=w.gym, role=GymRole.ADMIN)
     c = APIClient()
     c.force_authenticate(ops)
@@ -366,7 +366,7 @@ def test_console_requests_list_keeps_a_query_budget(w, other, django_assert_max_
     for i in range(3):
         g = World(f"g{i}", n=2 + i)
         ask(g)
-    c = rackline()
+    c = dumbelo()
     with django_assert_max_num_queries(3):
         rows = c.get(CONSOLE_ASKS).json()
     assert rows["count"] == 5 and all(r["branches_in_use"] == 2 for r in rows["results"])

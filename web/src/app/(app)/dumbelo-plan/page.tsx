@@ -6,26 +6,26 @@ import { useBillingInvoicesListInfinite, useBillingPlanRetrieve } from "@/api/ge
 import type { BranchAsk, GymPlan } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
 import { Confirm, Details, Empty, ErrorText, Field, Icon, LoadMore, Section, Seg, Sheet, SkeletonRows } from "@/components/ui";
-import { InvoiceRowLink } from "@/features/rackline-invoices";
-import { AskStatus, BranchRoom, PlanCard, PlanPrices, proRataText } from "@/features/rackline-plan";
+import { InvoiceRowLink } from "@/features/dumbelo-invoices";
+import { AskStatus, BranchRoom, PlanCard, PlanPrices, proRataText } from "@/features/dumbelo-plan";
 import { day, ordinal, plural, rupees, WHATSAPP_MODE } from "@/lib/format";
 import { fieldError, paged, pages, useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
 const COUNTS = ["1", "2", "3", "4", "5"] as const;
 
-/** What the gym pays Rackline, for its admins. Open while the gym is paused, so they can see what to settle. */
-export default function RacklinePlanPage() {
+/** What the gym pays Dumbelo, for its admins. Open while the gym is paused, so they can see what to settle. */
+export default function DumbeloPlanPage() {
   const { paused } = useSession();
   const q = useBillingPlanRetrieve();
   const plan = q.data?.data;
   const [asking, setAsking] = useState(false);
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Rackline plan" sub="What your gym pays Rackline" back="/more" />
+      <PageBar title="Dumbelo plan" sub="What your gym pays Dumbelo" back="/more" />
       <main className="rl-app__main">
         {q.isError ? (
-          <Empty icon={AlertCircle} title="Can't load your Rackline plan" text={q.error instanceof Error ? q.error.message : "Check your connection and try again."}>
+          <Empty icon={AlertCircle} title="Can't load your Dumbelo plan" text={q.error instanceof Error ? q.error.message : "Check your connection and try again."}>
             <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => q.refetch()}>Try Again</button>
           </Empty>
         ) : !plan ? <SkeletonRows n={4} /> : (
@@ -60,14 +60,14 @@ export default function RacklinePlanPage() {
   );
 }
 
-/** The gym's Rackline invoices, newest first, and what's still to pay on them. Each opens with its receipts. */
+/** The gym's Dumbelo invoices, newest first, and what's still to pay on them. Each opens with its receipts. */
 function Invoices({ owed }: { owed: number }) {
   const q = useBillingInvoicesListInfinite({}, { query: paged });
   const { rows } = pages(q);
   return (
     <Section title="Invoices" aside={<p className="rl-section__aside">{owed ? `${rupees(owed)} to pay` : "Nothing to pay"}</p>}>
       {owed > 0 && (
-        <p className="rl-field__hint" style={{ marginTop: 0 }}>Pay Rackline by bank transfer or UPI. Rackline records it here and you get a receipt.</p>
+        <p className="rl-field__hint" style={{ marginTop: 0 }}>Pay Dumbelo by bank transfer or UPI. Dumbelo records it here and you get a receipt.</p>
       )}
       {q.isLoading ? <SkeletonRows n={2} /> : q.isError ? (
         <Empty icon={AlertCircle} title="Can't load your invoices" text="Check your connection and try again.">
@@ -75,7 +75,7 @@ function Invoices({ owed }: { owed: number }) {
         </Empty>
       ) : rows.length ? (
         <>
-          <ul className="rl-card rl-mlist rl-mlist--compact">{rows.map((inv) => <InvoiceRowLink key={inv.id} inv={inv} href={`/rackline-plan/invoices/${inv.id}`} />)}</ul>
+          <ul className="rl-card rl-mlist rl-mlist--compact">{rows.map((inv) => <InvoiceRowLink key={inv.id} inv={inv} href={`/dumbelo-plan/invoices/${inv.id}`} />)}</ul>
           <LoadMore q={q} />
         </>
       ) : (
@@ -89,10 +89,10 @@ function LastRequest({ r }: { r: BranchAsk | null }) {
   if (!r) return null;
   const more = plural(r.count, "more branch", "more branches");
   const text = r.status === "asked"
-    ? `You asked for ${more} on ${day(r.created_at)}. Rackline will answer soon.`
+    ? `You asked for ${more} on ${day(r.created_at)}. Dumbelo will answer soon.`
     : r.status === "approved"
-      ? `Rackline added room for ${more} on ${day(r.decided_at ?? r.created_at)}. ${proRataText(r)}.`
-      : `Rackline didn't add ${more}: ${r.decline_reason}`;
+      ? `Dumbelo added room for ${more} on ${day(r.decided_at ?? r.created_at)}. ${proRataText(r)}.`
+      : `Dumbelo didn't add ${more}: ${r.decline_reason}`;
   return (
     <div className="rl-card rl-card--pad" style={{ marginTop: "var(--space-3)" }}>
       <p className="rl-row__title" style={{ margin: 0, display: "flex", justifyContent: "space-between", gap: "var(--space-2)" }}>
@@ -103,7 +103,7 @@ function LastRequest({ r }: { r: BranchAsk | null }) {
   );
 }
 
-/** Add Branch to My Plan: how many more, and a note for Rackline. Rackline approves it; nothing changes until then. */
+/** Add Branch to My Plan: how many more, and a note for Dumbelo. Dumbelo approves it; nothing changes until then. */
 function AskSheet({ plan, open, onClose }: { plan: GymPlan; open: boolean; onClose: () => void }) {
   const [count, setCount] = useState<(typeof COUNTS)[number]>("1");
   const [note, setNote] = useState("");
@@ -118,7 +118,7 @@ function AskSheet({ plan, open, onClose }: { plan: GymPlan; open: boolean; onClo
     <Sheet open={open} onClose={close} title={sent ? undefined : "Add Branch to My Plan"}>
       {sent ? (
         <>
-          <Confirm title="Request sent" text={`Rackline will add room for ${plural(sent.count, "more branch", "more branches")} and tell you here. You can open it as soon as it's approved.`} />
+          <Confirm title="Request sent" text={`Dumbelo will add room for ${plural(sent.count, "more branch", "more branches")} and tell you here. You can open it as soon as it's approved.`} />
           <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={close}>Done</button></div>
         </>
       ) : (
@@ -126,7 +126,7 @@ function AskSheet({ plan, open, onClose }: { plan: GymPlan; open: boolean; onClo
           <fieldset className="rl-fieldset"><legend>How many more branches</legend>
             <Seg label="How many more branches" value={count} onChange={setCount} options={COUNTS.map((c) => ({ value: c, label: c }))} />
           </fieldset>
-          <Field label="Note for Rackline" optional error={fieldError(a.error, "note")} hint="Where it opens, or when.">
+          <Field label="Note for Dumbelo" optional error={fieldError(a.error, "note")} hint="Where it opens, or when.">
             {(id, d) => <input className="rl-field__input" id={id} aria-describedby={d} value={note} maxLength={200} placeholder="Opening in Kakkanad in December" onChange={(e) => setNote(e.target.value)} />}
           </Field>
           <p className="rl-row__meta" style={{ margin: 0 }}>
@@ -134,7 +134,7 @@ function AskSheet({ plan, open, onClose }: { plan: GymPlan; open: boolean; onClo
             The rest of the month you&apos;re approved in is charged by the day on your next invoice.
           </p>
           <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
-          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="submit" disabled={a.busy}>{a.busy ? "Sending…" : "Ask Rackline"}</button></div>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="submit" disabled={a.busy}>{a.busy ? "Sending…" : "Ask Dumbelo"}</button></div>
         </form>
       )}
     </Sheet>

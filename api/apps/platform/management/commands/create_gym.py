@@ -4,7 +4,7 @@
         --owner-email meera@ironhouse.in --owner-name "Meera Iyer"
 
 A new owner login gets the password given with --owner-password, or one made up here and printed once to pass
-on. An owner who already signs in to Rackline (at another gym) keeps their password.
+on. An owner who already signs in to Dumbelo (at another gym) keeps their password.
 """
 import secrets
 
@@ -23,10 +23,10 @@ class Command(BaseCommand):
         parser.add_argument("--slug", required=True, help="Short name the app sends as X-Gym: lowercase letters, numbers, dashes")
         parser.add_argument("--branch", required=True, help="The first branch's name")
         parser.add_argument("--owner-email", required=True)
-        parser.add_argument("--owner-name", default="", help="Needed when the owner is new to Rackline")
+        parser.add_argument("--owner-name", default="", help="Needed when the owner is new to Dumbelo")
         parser.add_argument("--owner-password", default="", help="A first password for a new login; made up if left out")
         parser.add_argument("--timezone", default="Asia/Kolkata")
-        parser.add_argument("--billing-email", default="", help="Where Rackline sends invoices; the owner's email if left out")
+        parser.add_argument("--billing-email", default="", help="Where Dumbelo sends invoices; the owner's email if left out")
 
     def handle(self, *args, **o):
         password = o["owner_password"]
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         record(None, "gym.created", made.gym, None, {"slug": made.gym.slug, "owner": made.owner.user.email, "new_login": made.new_login}, gym=made.gym)
         self.stdout.write(self.style.SUCCESS(f"{made.gym.name} is ready (X-Gym: {made.gym.slug}), on trial."))
         if not made.new_login:
-            self.stdout.write(f"{made.owner.user.email} already signs in to Rackline and keeps their password.")
+            self.stdout.write(f"{made.owner.user.email} already signs in to Dumbelo and keeps their password.")
         elif made_up:
             self.stdout.write(f"{made.owner.user.email} signs in with this first password: {password}  (shown once: pass it on)")
         else:

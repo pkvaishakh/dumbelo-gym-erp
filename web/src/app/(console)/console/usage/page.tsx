@@ -12,13 +12,13 @@ import { gymToday, monthLabel, plural, rupees } from "@/lib/format";
 import { paged, pages } from "@/lib/hooks";
 import { recentMonths } from "@/lib/messages";
 
-/** Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month, and what they
+/** Console → WhatsApp usage: each gym's messages delivered from Dumbelo's shared number in a month, and what they
  *  came to, the biggest first. Each gym's days are its own, as its invoice counts them. A gym opens its log, showing
  *  just the messages counted here. */
 function Usage() {
   const params = useSearchParams();
   const router = useRouter();
-  const thisMonth = gymToday("Asia/Kolkata").slice(0, 7); // Rackline's month, as on Console Home
+  const thisMonth = gymToday("Asia/Kolkata").slice(0, 7); // Dumbelo's month, as on Console Home
   const asked = params.get("month") ?? "";
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(asked) ? asked : thisMonth;
   const list = usePlatformWhatsappUsageRetrieveInfinite({ month }, { query: paged });
@@ -27,7 +27,7 @@ function Usage() {
 
   return (
     <div className="rl-app rl-root">
-      <PageBar title="WhatsApp usage" sub={`Rackline's shared number • ${monthLabel(month)}`} back="/console/more" />
+      <PageBar title="WhatsApp usage" sub={`Dumbelo's shared number • ${monthLabel(month)}`} back="/console/more" />
       <main className="rl-app__main">
         <Field label="Month">{(id) => (
           <select className="rl-field__input" id={id} value={month} onChange={(e) => router.replace(`/console/usage?month=${e.target.value}`, { scroll: false })}>
@@ -61,7 +61,7 @@ function Usage() {
               <LoadMore q={list} />
             </>
           ) : (
-            <Empty icon={MessageCircle} title={`No messages in ${monthLabel(month)}`} text="Gyms on Rackline's number show up here once their messages are delivered." />
+            <Empty icon={MessageCircle} title={`No messages in ${monthLabel(month)}`} text="Gyms on Dumbelo's number show up here once their messages are delivered." />
           )}
         </Section>
         <p className="rl-row__meta">A gym&apos;s messages go on the invoice written on its billing day, for the billing month before. Gyms on their own number pay Meta and aren&apos;t here.</p>

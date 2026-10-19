@@ -1,6 +1,6 @@
 # Commands
 
-PowerShell, from the repo root. Demo password: `rackline-demo`.
+PowerShell, from the repo root. Demo password: `dumbelo-demo`.
 
 ## First time
 
@@ -34,14 +34,14 @@ cd api; .venv\Scripts\activate; celery -A config beat --loglevel=info
 docker compose up -d worker beat                                      # or both in Docker
 ```
 
-## Rackline admin (super admin, the Console)
+## Dumbelo admin (super admin, the Console)
 
 ```powershell
 cd api; .venv\Scripts\activate
 python manage.py createsuperuser                                      # asks email, name, password
 ```
 
-Make an existing login a Rackline admin:
+Make an existing login a Dumbelo admin:
 
 ```powershell
 python manage.py shell -c "from apps.accounts.models import User; User.objects.filter(email='you@example.com').update(is_superuser=True, is_staff=True)"

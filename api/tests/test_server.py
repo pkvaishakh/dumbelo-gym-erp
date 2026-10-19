@@ -1,4 +1,4 @@
-"""Console → Server: the status of everything Rackline runs on, each job's runs, and Run Now."""
+"""Console → Server: the status of everything Dumbelo runs on, each job's runs, and Run Now."""
 from datetime import timedelta
 from unittest import mock
 
@@ -17,7 +17,7 @@ from apps.core.models import JobRun
 from apps.messages.models import Message, WebhookEvent, WhatsAppAccount
 from apps.messages.tasks import replay_webhook_calls, retry_messages, send_reminders
 from apps.platform import server
-from tests.test_platform import rackline, support
+from tests.test_platform import dumbelo, support
 
 STATUS = "/api/platform/status/"
 
@@ -47,7 +47,7 @@ def on_a_server(settings):
 
 # ---- who may look ----
 
-def test_only_rackline_admins_see_the_status_and_run_jobs(w):
+def test_only_dumbelo_admins_see_the_status_and_run_jobs(w):
     for c in (support(), w.client(w.admin), w.client(w.desk), w.client(w.trainer), w.member_client()):
         assert c.get(STATUS).status_code == 403
         assert c.post(run_now("reminders")).status_code == 403
@@ -82,7 +82,7 @@ def test_the_status_shows_the_version_the_jobs_messages_and_webhook_within_a_que
     WebhookEvent.objects.filter(pk=stale.pk).update(created_at=now - timedelta(days=8))
 
     with django_assert_max_num_queries(12):
-        r = rackline().get(STATUS)
+        r = dumbelo().get(STATUS)
 
     assert r.status_code == 200, r.content
     body = r.json()
@@ -107,7 +107,7 @@ def test_the_status_shows_the_version_the_jobs_messages_and_webhook_within_a_que
 
 
 def test_a_dead_database_shows_as_down_not_a_500(w):
-    ops = rackline()
+    ops = dumbelo()
     with mock.patch.object(core_views.connection, "cursor", side_effect=DatabaseError("could not connect to server")):
         r = ops.get(STATUS)
 
@@ -121,7 +121,7 @@ def test_a_dead_database_shows_as_down_not_a_500(w):
 
 def test_a_section_the_database_breaks_on_is_left_out_not_a_500(w):
     with mock.patch.object(server, "job_rows", side_effect=OperationalError("server closed the connection")):
-        r = rackline().get(STATUS)
+        r = dumbelo().get(STATUS)
 
     assert r.status_code == 200 and r.json()["jobs"] is None and r.json()["messages"] is not None
 
@@ -129,7 +129,7 @@ def test_a_section_the_database_breaks_on_is_left_out_not_a_500(w):
 def test_dead_redis_shows_as_down_and_the_worker_is_not_asked(w, settings):
     settings.CELERY_BROKER_URL = "redis://redis.internal:6379/0"
     with mock.patch.object(server, "_redis_answers", return_value=False), mock.patch.object(server.celery_app.control, "ping") as ping:
-        c = checks(rackline().get(STATUS).json())
+        c = checks(dumbelo().get(STATUS).json())
 
     assert c["redis"]["state"] == "down" and c["redis"]["detail"] == "No answer: job queue"
     assert "redis.internal" not in str(c)  # an address can carry a password
@@ -144,7 +144,7 @@ def test_redis_pings_have_a_time_limit_and_a_refused_connection_is_down(settings
 
 
 def test_a_dead_worker_shows_as_down(w, on_a_server):
-    ops = rackline()
+    ops = dumbelo()
     on_a_server.return_value = []
     c = checks(ops.get(STATUS).json())
     assert c["redis"]["state"] == "up" and c["worker"]["state"] == "down"
@@ -156,7 +156,7 @@ def test_a_dead_worker_shows_as_down(w, on_a_server):
 
 
 def test_beat_is_up_while_it_ticks_and_down_when_it_stops(w, on_a_server):
-    ops = rackline()
+    ops = dumbelo()
     assert checks(ops.get(STATUS).json())["beat"]["state"] == "down"  # never ticked
 
     retry_messages.apply()  # beat's every-minute tick
@@ -173,20 +173,20 @@ def test_beat_is_up_while_it_ticks_and_down_when_it_stops(w, on_a_server):
 # ---- Run Now ----
 
 def test_run_now_queues_once_is_refused_while_the_job_runs_and_is_audited(w):
-    ops = rackline()
+    ops = dumbelo()
     with mock.patch.object(send_reminders, "apply_async") as queued:
         r = ops.post(run_now("reminders"))
         again = ops.post(run_now("reminders"))
 
     assert r.status_code == 202, r.content
     run = r.json()
-    assert run["state"] == "queued" and run["trigger"] == "run_now" and run["by_name"] == "Rackline Ops"
+    assert run["state"] == "queued" and run["trigger"] == "run_now" and run["by_name"] == "Dumbelo Ops"
     queued.assert_called_once_with(kwargs={"run_id": run["id"]})
     assert again.status_code == 409 and again.json()["error"]["code"] == "job_running"
     assert again.json()["error"]["message"] == "Reminders is running now. Wait for it to finish, then try again."
     log = AuditLog.objects.get(action="job.run_now")
-    assert log.gym is None and log.actor.email == "ops@rackline.in" and log.after == {"job": "reminders"}
-    assert rackline("ops2@rackline.in").get(STATUS).json()["jobs"][0]["current"]["id"] == run["id"]
+    assert log.gym is None and log.actor.email == "ops@dumbelo.com" and log.after == {"job": "reminders"}
+    assert dumbelo("ops2@dumbelo.com").get(STATUS).json()["jobs"][0]["current"]["id"] == run["id"]
 
     send_reminders.apply(kwargs={"run_id": run["id"]})  # the worker takes it
     send_reminders.apply(kwargs={"run_id": run["id"]})  # and the queue hands it over again: nothing more
@@ -200,7 +200,7 @@ def test_run_now_queues_once_is_refused_while_the_job_runs_and_is_audited(w):
 def test_run_now_is_refused_while_beat_is_running_that_job(w):
     JobRun.objects.create(job=JobRun.INVOICES, trigger=JobRun.BEAT, started_at=timezone.now())
     with mock.patch.object(write_invoices, "apply_async") as queued:
-        r = rackline().post(run_now("invoices"))
+        r = dumbelo().post(run_now("invoices"))
     assert r.status_code == 409 and r.json()["error"]["code"] == "job_running"
     queued.assert_not_called()
     assert not AuditLog.objects.filter(action="job.run_now").exists()
@@ -210,13 +210,13 @@ def test_a_run_left_unfinished_for_an_hour_no_longer_blocks_run_now(w):
     stuck = JobRun.objects.create(job=JobRun.WEBHOOK_REPLAY, trigger=JobRun.RUN_NOW)
     JobRun.objects.filter(pk=stuck.pk).update(created_at=timezone.now() - timedelta(hours=2))
     with mock.patch.object(replay_webhook_calls, "apply_async"):
-        assert rackline().post(run_now("webhook_replay")).status_code == 202
+        assert dumbelo().post(run_now("webhook_replay")).status_code == 202
     stuck.refresh_from_db()
     assert stuck.finished_at and stuck.error == ABANDONED
 
 
 def test_run_now_only_starts_the_safe_to_repeat_jobs(w):
-    ops = rackline()
+    ops = dumbelo()
     assert ops.post(run_now("retries")).status_code == 404
     assert ops.post(run_now("backups")).status_code == 404
     assert not JobRun.objects.exists()
@@ -225,7 +225,7 @@ def test_run_now_only_starts_the_safe_to_repeat_jobs(w):
 def test_run_now_without_a_worker_runs_here(w, shared_number):
     """A laptop: no broker, so the job runs in the request and the run is finished when it answers."""
     event = WebhookEvent.objects.create(account=shared_number, body='{"entry": []}', error="KeyError: 'entry'")
-    r = rackline().post(run_now("webhook_replay"))
+    r = dumbelo().post(run_now("webhook_replay"))
     assert r.status_code == 202 and r.json()["state"] == "done"
     assert r.json()["did"] == [{"label": "calls handled", "count": 1}]
     event.refresh_from_db()
@@ -233,7 +233,7 @@ def test_run_now_without_a_worker_runs_here(w, shared_number):
 
 
 def test_run_now_says_so_when_the_queue_is_down_and_does_not_block_the_next_try(w):
-    ops = rackline()
+    ops = dumbelo()
     with mock.patch.object(send_reminders, "apply_async", side_effect=QueueDown("Error 111 connecting")):
         r = ops.post(run_now("reminders"))
     assert r.status_code == 503 and r.json()["error"]["code"] == "queue_down"

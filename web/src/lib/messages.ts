@@ -1,5 +1,5 @@
-/* When each WhatsApp message goes out, in the words a gym's admin or a Rackline admin reads. The times themselves
-   come from the API (Rackline's, or a gym's own); this only says them. */
+/* When each WhatsApp message goes out, in the words a gym's admin or a Dumbelo admin reads. The times themselves
+   come from the API (Dumbelo's, or a gym's own); this only says them. */
 import { MessagesListKind, MessagesListRecipient, MessagesListStatus } from "@/api/gen/model";
 import type { MessageKindEnum, MessagesListParams, Rule } from "@/api/gen/model";
 
@@ -25,7 +25,7 @@ export function daysLabel(days: readonly number[]) {
 const AS_IT_HAPPENS: Record<string, string> = {
   payment_received: "When the desk records a payment",
   task_assigned: "When an admin gives them a task",
-  rackline_payment_received: "When Rackline records a payment",
+  dumbelo_payment_received: "When Dumbelo records a payment",
 };
 
 /** When a message goes out: "7 and 3 days before a plan ends, at 6 AM", or what sends it. */
@@ -36,7 +36,7 @@ export function whenLabel(r: Pick<Rule, "kind" | "hour" | "days_ahead">) {
     case "plan_ending": return `${daysLabel(r.days_ahead ?? [])} before a plan ends, at ${at}`;
     case "plan_ends_today": return `The day a plan ends, at ${at}`;
     case "payment_due": return `Each day money is owed, at ${at}`;
-    case "rackline_invoice_due": return `3 days before an invoice is due, then 1 and 7 days after, at ${at}`;
+    case "dumbelo_invoice_due": return `3 days before an invoice is due, then 1 and 7 days after, at ${at}`;
     default: return `At ${at}`;
   }
 }
@@ -44,13 +44,13 @@ export function whenLabel(r: Pick<Rule, "kind" | "hour" | "days_ahead">) {
 /** Who each message goes to. */
 export const MESSAGE_TO: Record<string, string> = {
   plan_ending: "The member", plan_ends_today: "The member", payment_due: "The member", payment_received: "The member",
-  task_assigned: "The trainer or receptionist", rackline_invoice_due: "The gym's owner", rackline_payment_received: "The gym's owner",
+  task_assigned: "The trainer or receptionist", dumbelo_invoice_due: "The gym's owner", dumbelo_payment_received: "The gym's owner",
 };
 
 /** What each message is, as the log names it (the API's labels). */
 export const MESSAGE_LABEL: Record<MessageKindEnum, string> = {
   plan_ending: "Plan ending soon", plan_ends_today: "Plan ends today", payment_due: "Payment due", payment_received: "Payment received",
-  task_assigned: "Task assigned", rackline_invoice_due: "Rackline invoice due", rackline_payment_received: "Rackline payment received",
+  task_assigned: "Task assigned", dumbelo_invoice_due: "Dumbelo invoice due", dumbelo_payment_received: "Dumbelo payment received",
 };
 
 /** The gym's message log filters, as they sit in the address ("" or "all" for none). */

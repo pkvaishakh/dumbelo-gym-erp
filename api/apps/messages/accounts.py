@@ -1,6 +1,6 @@
-"""WhatsApp accounts and their templates: the rules for setting them up. Rackline admins do this, in the Console.
+"""WhatsApp accounts and their templates: the rules for setting them up. Dumbelo admins do this, in the Console.
 
-A gym has at most one account and Rackline one shared number. Changing where an account points, or its
+A gym has at most one account and Dumbelo one shared number. Changing where an account points, or its
 credentials, puts it back to "not checked yet" until Test Connection says it works.
 """
 from django.db import IntegrityError, transaction
@@ -19,23 +19,23 @@ WHERE = ("waba_id", "phone_number_id", "display_number")  # what an account poin
 def _taken(gym: Gym | None, phone_number_id: str, exclude: int | None = None) -> None:
     others = WhatsAppAccount.objects.exclude(pk=exclude)
     if others.filter(phone_number_id=phone_number_id).exists():
-        raise RuleBroken("number_taken", "That phone number id is already set up on Rackline.")
+        raise RuleBroken("number_taken", "That phone number id is already set up on Dumbelo.")
     if exclude is None and others.filter(gym=gym).exists():
         if gym is None:
-            raise RuleBroken("account_exists", "Rackline's shared number is already set up. Open it to replace its credentials.")
+            raise RuleBroken("account_exists", "Dumbelo's shared number is already set up. Open it to replace its credentials.")
         raise RuleBroken("account_exists", f"{gym.name} already has a WhatsApp account. Open it to replace its credentials.")
 
 
 def add_account(*, gym: Gym | None, waba_id: str, phone_number_id: str, display_number: str, access_token: str,
                 app_secret: str) -> WhatsAppAccount:
-    """A new account, for a gym's own number or (no gym) Rackline's shared one. Not checked until Test Connection."""
+    """A new account, for a gym's own number or (no gym) Dumbelo's shared one. Not checked until Test Connection."""
     _taken(gym, phone_number_id)
     account = WhatsAppAccount(gym=gym, waba_id=waba_id, phone_number_id=phone_number_id, display_number=display_number)
     account.set_credentials(access_token=access_token, app_secret=app_secret)
     try:
         with transaction.atomic():
             account.save()
-    except IntegrityError:  # another Rackline admin added the same one a moment ago
+    except IntegrityError:  # another Dumbelo admin added the same one a moment ago
         _taken(gym, phone_number_id)
         raise
     return account
@@ -86,13 +86,13 @@ def test_connection(account: WhatsAppAccount) -> WhatsAppAccount:
 
 
 def whatsapp_mode(gym: Gym) -> str:
-    """Shared, own or off, from the gym's Rackline plan. A gym without one yet is on the shared number."""
+    """Shared, own or off, from the gym's Dumbelo plan. A gym without one yet is on the shared number."""
     return getattr(getattr(gym, "billing", None), "whatsapp_mode", GymBilling.SHARED)
 
 
 def _sends_from(gym: Gym | None) -> dict | None:
     """Which account a gym's messages go from, as a filter, by its WhatsApp mode; None when it's off. No gym:
-    Rackline's own messages, which always go from the shared number."""
+    Dumbelo's own messages, which always go from the shared number."""
     if gym is None:
         return {"gym": None}
     mode = whatsapp_mode(gym)
@@ -111,7 +111,7 @@ def account_for(gym: Gym | None) -> WhatsAppAccount | None:
 
 
 def approved_templates(gym: Gym | None) -> list[WhatsAppTemplate]:
-    """The approved templates on the number a gym sends from (no gym: Rackline's shared number), each with that
+    """The approved templates on the number a gym sends from (no gym: Dumbelo's shared number), each with that
     account (without its credentials), in one query. Empty when WhatsApp is off, or the number has none."""
     where = _sends_from(gym)
     if where is None:

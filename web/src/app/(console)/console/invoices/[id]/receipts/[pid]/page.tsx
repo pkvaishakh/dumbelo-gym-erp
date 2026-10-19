@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 
 import { usePlatformInvoicesRetrieve } from "@/api/gen/platform/platform";
 import { Empty } from "@/components/ui";
-import { PrintFrame, ReceiptPaper } from "@/features/rackline-invoices";
+import { PrintFrame, ReceiptPaper } from "@/features/dumbelo-invoices";
 
 /** A payment's receipt to print or save as a PDF, from the Console. The same paper the gym's admins print. */
 export default function ConsolePrintReceipt() {

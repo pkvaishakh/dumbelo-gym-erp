@@ -121,7 +121,7 @@ jobs:
           reason=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$arn" \
             --query 'tasks[0].stoppedReason' --output text)
           echo "Migration task finished with exit code $code ($reason)"
-          [ "$code" = "0" ] || { echo "::error::The migrations failed. Nothing has been rolled out; the log is in CloudWatch under /ecs/rackline."; exit 1; }
+          [ "$code" = "0" ] || { echo "::error::The migrations failed. Nothing has been rolled out; the log is in CloudWatch under /ecs/dumbelo."; exit 1; }
 
       - name: Roll out the API
         env:

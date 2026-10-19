@@ -17,8 +17,8 @@ PRODUCTION_ENV = {
     "PRODUCTION": "true",
     "DEBUG": "False",
     "SECRET_KEY": "a-very-long-random-production-secret-key-0123456789abcdefghij",
-    "ALLOWED_HOSTS": "api.rackline.in",
-    "DATABASE_URL": "postgres://rackline:secret@db.ap-south-1.rds.amazonaws.com:5432/rackline",
+    "ALLOWED_HOSTS": "api.dumbelo.com",
+    "DATABASE_URL": "postgres://dumbelo:secret@db.ap-south-1.rds.amazonaws.com:5432/dumbelo",
     "CACHE_URL": "redis://cache.ap-south-1.cache.amazonaws.com:6379/1",
     "FIELD_ENCRYPTION_KEY": "cHJvZHVjdGlvbi10ZXN0LWtleS0wMDAwMDAwMDAwMDA=",
 }
@@ -61,7 +61,7 @@ def test_health_says_503_when_the_database_is_unreachable(db):
 
 
 def test_health_answers_the_load_balancer_asking_by_ip(db, settings):
-    settings.ALLOWED_HOSTS = ["api.rackline.in"]
+    settings.ALLOWED_HOSTS = ["api.dumbelo.com"]
 
     assert APIClient().get("/api/health/", headers={"host": "10.0.3.47"}).status_code == 200
     # Only that one path: everything else still answers only on the names the server was given.

@@ -100,7 +100,7 @@ export function MessageSheet({ m, onClose }: { m: ConsoleMessage | null; onClose
         <Details rows={[
           { icon: Building2, label: "Gym", value: m.gym_name },
           { icon: UserRound, label: "To", value: `${m.recipient === "member" ? "A member" : "A staff member"}, ${lastDigits(m.to_last4)}` },
-          { icon: MessageCircle, label: "From", value: m.account_number ? `${m.account_number}${m.is_shared ? " (Rackline's shared number)" : ""}` : "No number to send from" },
+          { icon: MessageCircle, label: "From", value: m.account_number ? `${m.account_number}${m.is_shared ? " (Dumbelo's shared number)" : ""}` : "No number to send from" },
           { icon: FileText, label: "Template", value: m.template_name ? `${m.template_name} (${m.template_language})` : "None" },
           { icon: Send, label: "Status", value: <><MessageBadge status={m.status} /> since {dayTime(m.updated_at)}</> },
           { icon: CalendarClock, label: "Written", value: `${dayTime(m.created_at)}, for ${day(m.for_date)}` },

@@ -16,7 +16,7 @@ A `volt` tick above the heading "Password changed", one line, and "Back to Sign 
     </div>
   </aside>
   <div class="rl-auth__app">
-    <header class="rl-auth__top rl-auth__top--back"><button class="rl-iconbtn rl-iconbtn--plain" type="button" data-auth-back aria-label="Back to sign in"><Icon class="rl-icon"/></button><a class="rl-logo" href="#" aria-label="Rackline home"><Mark/><span class="rl-logo__name">Rackline</span></a></header>
+    <header class="rl-auth__top rl-auth__top--back"><button class="rl-iconbtn rl-iconbtn--plain" type="button" data-auth-back aria-label="Back to sign in"><Icon class="rl-icon"/></button><a class="rl-logo" href="#" aria-label="Dumbelo home"><Mark/><span class="rl-logo__name">Dumbelo</span></a></header>
     <div class="rl-auth__art"><div class="rl-barbell rl-barbell--bleed" aria-hidden="true"><span class="rl-barbell__tip"></span><span class="rl-plate rl-plate--sm"></span><span class="rl-plate rl-plate--md"></span><span class="rl-plate rl-plate--lg"></span><span class="rl-plate"></span><span class="rl-plate rl-plate--volt"></span><span class="rl-barbell__collar"></span><span class="rl-barbell__shaft"></span></div></div>
     <section class="rl-auth__body" data-step="1" hidden aria-labelledby="fp-t1">
       <h1 class="rl-display" id="fp-t1">Reset your password</h1>

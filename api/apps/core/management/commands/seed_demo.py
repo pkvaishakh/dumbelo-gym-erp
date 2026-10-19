@@ -1,9 +1,9 @@
 """Fill an empty database with the demo gym from the prototype: `python manage.py seed_demo` (add --reset to start over).
 
-Every demo login uses the password `rackline-demo`:
-  meera@rackline.demo (admin, account owner)   arjun@ / kavya@ (receptionists)   neha@ / neeraj@ / alex@ / imran@ (trainers)
+Every demo login uses the password `dumbelo-demo`:
+  meera@dumbelo.demo (admin, account owner)   arjun@ / kavya@ (receptionists)   neha@ / neeraj@ / alex@ / imran@ (trainers)
   members sign in with their phone, e.g. 9800000001
-  rackline@rackline.demo (a Rackline admin: the Console at /console, no role in the gym)
+  dumbelo@dumbelo.demo (a Dumbelo admin: the Console at /console, no role in the gym)
 """
 import random
 from datetime import date, datetime, time, timedelta
@@ -37,7 +37,7 @@ from apps.reminders.services import queue_for
 from apps.tasks.models import Task, TaskUpdate
 
 User = get_user_model()
-PASSWORD = "rackline-demo"
+PASSWORD = "dumbelo-demo"
 
 BRANCHES = {
     "Indiranagar": [("Morning", 5, 10), ("Afternoon", 12, 16), ("Evening", 17, 22)],
@@ -61,8 +61,8 @@ DEMO_TEMPLATES = [
     ("payment_due", ["first_name", "amount", "plan", "gym"], "Hi {{1}}, {{2}} is still to pay on your {{3}} at {{4}}. You can pay it at the front desk the next time you come in."),
     ("payment_received", ["first_name", "amount", "gym", "paid_on"], "Hi {{1}}, thank you: {{3}} received {{2}} from you on {{4}}."),
     ("task_assigned", ["first_name", "task", "gym", "due_date"], "Hi {{1}}, you have a new task at {{3}}: {{2}}, due {{4}}."),
-    ("rackline_invoice_due", ["first_name", "invoice_number", "gym", "amount", "due_date"], "Hi {{1}}, Rackline invoice {{2}} for {{3}} has {{4}} to pay by {{5}}."),
-    ("rackline_payment_received", ["first_name", "amount", "gym", "receipt_number"], "Hi {{1}}, Rackline received {{2}} from {{3}}. Your receipt is {{4}}."),
+    ("dumbelo_invoice_due", ["first_name", "invoice_number", "gym", "amount", "due_date"], "Hi {{1}}, Dumbelo invoice {{2}} for {{3}} has {{4}} to pay by {{5}}."),
+    ("dumbelo_payment_received", ["first_name", "amount", "gym", "receipt_number"], "Hi {{1}}, Dumbelo received {{2}} from {{3}}. Your receipt is {{4}}."),
 ]
 PLANS = [("Monthly", 1, 1500), ("Quarterly", 3, 4500), ("Premium 6 months", 6, 9000), ("Annual", 12, 15000)]
 FIRST = "Aarav Vivaan Aditya Diya Ananya Ishaan Kabir Riya Saanvi Arnav Kiara Myra Reyansh Anika Vihaan Tara Dev Nisha Rohan Pooja Karan Sneha Rahul Meghna Siddharth Lakshmi Varun Zoya Nikhil Priya".split()
@@ -71,7 +71,7 @@ GOALS = ["Weight loss", "Muscle gain", "General fitness", "Strength", "Endurance
 
 
 class Command(BaseCommand):
-    help = "Create the Rackline Fitness demo gym with branches, staff, members, payments, check-ins and tasks."
+    help = "Create the Dumbelo Fitness demo gym with branches, staff, members, payments, check-ins and tasks."
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Delete the demo gym first")
@@ -80,17 +80,17 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, reset=False, members=60, **kw):
         rnd = random.Random(7)
-        self._rackline_admin()
+        self._dumbelo_admin()
         self._prices()
         self._whatsapp()
-        old = Gym.objects.filter(slug="rackline-fitness").first()
+        old = Gym.objects.filter(slug="dumbelo-fitness").first()
         if old and not reset:
             self.stdout.write("The demo gym already exists. Run with --reset to rebuild it.")
             return
         if old:
             self._wipe(old)
 
-        gym = Gym.objects.create(name="Rackline Fitness", slug="rackline-fitness", status="active", billing_email="meera@rackline.demo")
+        gym = Gym.objects.create(name="Dumbelo Fitness", slug="dumbelo-fitness", status="active", billing_email="meera@dumbelo.demo")
         today = clock.today(gym)
 
         branches = {}
@@ -103,7 +103,7 @@ class Command(BaseCommand):
 
         staff = {}
         for i, (name, key, role, where, shift, spec) in enumerate(STAFF):
-            user = User.objects.filter(email=f"{key}@rackline.demo").first() or User.objects.create_user(email=f"{key}@rackline.demo", password=PASSWORD, name=name, phone=f"97000000{i:02d}")
+            user = User.objects.filter(email=f"{key}@dumbelo.demo").first() or User.objects.create_user(email=f"{key}@dumbelo.demo", password=PASSWORD, name=name, phone=f"97000000{i:02d}")
             r = GymRole.objects.create(user=user, gym=gym, role=role, is_owner=key == "meera", shift=shift, specialities=spec, day_off="Sunday" if role != GymRole.ADMIN else "", device_user_id=str(900 + i))
             r.branches.set([branches[w] for w in where])
             staff[key] = r
@@ -205,7 +205,7 @@ class Command(BaseCommand):
         Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today,
                                created_by=meera, account=Account.objects.for_money(branches["Whitefield"].id, "card", on=today))
         self._moves(gym, accounts, meera, today)
-        self._rackline_invoices(gym, today)
+        self._dumbelo_invoices(gym, today)
 
         # Yesterday's and today's reminders, sent by the fake sender, so the Reminders card has something in it.
         for day in (today - timedelta(days=1), today):
@@ -216,7 +216,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Demo gym ready: {len(branches)} branches, {len(staff)} staff, {len(people)} members, "
             f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
-            f"Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
+            f"Sign in as meera@dumbelo.demo / {PASSWORD} (X-Gym: dumbelo-fitness)."
         ))
 
     def _failed_messages(self, gym, day):
@@ -226,13 +226,13 @@ class Command(BaseCommand):
         for pk, (code, error) in zip(sent, [("131026", "Message undeliverable (code 131026)"), ("no_answer", NO_ANSWER)]):
             Message.objects.filter(pk=pk).update(status=Message.FAILED, error_code=code, error=error, provider_id="")
 
-    def _rackline_admin(self):
-        """Rackline's own login for the Console. Kept across --reset: it belongs to no gym."""
-        if not User.objects.filter(email="rackline@rackline.demo").exists():
-            User.objects.create_superuser(email="rackline@rackline.demo", password=PASSWORD, name="Rackline Admin")
+    def _dumbelo_admin(self):
+        """Dumbelo's own login for the Console. Kept across --reset: it belongs to no gym."""
+        if not User.objects.filter(email="dumbelo@dumbelo.demo").exists():
+            User.objects.create_superuser(email="dumbelo@dumbelo.demo", password=PASSWORD, name="Dumbelo Admin")
 
     def _prices(self):
-        """Rackline's prices, kept across --reset like the Rackline admin: they belong to no gym."""
+        """Dumbelo's prices, kept across --reset like the Dumbelo admin: they belong to no gym."""
         if not PriceList.objects.exists():
             PriceList.objects.create(
                 active_from=clock.add_months(date.today(), -6).replace(day=1), base_paise=999 * 100, per_branch_paise=3100 * 100,
@@ -241,7 +241,7 @@ class Command(BaseCommand):
             )
 
     def _whatsapp(self):
-        """Rackline's shared number with a template for each message, kept across --reset like the prices. Its
+        """Dumbelo's shared number with a template for each message, kept across --reset like the prices. Its
         credentials are made up, so Test Connection says Meta turned them down: that's the demo working."""
         if WhatsAppAccount.objects.filter(gym=None).exists():
             return
@@ -252,10 +252,10 @@ class Command(BaseCommand):
         WhatsAppTemplate.objects.bulk_create([T(account=shared, kind=kind, name=f"{kind}_v1", body=body, parameters=params, status=T.APPROVED)
                                               for kind, params, body in DEMO_TEMPLATES])
 
-    def _rackline_invoices(self, gym, today):
-        """Three months of Rackline invoices: the first two paid by bank transfer, this month's half paid, and the
+    def _dumbelo_invoices(self, gym, today):
+        """Three months of Dumbelo invoices: the first two paid by bank transfer, this month's half paid, and the
         machine setup for the turnstiles waiting for the next invoice."""
-        ops = User.objects.get(email="rackline@rackline.demo")
+        ops = User.objects.get(email="dumbelo@dumbelo.demo")
         this_month = today.replace(day=1)
         for back in (2, 1, 0):
             inv = invoicing.write_invoice(gym, clock.add_months(this_month, -back))
@@ -312,7 +312,7 @@ class Command(BaseCommand):
                 pay_due(due, amount_paise=due.amount_paise if due.recurring == rent else due.amount_paise + rnd.randint(-20, 20) * 10000,
                         method=due.recurring.method, paid_on=due.due_on, by=meera)
         RecurringExpense.objects.create(gym=gym, branch=branches["Indiranagar"], name="Gym software", category="other", amount_paise=2499 * 100, method="card",
-                                        paid_to="Rackline", frequency="monthly", starts=today + timedelta(days=2), remind_days=3, created_by=meera)
+                                        paid_to="Dumbelo", frequency="monthly", starts=today + timedelta(days=2), remind_days=3, created_by=meera)
         sync_dues(gym, today)
 
     def _payroll(self, gym, staff, branches, meera, today):

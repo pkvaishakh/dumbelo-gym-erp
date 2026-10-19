@@ -9,7 +9,7 @@ A sheet titled with the trainer's name: My Profile, My Availability, Settings, S
 ```html
 <div class="rl-app rl-root">
 <header class="rl-appbar"><div class="rl-appbar__in">
-  <a class="rl-logo" href="#" aria-label="Rackline home"><Mark/></a>
+  <a class="rl-logo" href="#" aria-label="Dumbelo home"><Mark/></a>
   <div class="rl-appbar__who"><h1 class="rl-appbar__hello">Good morning, Arjun 👋</h1><p class="rl-appbar__branch">Main Branch</p></div>
   <button class="rl-iconbtn" type="button" aria-label="Notifications, 2 unread"><Icon class="rl-icon"/><span class="rl-badge" aria-hidden="true">2</span></button>
   <button class="rl-avatar rl-pressable" type="button" data-sheet="rl-sheet-profile" aria-haspopup="dialog" aria-label="Profile menu: Arjun Rao">AR</button>

@@ -1,5 +1,5 @@
-"""Message switches and when messages go out: each gym's Pause and Resume, Rackline's times (for every gym and for
-one), the receipt and task messages, and Rackline's own messages to a gym's owner."""
+"""Message switches and when messages go out: each gym's Pause and Resume, Dumbelo's times (for every gym and for
+one), the receipt and task messages, and Dumbelo's own messages to a gym's owner."""
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -21,7 +21,7 @@ from apps.messages.tasks import send_reminders
 from apps.platform.services import suspend
 from apps.reminders.models import ReminderDue
 from apps.reminders.services import queue_for
-from tests.test_platform import rackline, support
+from tests.test_platform import dumbelo, support
 
 MESSAGES = "/api/gym/messages/"
 AUTOMATION = "/api/platform/automation/"
@@ -190,8 +190,8 @@ def test_a_gyms_admins_cant_set_when_messages_go(w):
     assert c.get(AUTOMATION).status_code == 403
     assert c.patch(AUTOMATION, {"reminder_hour": 9}, format="json").status_code == 403
     assert c.patch(console(w.gym, "plan_ending"), {"hour": 9}, format="json").status_code == 403
-    # Rackline's messages to the owner are Rackline's to switch
-    assert c.patch(f"{MESSAGES}rackline_invoice_due/", {"is_on": False}, format="json").status_code == 404
+    # Dumbelo's messages to the owner are Dumbelo's to switch
+    assert c.patch(f"{MESSAGES}dumbelo_invoice_due/", {"is_on": False}, format="json").status_code == 404
     assert c.patch(f"{MESSAGES}no_such_message/", {"is_on": False}, format="json").status_code == 404
 
 
@@ -206,14 +206,14 @@ def test_only_a_gyms_admins_switch_its_messages(w, other):
     assert not NotificationRule.objects.exists()
 
 
-# ---- Rackline admins: the times ----
+# ---- Dumbelo admins: the times ----
 
-def test_only_rackline_admins_change_racklines_times_and_it_is_audited(w):
-    ops = rackline()
+def test_only_dumbelo_admins_change_dumbelos_times_and_it_is_audited(w):
+    ops = dumbelo()
     assert ops.get(AUTOMATION).json() == {"reminder_hour": 6, "days_ahead": [7, 3], "invoice_hour": 0, "updated_at": None,
                                           "updated_by_name": None}
     r = ops.patch(AUTOMATION, {"reminder_hour": 7, "days_ahead": [3, 10, 3]}, format="json")
-    assert r.status_code == 200 and r.json()["days_ahead"] == [10, 3] and r.json()["updated_by_name"] == "Rackline Ops"
+    assert r.status_code == 200 and r.json()["days_ahead"] == [10, 3] and r.json()["updated_by_name"] == "Dumbelo Ops"
     log = AuditLog.objects.get(action="automation.changed")
     assert log.gym is None and log.before == {"reminder_hour": 6, "days_ahead": [7, 3], "invoice_hour": 0}
     assert log.after == {"reminder_hour": 7, "days_ahead": [10, 3], "invoice_hour": 0}
@@ -230,14 +230,14 @@ def test_only_rackline_admins_change_racklines_times_and_it_is_audited(w):
         assert c.patch(console(w.gym, "plan_ending"), {"hour": 9}, format="json").status_code == 403
 
 
-def test_rackline_sets_one_gyms_times_and_it_is_audited(w, other):
-    ops = rackline()
+def test_dumbelo_sets_one_gyms_times_and_it_is_audited(w, other):
+    ops = dumbelo()
     r = ops.patch(console(w.gym, "plan_ending"), {"hour": 9, "days_ahead": [5]}, format="json")
     assert r.status_code == 200 and r.json() == {"kind": "plan_ending", "label": "Plan ending soon", "is_on": True, "switched_by": "gym",
                                                  "hour": 9, "days_ahead": [5], "gyms_own_time": True}
     log = AuditLog.objects.get(action="message.changed")
     assert log.gym == w.gym and log.before["hour"] == 6 and log.after == {"is_on": True, "hour": 9, "days_ahead": [5]}
-    assert {r["kind"]: r["hour"] for r in ops.get(console(other.gym)).json()}["plan_ending"] == 6  # another gym keeps Rackline's
+    assert {r["kind"]: r["hour"] for r in ops.get(console(other.gym)).json()}["plan_ending"] == 6  # another gym keeps Dumbelo's
     assert {r["kind"]: r["hour"] for r in w.client(w.admin).get(MESSAGES).json()}["plan_ending"] == 9  # the gym sees it
 
     assert ops.patch(console(w.gym, "payment_received"), {"hour": 9}, format="json").json()["error"]["code"] == "not_scheduled"
@@ -247,12 +247,12 @@ def test_rackline_sets_one_gyms_times_and_it_is_audited(w, other):
     assert ops.patch(console(w.gym, "no_such_message"), {"hour": 9}, format="json").status_code == 404
     assert ops.patch("/api/platform/gyms/999999/messages/plan_ending/", {"hour": 9}, format="json").status_code == 404
 
-    r = ops.patch(console(w.gym, "rackline_invoice_due"), {"is_on": False}, format="json")
-    assert r.status_code == 200 and r.json()["is_on"] is False and r.json()["switched_by"] == "rackline"
+    r = ops.patch(console(w.gym, "dumbelo_invoice_due"), {"is_on": False}, format="json")
+    assert r.status_code == 200 and r.json()["is_on"] is False and r.json()["switched_by"] == "dumbelo"
 
 
-def test_a_gyms_own_time_beats_rackline_and_clearing_it_goes_back(w):
-    ops = rackline()
+def test_a_gyms_own_time_beats_dumbelo_and_clearing_it_goes_back(w):
+    ops = dumbelo()
 
     def sends(hour):
         return [sorted(run.send) for run in reminder_runs(at(w.gym, JUNE, hour))]
@@ -264,7 +264,7 @@ def test_a_gyms_own_time_beats_rackline_and_clearing_it_goes_back(w):
     ops.patch(console(w.gym, "plan_ending"), {"days_ahead": [5]}, format="json")  # its hour stays the gym's own
     assert [run.days_ahead for run in reminder_runs(at(w.gym, JUNE, 9))] == [(5,)]
 
-    r = ops.patch(console(w.gym, "plan_ending"), {"hour": None, "days_ahead": None}, format="json")  # Use Rackline's Times
+    r = ops.patch(console(w.gym, "plan_ending"), {"hour": None, "days_ahead": None}, format="json")  # Use Dumbelo's Times
     assert r.json()["gyms_own_time"] is False and r.json()["hour"] == 6 and r.json()["days_ahead"] == [7, 3]
     assert sends(6) == [sorted(NotificationRule.REMINDERS)] and sends(9) == []
 
@@ -274,7 +274,7 @@ def test_times_follow_each_gyms_clock_and_a_change_applies_on_the_next_tick(w, o
     w.gym.save(update_fields=["timezone"])
     other.gym.save(update_fields=["timezone"])
     member = w.plan_ending_on(JUNE + timedelta(days=5), "Five Days", "9811111115")
-    ops = rackline()
+    ops = dumbelo()
     ops.patch(AUTOMATION, {"reminder_hour": 7, "days_ahead": [5]}, format="json")  # no restart: the next tick reads it
 
     assert send_reminders.apply(kwargs={"at": "2026-06-01T00:30:00+00:00"}).get() == 0  # 6 AM in Kolkata: not any more
@@ -284,8 +284,8 @@ def test_times_follow_each_gyms_clock_and_a_change_applies_on_the_next_tick(w, o
     assert [r.gym.slug for r in reminder_runs(datetime(2026, 6, 1, 6, 0, tzinfo=ZoneInfo("UTC")))] == ["steel"]  # 7 AM in London
 
 
-def test_the_invoice_job_waits_for_racklines_invoice_hour(w):
-    rackline().patch(AUTOMATION, {"invoice_hour": 9}, format="json")
+def test_the_invoice_job_waits_for_dumbelos_invoice_hour(w):
+    dumbelo().patch(AUTOMATION, {"invoice_hour": 9}, format="json")
     billing_day = date(2026, 11, 1)  # the World's billing day is the 1st
     assert write_due(now=at(w.gym, billing_day, 0, 35)) == 0
     assert write_due(now=at(w.gym, billing_day, 9, 35)) == 1
@@ -294,9 +294,9 @@ def test_the_invoice_job_waits_for_racklines_invoice_hour(w):
     assert write_due(day=date(2026, 12, 1)) == 1  # a missed day by hand: any hour
 
 
-# ---- Rackline's messages to the owner ----
+# ---- Dumbelo's messages to the owner ----
 
-def owner_messages(gym, kind=NotificationRule.RACKLINE_INVOICE_DUE):
+def owner_messages(gym, kind=NotificationRule.DUMBELO_INVOICE_DUE):
     return Message.objects.filter(gym=gym, kind=kind)
 
 
@@ -315,19 +315,19 @@ def test_the_owner_hears_about_an_invoice_before_and_after_its_due_day(w, shared
     assert inv.number in first.text and "₹" in first.text and first.account == shared_number and not first.billable
 
 
-def test_owner_messages_follow_the_invoice_its_hour_and_rackline_switch(w):
+def test_owner_messages_follow_the_invoice_its_hour_and_dumbelo_switch(w):
     with_phone(w.admin, "+919811100009")
     inv = invoicing.write_invoice(w.gym, date(2026, 11, 1))
     reminder_day = date(2026, 11, 5)
     assert notify.invoice_reminders(at(w.gym, reminder_day, 7)) == 0  # not the hour
 
-    ops = rackline()
-    ops.patch(console(w.gym, "rackline_invoice_due"), {"hour": 7}, format="json")
-    switch(w.gym, NotificationRule.RACKLINE_INVOICE_DUE)
-    assert notify.invoice_reminders(at(w.gym, reminder_day, 7)) == 0  # paused by Rackline
-    switch(w.gym, NotificationRule.RACKLINE_INVOICE_DUE, on=True)
+    ops = dumbelo()
+    ops.patch(console(w.gym, "dumbelo_invoice_due"), {"hour": 7}, format="json")
+    switch(w.gym, NotificationRule.DUMBELO_INVOICE_DUE)
+    assert notify.invoice_reminders(at(w.gym, reminder_day, 7)) == 0  # paused by Dumbelo
+    switch(w.gym, NotificationRule.DUMBELO_INVOICE_DUE, on=True)
 
-    # A suspended gym's owner, with its WhatsApp off, still hears: it comes from Rackline's number
+    # A suspended gym's owner, with its WhatsApp off, still hears: it comes from Dumbelo's number
     suspend(w.gym, "Not paid")
     GymBilling.objects.filter(gym=w.gym).update(whatsapp_mode=GymBilling.OFF)
     assert notify.invoice_reminders(at(w.gym, reminder_day, 7)) == 1
@@ -336,28 +336,28 @@ def test_owner_messages_follow_the_invoice_its_hour_and_rackline_switch(w):
     assert notify.invoice_reminders(at(w.gym, date(2026, 11, 9), 7)) == 0  # paid: nothing to chase
 
 
-def test_the_owner_hears_once_that_rackline_got_their_payment(w, django_capture_on_commit_callbacks):
+def test_the_owner_hears_once_that_dumbelo_got_their_payment(w, django_capture_on_commit_callbacks):
     with_phone(w.admin, "+919811100009")
     inv = invoicing.write_invoice(w.gym, date(2026, 11, 1))
-    ops = rackline()
+    ops = dumbelo()
     body = {"amount_paise": 100000, "method": "bank", "paid_on": "2026-10-18", "reference": "UTR123"}
     with django_capture_on_commit_callbacks(execute=True):
         assert ops.post(f"/api/platform/invoices/{inv.id}/payments/", body, format="json").status_code == 200
     pay = inv.payments.get()
-    message = owner_messages(w.gym, NotificationRule.RACKLINE_PAYMENT_RECEIVED).get()
+    message = owner_messages(w.gym, NotificationRule.DUMBELO_PAYMENT_RECEIVED).get()
     assert message.user == w.admin.user and pay.receipt_number in message.text and "₹1,000" in message.text
-    assert notify.rackline_payment_received(pay.id) is None
+    assert notify.dumbelo_payment_received(pay.id) is None
 
-    ops.patch(console(w.gym, "rackline_payment_received"), {"is_on": False}, format="json")
+    ops.patch(console(w.gym, "dumbelo_payment_received"), {"is_on": False}, format="json")
     with django_capture_on_commit_callbacks(execute=True):
         ops.post(f"/api/platform/invoices/{inv.id}/payments/", body, format="json")
-    assert owner_messages(w.gym, NotificationRule.RACKLINE_PAYMENT_RECEIVED).count() == 1
+    assert owner_messages(w.gym, NotificationRule.DUMBELO_PAYMENT_RECEIVED).count() == 1
 
 
 # ---- Query budgets ----
 
 def test_the_message_lists_cost_the_same_however_many_rules(w, django_assert_max_num_queries):
-    ops, c = rackline(), w.client(w.admin)
+    ops, c = dumbelo(), w.client(w.admin)
     # Counted at once: each request clears Django's query log, and with it what an earlier block captured
     with django_assert_max_num_queries(10) as few:
         c.get(MESSAGES)

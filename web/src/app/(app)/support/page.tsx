@@ -12,10 +12,10 @@ const REFRESH = ["/api/support-access/"];
 const LENGTHS = [
   { value: 2, title: "2 hours", meta: "Long enough for one call" },
   { value: 24, title: "24 hours", meta: "A problem that takes a day" },
-  { value: 72, title: "3 days", meta: "The longest Rackline can ask for" },
+  { value: 72, title: "3 days", meta: "The longest Dumbelo can ask for" },
 ];
 
-/** Whether Rackline's team can see this gym right now, and the record of every time they could. */
+/** Whether Dumbelo's team can see this gym right now, and the record of every time they could. */
 export default function SupportAccessPage() {
   const q = useSupportAccessList({ limit: 50 });
   const rows = q.data?.data.results ?? [];
@@ -34,13 +34,13 @@ export default function SupportAccessPage() {
             ) : open ? (
               <>
                 <p className="rl-statusline"><span className="rl-tag rl-tag--now">On</span></p>
-                <p className="rl-lede">Rackline&apos;s team can see your gym, but can&apos;t change anything, until {until(open.ends)}.</p>
+                <p className="rl-lede">Dumbelo&apos;s team can see your gym, but can&apos;t change anything, until {until(open.ends)}.</p>
                 <button className="rl-button rl-button--danger-quiet rl-button--block" type="button" style={{ marginTop: "var(--space-4)" }}
                   aria-haspopup="dialog" onClick={() => setEnd(true)}>End Access</button>
               </>
             ) : (
               <>
-                <p className="rl-statusline"><Icon as={ShieldCheck} size="sm" />No one at Rackline can see your gym</p>
+                <p className="rl-statusline"><Icon as={ShieldCheck} size="sm" />No one at Dumbelo can see your gym</p>
                 <p className="rl-lede">They can look only while you allow it, they can never change anything, and every look is recorded.</p>
                 <button className="rl-button rl-button--block" type="button" style={{ marginTop: "var(--space-4)" }}
                   aria-haspopup="dialog" onClick={() => setGive(true)}>Give Access</button>
@@ -51,7 +51,7 @@ export default function SupportAccessPage() {
 
         <Section title="Access you've given">
           {q.isLoading ? <SkeletonRows n={3} /> : rows.length === 0 ? (
-            <Empty icon={LifeBuoy} title="You haven't given access yet" text="When Rackline asks to look at a problem, you can let them in from here." />
+            <Empty icon={LifeBuoy} title="You haven't given access yet" text="When Dumbelo asks to look at a problem, you can let them in from here." />
           ) : (
             <ul className="rl-card rl-mlist rl-mlist--compact">
               {rows.map((r) => (
@@ -84,7 +84,7 @@ function GiveSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     } catch { /* shown */ }
   }
   return (
-    <Sheet open={open} onClose={onClose} title="Give Rackline access">
+    <Sheet open={open} onClose={onClose} title="Give Dumbelo access">
       <p className="rl-row__meta">They can read your members, payments and check-ins to help with a problem. They can&apos;t change anything, and the access ends on its own.</p>
       <Choices name="hours" value={hours} onChange={setHours} options={LENGTHS} />
       <ErrorText>{a.error?.message}</ErrorText>
@@ -105,7 +105,7 @@ function EndSheet({ open, id, ends, onClose }: { open: boolean; id?: number; end
     } catch { /* shown */ }
   }
   return (
-    <Sheet open={open} onClose={onClose} title="End Rackline's access?">
+    <Sheet open={open} onClose={onClose} title="End Dumbelo's access?">
       <p className="rl-row__meta">
         They lose your gym straight away, instead of at {ends ? until(ends) : "the end of the window"}. You can give access again whenever you need to.
       </p>

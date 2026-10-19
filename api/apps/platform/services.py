@@ -1,6 +1,6 @@
-"""Rackline's side of a gym: opening one, pausing it, and the admin accounts that run it.
+"""Dumbelo's side of a gym: opening one, pausing it, and the admin accounts that run it.
 
-Rackline admins call these from the Console; `python manage.py create_gym` calls `create_gym` too, so a gym opened
+Dumbelo admins call these from the Console; `python manage.py create_gym` calls `create_gym` too, so a gym opened
 from the command line is set up exactly like one opened in the Console.
 """
 import zoneinfo
@@ -26,7 +26,7 @@ FIRST_SESSION = ("All day", time(5), time(23))
 class NewGym:
     gym: Gym
     owner: GymRole
-    new_login: bool  # False: the owner already signed in to Rackline (another gym) and keeps their password
+    new_login: bool  # False: the owner already signed in to Dumbelo (another gym) and keeps their password
 
 
 def find_login(email: str):
@@ -37,13 +37,13 @@ def _login_for(email: str, name: str, password: str | None) -> tuple[User, bool]
     """The person's login: the one they already have, or a new one with the first password they were told."""
     user = find_login(email)
     if user is not None:
-        if user.is_staff:  # Rackline's team sees inside gyms only through a support window
-            raise RuleBroken("rackline_login", "That email is a Rackline team login. Use the gym admin's own email.")
+        if user.is_staff:  # Dumbelo's team sees inside gyms only through a support window
+            raise RuleBroken("dumbelo_login", "That email is a Dumbelo team login. Use the gym admin's own email.")
         return user, False
     if not name.strip():
-        raise RuleBroken("name_needed", "They don't sign in to Rackline yet, so enter their name")
+        raise RuleBroken("name_needed", "They don't sign in to Dumbelo yet, so enter their name")
     if not password:
-        raise RuleBroken("password_needed", "They don't sign in to Rackline yet, so set a first password for them")
+        raise RuleBroken("password_needed", "They don't sign in to Dumbelo yet, so set a first password for them")
     return User.objects.create_user(email=email.strip(), password=password, name=name.strip()), True
 
 
@@ -57,7 +57,7 @@ def check_timezone(name: str) -> str:
 def create_gym(*, name: str, slug: str, timezone_name: str, branch: str, owner_email: str, owner_name: str = "",
                owner_password: str | None = None, billing_email: str = "") -> NewGym:
     """A new gym on trial: its first branch, open all day until its admin sets the hours, its owner admin, and its
-    Rackline plan on today's prices with room for that one branch."""
+    Dumbelo plan on today's prices with room for that one branch."""
     check_timezone(timezone_name)
     try:
         with transaction.atomic():
@@ -79,7 +79,7 @@ def _locked(gym: Gym) -> Gym:
 
 @transaction.atomic
 def suspend(gym: Gym, reason: str) -> Gym:
-    """Pause the gym: its staff and members are refused, its admins keep their Rackline plan, nothing is sent."""
+    """Pause the gym: its staff and members are refused, its admins keep their Dumbelo plan, nothing is sent."""
     gym = _locked(gym)
     if gym.is_suspended:
         raise RuleBroken("already_suspended", f"{gym.name} is already suspended")
@@ -120,7 +120,7 @@ def add_admin(gym: Gym, *, email: str, name: str, password: str | None = None) -
 def reset_admin_password(role: GymRole, password: str) -> None:
     """A new password for a gym's admin who has lost theirs. They're signed out on every device."""
     if role.user.is_staff:
-        raise RuleBroken("rackline_login", "That's a Rackline team login. They change their own password.")
+        raise RuleBroken("dumbelo_login", "That's a Dumbelo team login. They change their own password.")
     set_password(role.user, password)
 
 
@@ -150,7 +150,7 @@ def reactivate_admin(role: GymRole) -> GymRole:
 
 @transaction.atomic
 def make_owner(role: GymRole) -> GymRole | None:
-    """The account owner handles Rackline billing and can't be removed. Returns who was the owner before."""
+    """The account owner handles Dumbelo billing and can't be removed. Returns who was the owner before."""
     _locked(role.gym)
     role.refresh_from_db()
     if not role.is_active:

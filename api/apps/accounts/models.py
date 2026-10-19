@@ -45,7 +45,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     """One login for a person. Staff sign in with email, members with the phone number the desk registered.
 
-    `is_staff` means Rackline's own team (Django admin, support access), never gym staff:
+    `is_staff` means Dumbelo's own team (Django admin, support access), never gym staff:
     a person's role inside a gym lives on gyms.GymRole.
     """
 

@@ -22,5 +22,5 @@ Use on detail screens and in sheets wherever a person needs to read what somethi
 ## Markup (from the design system preview)
 
 ```html
-<div class="rl-root demo"><dl class="rl-card rl-details"><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Mobile number</dt><dd>+91 90000 30001</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Email</dt><dd>arjun.rao@rackline.example</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Started</dt><dd>12 Jan 2024</dd></div></dl></div>
+<div class="rl-root demo"><dl class="rl-card rl-details"><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Mobile number</dt><dd>+91 90000 30001</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Email</dt><dd>arjun.rao@dumbelo.example</dd></div><div class="rl-detail"><span class="rl-chipicon" aria-hidden="true"><Icon class="rl-icon rl-icon--sm"/></span><dt>Started</dt><dd>12 Jan 2024</dd></div></dl></div>
 ```

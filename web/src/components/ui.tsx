@@ -1,5 +1,5 @@
 "use client";
-/* Small building blocks that render the Rackline design system's markup (src/styles/rackline.css). */
+/* Small building blocks that render the Dumbelo design system's markup (src/styles/dumbelo.css). */
 import { AlertCircle, CalendarDays, Check, ChevronRight, Plus, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";

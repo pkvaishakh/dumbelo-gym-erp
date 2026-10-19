@@ -1,7 +1,7 @@
-"""The Console's Server screen: whether what Rackline runs on is answering, what the jobs did, and Run Now.
+"""The Console's Server screen: whether what Dumbelo runs on is answering, what the jobs did, and Run Now.
 
 Every check has a time limit and catches its own failure, so anything down shows as down, never as an error page;
-with the database down, what is read from it shows as unknown. Rackline admins only (views.py). `/api/health/` stays
+with the database down, what is read from it shows as unknown. Dumbelo admins only (views.py). `/api/health/` stays
 the load balancer's question and says no more than whether the API reaches its database.
 """
 import logging
@@ -149,7 +149,7 @@ def job_rows() -> list[dict]:
 
 
 def message_counts(now: datetime) -> dict[str, int]:
-    """Messages waiting for a retry, and those that failed today (Rackline's day, India time)."""
+    """Messages waiting for a retry, and those that failed today (Dumbelo's day, India time)."""
     start = datetime.combine(timezone.localdate(now), time.min, tzinfo=timezone.get_current_timezone())
     return {
         "waiting_retry": Message.objects.filter(status=Message.QUEUED, next_retry_at__isnull=False).count(),

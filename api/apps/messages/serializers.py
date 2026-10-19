@@ -75,37 +75,37 @@ class ConsoleMessageSerializer(serializers.ModelSerializer):
         return message.to[-4:]
 
     def get_is_shared(self, message) -> bool:
-        """Sent from Rackline's shared number (an account with no gym)."""
+        """Sent from Dumbelo's shared number (an account with no gym)."""
         return message.account is not None and message.account.gym_id is None
 
 
 # ---- When messages go out, and their switches ----
 
 class RuleSerializer(serializers.Serializer):
-    """One message for one gym: on or paused, who switches it, and when it goes (Rackline's times or the gym's own)."""
+    """One message for one gym: on or paused, who switches it, and when it goes (Dumbelo's times or the gym's own)."""
 
     kind = serializers.ChoiceField(choices=WhatsAppTemplate.KINDS)
     label = serializers.CharField()
     is_on = serializers.BooleanField()
-    switched_by = serializers.SerializerMethodField(help_text="Who pauses and resumes it: the gym's admins or Rackline")
+    switched_by = serializers.SerializerMethodField(help_text="Who pauses and resumes it: the gym's admins or Dumbelo")
     hour = serializers.IntegerField(allow_null=True, help_text="The hour it goes out (0-23, the gym's clock); empty when it goes as it happens")
     days_ahead = serializers.ListField(child=serializers.IntegerField(), allow_null=True,
                                        help_text="A plan ending soon: how many days before the end")
-    gyms_own_time = serializers.BooleanField(help_text="A Rackline admin set this gym's time in place of Rackline's")
+    gyms_own_time = serializers.BooleanField(help_text="A Dumbelo admin set this gym's time in place of Dumbelo's")
 
-    def get_switched_by(self, rule) -> Literal["gym", "rackline"]:
-        return "rackline" if rule.kind in NotificationRule.RACKLINE_KINDS else "gym"
+    def get_switched_by(self, rule) -> Literal["gym", "dumbelo"]:
+        return "dumbelo" if rule.kind in NotificationRule.DUMBELO_KINDS else "gym"
 
 
 class SwitchSerializer(serializers.Serializer):
-    """Pause or Resume. The only thing a gym's admins change about a message: when it goes is Rackline's."""
+    """Pause or Resume. The only thing a gym's admins change about a message: when it goes is Dumbelo's."""
 
     is_on = serializers.BooleanField()
 
     def to_internal_value(self, data):
         # Refused, not ignored, and before anything else: an admin trying to set a time should hear why it can't be
         if extra := set(data if isinstance(data, dict) else ()) - {"is_on"}:
-            raise serializers.ValidationError({f: "Rackline sets when messages go out. Contact Rackline to change it." for f in extra})
+            raise serializers.ValidationError({f: "Dumbelo sets when messages go out. Contact Dumbelo to change it." for f in extra})
         return super().to_internal_value(data)
 
 
@@ -120,8 +120,8 @@ def _days(**kw):
 
 
 class GymTimesSerializer(serializers.Serializer):
-    """A Rackline admin's word on one of a gym's messages: its own hour and days (null for both: Use Rackline's
-    Times), and Pause or Resume for the messages Rackline sends the owner."""
+    """A Dumbelo admin's word on one of a gym's messages: its own hour and days (null for both: Use Dumbelo's
+    Times), and Pause or Resume for the messages Dumbelo sends the owner."""
 
     hour = _hour(required=False, allow_null=True)
     days_ahead = _days(required=False, allow_null=True)
@@ -129,7 +129,7 @@ class GymTimesSerializer(serializers.Serializer):
 
 
 class AutomationScheduleSerializer(serializers.ModelSerializer):
-    """Rackline's times, for every gym that has no times of its own."""
+    """Dumbelo's times, for every gym that has no times of its own."""
 
     reminder_hour = _hour()
     days_ahead = _days()
@@ -152,7 +152,7 @@ def webhook_path(account: WhatsAppAccount) -> str:
 
 
 class WhatsAppAccountSerializer(serializers.ModelSerializer):
-    """An account as Rackline admins see it. `template_count` comes from the queryset."""
+    """An account as Dumbelo admins see it. `template_count` comes from the queryset."""
 
     gym_name = serializers.CharField(source="gym.name", read_only=True, allow_null=True, default=None)
     is_shared = serializers.BooleanField(read_only=True)
@@ -190,10 +190,10 @@ def _secret(**kw):
 
 
 class WhatsAppAccountCreateSerializer(_Where):
-    """Add Account. No gym means Rackline's shared number."""
+    """Add Account. No gym means Dumbelo's shared number."""
 
     gym = serializers.PrimaryKeyRelatedField(queryset=Gym.objects.all(), allow_null=True, required=False, default=None,
-                                             help_text="The gym whose own number this is; leave out for Rackline's shared number")
+                                             help_text="The gym whose own number this is; leave out for Dumbelo's shared number")
     access_token = _secret(min_length=20, max_length=1024, help_text="A permanent access token for the number (a system user's)")
     app_secret = _secret(min_length=16, max_length=256, help_text="The Meta app's secret, which signs its webhook calls")
 
@@ -269,7 +269,7 @@ class TemplateParameterSerializer(serializers.Serializer):
 
 
 class MessageKindSerializer(serializers.Serializer):
-    """A message Rackline sends, and the details a template for it can use."""
+    """A message Dumbelo sends, and the details a template for it can use."""
 
     kind = serializers.ChoiceField(choices=WhatsAppTemplate.KINDS)
     label = serializers.CharField()
@@ -309,7 +309,7 @@ class GymWhatsAppSerializer(serializers.Serializer):
         }
 
 
-# ---- Usage on Rackline's shared number ----
+# ---- Usage on Dumbelo's shared number ----
 
 class UsageLineSerializer(serializers.Serializer):
     category = serializers.CharField(help_text="Meta's category for the template: utility, marketing or authentication")
@@ -319,7 +319,7 @@ class UsageLineSerializer(serializers.Serializer):
 
 
 class GymUsageSerializer(serializers.Serializer):
-    """The gym's messages delivered from Rackline's shared number in its billing month so far, and what they come
+    """The gym's messages delivered from Dumbelo's shared number in its billing month so far, and what they come
     to on the invoice written on `billed_on`."""
 
     mode = serializers.ChoiceField(choices=GymBilling.WHATSAPP_MODES)

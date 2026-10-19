@@ -4,11 +4,11 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Rackline",
+  title: "Dumbelo",
   description: "Members, check-ins and payments for your gym.",
-  applicationName: "Rackline",
-  appleWebApp: { capable: true, title: "Rackline", statusBarStyle: "default" },
-  icons: { icon: "/icons/rackline-mark.svg", apple: "/icons/icon-192.png" },
+  applicationName: "Dumbelo",
+  appleWebApp: { capable: true, title: "Dumbelo", statusBarStyle: "default" },
+  icons: { icon: "/icons/dumbelo-mark.svg", apple: "/icons/icon-192.png" },
 };
 
 export const viewport: Viewport = {

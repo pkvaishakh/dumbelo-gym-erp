@@ -1,4 +1,4 @@
-/* Rackline components. Every colour, space, radius and shadow is a token from tokens.css. */
+/* Dumbelo components. Every colour, space, radius and shadow is a token from tokens.css. */
 
 .rl-root, .rl-root *, .rl-root *::before, .rl-root *::after { box-sizing: border-box; }
 .rl-root [hidden] { display: none !important; }

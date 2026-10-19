@@ -9,11 +9,11 @@ import { DetailBar } from "@/components/shell";
 import { Details, Empty, LoadMore, Section, SkeletonRows } from "@/components/ui";
 import { EditPlanSheet, MovePricesSheet } from "@/features/console/plan-sheets";
 import { RequestRow, RequestSheet } from "@/features/console/requests";
-import { BranchRoom, PlanCard, PlanPrices } from "@/features/rackline-plan";
+import { BranchRoom, PlanCard, PlanPrices } from "@/features/dumbelo-plan";
 import { day, ordinal, plural, WHATSAPP_MODE } from "@/lib/format";
 import { paged, pages } from "@/lib/hooks";
 
-/** A gym's Rackline plan in the Console: what it pays, its quota, billing day and WhatsApp, and its branch requests. */
+/** A gym's Dumbelo plan in the Console: what it pays, its quota, billing day and WhatsApp, and its branch requests. */
 export default function GymPlanScreen() {
   const { id } = useParams<{ id: string }>();
   const gymId = Number(id);
@@ -24,7 +24,7 @@ export default function GymPlanScreen() {
   const [sheet, setSheet] = useState<"edit" | "prices" | null>(null);
   const [open, setOpen] = useState<ConsoleBranchAsk | null>(null);
   const back = `/console/gyms/${gymId}`;
-  const bar = <DetailBar title={gym ? `${gym.name}: Rackline plan` : "Rackline plan"} back={back} />;
+  const bar = <DetailBar title={gym ? `${gym.name}: Dumbelo plan` : "Dumbelo plan"} back={back} />;
   if (q.isError) {
     return (
       <div className="rl-app rl-root">{bar}<main className="rl-app__main">

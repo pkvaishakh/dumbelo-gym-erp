@@ -1,6 +1,6 @@
-"""The Console's side of billing: price lists, a gym's Rackline plan and the requests for more branches.
+"""The Console's side of billing: price lists, a gym's Dumbelo plan and the requests for more branches.
 
-Rackline admins only (`RacklineViewMixin`), no X-Gym. Every change is audited, against its gym where it has one.
+Dumbelo admins only (`DumbeloViewMixin`), no X-Gym. Every change is audited, against its gym where it has one.
 """
 from django.db.models import Count, OuterRef
 from django.shortcuts import get_object_or_404
@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from apps.audit.models import record
 from apps.core.queries import count_of
-from apps.core.rackline import RacklineViewMixin
+from apps.core.dumbelo import DumbeloViewMixin
 from apps.gyms.models import Branch, Gym
 
 from .. import invoicing, services
@@ -26,8 +26,8 @@ GYM_ID = OpenApiParameter("gym_id", int, OpenApiParameter.PATH, description="The
 
 
 @extend_schema(tags=["platform"])
-class PriceListViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
-    """Rackline's price lists, newest first. Added, never edited: gyms move to new prices one by one."""
+class PriceListViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """Dumbelo's price lists, newest first. Added, never edited: gyms move to new prices one by one."""
 
     serializer_class = PriceListSerializer
 
@@ -52,7 +52,7 @@ def _audit_plan(plan: GymBilling) -> dict:
     return {"branch_quota": plan.branch_quota, "billing_day": plan.billing_day, "whatsapp_mode": plan.whatsapp_mode}
 
 
-class _GymPlan(RacklineViewMixin, APIView):
+class _GymPlan(DumbeloViewMixin, APIView):
     def gym(self) -> Gym:
         return get_object_or_404(Gym, pk=self.kwargs["gym_id"])
 
@@ -67,7 +67,7 @@ class _GymPlan(RacklineViewMixin, APIView):
 
 @extend_schema(tags=["platform"], parameters=[GYM_ID])
 class GymPlanView(_GymPlan):
-    """A gym's Rackline plan: its prices, branch quota, billing day and WhatsApp mode."""
+    """A gym's Dumbelo plan: its prices, branch quota, billing day and WhatsApp mode."""
 
     @extend_schema(responses=ConsolePlanSerializer)
     def get(self, request, gym_id):
@@ -100,7 +100,7 @@ class GymPlanPricesView(_GymPlan):
 
 
 @extend_schema(tags=["platform"])
-class ConsoleBranchRequestViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class ConsoleBranchRequestViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Every gym's requests for more branches, to Approve or Decline. Filter with `?status=asked` or `?gym=`."""
 
     serializer_class = ConsoleBranchAskSerializer

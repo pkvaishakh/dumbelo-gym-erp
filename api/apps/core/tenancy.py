@@ -1,11 +1,11 @@
 """Which gym a request is about, and who the caller is in it.
 
 The web app sends `X-Gym: <slug>` on every call inside a gym. We check the signed-in user has an active role there
-(or, for Rackline's own team, an open support window) and hang `request.gym` and `request.gym_role` on the request.
+(or, for Dumbelo's own team, an open support window) and hang `request.gym` and `request.gym_role` on the request.
 Every gym-scoped view filters by `request.gym`, and by `request.gym_role.branch_ids()` where branches matter.
 
-A gym Rackline has suspended answers `gym_suspended` (403) on every gym endpoint, except views marked
-`open_when_suspended = True`, which its admins can still reach (their Rackline plan and invoices).
+A gym Dumbelo has suspended answers `gym_suspended` (403) on every gym endpoint, except views marked
+`open_when_suspended = True`, which its admins can still reach (their Dumbelo plan and invoices).
 """
 from rest_framework import exceptions, permissions, status
 
@@ -13,7 +13,7 @@ from apps.gyms.models import Gym, GymRole, SupportAccess
 
 from .errors import RuleBroken
 
-PAUSED_MESSAGE = "This gym's account is paused. Contact Rackline to turn it back on."
+PAUSED_MESSAGE = "This gym's account is paused. Contact Dumbelo to turn it back on."
 
 
 def gym_suspended():
@@ -22,7 +22,7 @@ def gym_suspended():
 
 
 class SupportRole:
-    """Stand-in role for Rackline support inside an open window: read-only, every branch."""
+    """Stand-in role for Dumbelo support inside an open window: read-only, every branch."""
 
     role = "support"
     is_admin = False

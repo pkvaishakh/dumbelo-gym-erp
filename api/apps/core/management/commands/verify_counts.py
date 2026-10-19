@@ -1,7 +1,7 @@
 """How many rows a gym has, to check a restored copy of the database against the live one (docs/operations.md).
 
-    python manage.py verify_counts --gym rackline-fitness
-    python manage.py verify_counts --gym rackline-fitness --until 2026-10-19T03:30Z   # rows written by then
+    python manage.py verify_counts --gym dumbelo-fitness
+    python manage.py verify_counts --gym dumbelo-fitness --until 2026-10-19T03:30Z   # rows written by then
 
 Members, payments and check-ins are never deleted (archived, voided), so the rows a gym had at a moment can only
 grow after it: run with `--until` set to the copy's restore time, on both databases, and the counts must match.

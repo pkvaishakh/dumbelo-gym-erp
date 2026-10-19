@@ -3,13 +3,13 @@ import { expect, test, type Page } from "@playwright/test";
 async function signIn(page: Page, who: string) {
   await page.goto("/login");
   await page.getByLabel("Mobile number or email").fill(who);
-  await page.getByLabel("Password", { exact: true }).fill("rackline-demo");
+  await page.getByLabel("Password", { exact: true }).fill("dumbelo-demo");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL("**/home");
 }
 
 test("admin: home figures, a member's profile, and assigning a task", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening), Meera/ })).toBeVisible();
   await expect(page.getByText("Outstanding dues")).toBeVisible();
   await expect(page.getByText("Check-ins today").first()).toBeVisible();
@@ -31,7 +31,7 @@ test("admin: home figures, a member's profile, and assigning a task", async ({ p
 });
 
 test("admin: add a member with a plan and part payment", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/members/new");
   const phone = "9" + String(Date.now()).slice(-9);
   await page.getByLabel("Full name").fill("Test Member");
@@ -47,7 +47,7 @@ test("admin: add a member with a plan and part payment", async ({ page }) => {
 });
 
 test("receptionist: check a member in from home, once a day", async ({ page }) => {
-  await signIn(page, "arjun@rackline.demo");
+  await signIn(page, "arjun@dumbelo.demo");
   await page.getByRole("button", { name: /Check In Member/ }).click();
   const search = page.getByLabel("Search members to check in");
   await search.fill("RF-10");
@@ -61,7 +61,7 @@ test("receptionist: check a member in from home, once a day", async ({ page }) =
 });
 
 test("trainer: sees own members without amounts", async ({ page }) => {
-  await signIn(page, "neha@rackline.demo");
+  await signIn(page, "neha@dumbelo.demo");
   await page.goto("/members");
   await expect(page.getByRole("heading", { name: "My Members" })).toBeVisible();
   await page.locator("a.rl-mrow").first().click();
@@ -79,7 +79,7 @@ test("member: home shows the membership and visits", async ({ page }) => {
 });
 
 test("admin: long lists load a page at a time, and the other list screens load", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/members");
   await expect(page.getByText(/^Showing 50 members of \d+$/)).toBeVisible();  // the demo gym has more than one page
   await page.getByRole("button", { name: "Load More" }).click();
@@ -95,7 +95,7 @@ test("admin: long lists load a page at a time, and the other list screens load",
 });
 
 test("admin: pauses and resumes a message, and sees what a member was sent", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/more");
   await page.getByRole("link", { name: "Settings" }).click();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
@@ -122,7 +122,7 @@ test("admin: pauses and resumes a message, and sees what a member was sent", asy
 });
 
 test("admin: work out payroll, approve and pay a salary, then pay a bill from Dues", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/payroll");
   await page.getByRole("button", { name: /^(Update|Work Out) Payroll$/ }).first().click();
   await page.locator("a.rl-mrow", { hasText: "Imran Khan" }).click();
@@ -142,7 +142,7 @@ test("admin: work out payroll, approve and pay a salary, then pay a bill from Du
 });
 
 test("admin: cash and bank, a shared account, and banking a branch's cash", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/more");
   await page.getByRole("link", { name: /Cash and bank/ }).click();
   await expect(page.getByText("Total funds")).toBeVisible();
@@ -185,7 +185,7 @@ test("admin: cash and bank, a shared account, and banking a branch's cash", asyn
 });
 
 test("receptionist counts the cash short, and an admin settles it", async ({ page }) => {
-  await signIn(page, "arjun@rackline.demo");
+  await signIn(page, "arjun@dumbelo.demo");
   // Home shows the drawers' cash; More leads to each drawer, then Count Cash.
   await expect(page.getByRole("link", { name: /Cash in hand/ })).toBeVisible();
   await page.goto("/more");
@@ -202,7 +202,7 @@ test("receptionist counts the cash short, and an admin settles it", async ({ pag
 
   await page.getByRole("link", { name: "Done" }).click();
   await page.evaluate(() => localStorage.clear());
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/money");
   await page.getByRole("button", { name: /Indiranagar cash.*₹100 short/ }).click();
   await page.getByLabel("What happened").fill("Change given twice");
@@ -212,7 +212,7 @@ test("receptionist counts the cash short, and an admin settles it", async ({ pag
 });
 
 test("admin: refunds part of a plan, and the member owes nothing because of it", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/members?status=active");
   await page.locator("a.rl-mrow").first().click();
   await page.getByRole("button", { name: "More actions" }).click();
@@ -229,14 +229,14 @@ test("admin: refunds part of a plan, and the member owes nothing because of it",
 });
 
 test("trainer: no cash and bank in More", async ({ page }) => {
-  await signIn(page, "neha@rackline.demo");
+  await signIn(page, "neha@dumbelo.demo");
   await page.goto("/more");
   await expect(page.getByRole("heading", { name: "Your work" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Cash and bank/ })).toHaveCount(0);
 });
 
 test("admin: reports by category, 30 days, a custom range over 3 months, and downloads", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+  await signIn(page, "meera@dumbelo.demo");
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" }).click();
   await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
   for (const name of ["Revenue", "Expenses", "Members", "Attendance", "Tasks"]) await expect(page.getByRole("main").getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
@@ -268,22 +268,22 @@ test("admin: reports by category, 30 days, a custom range over 3 months, and dow
 });
 
 test("receptionist: no Reports", async ({ page }) => {
-  await signIn(page, "arjun@rackline.demo");
+  await signIn(page, "arjun@dumbelo.demo");
   await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" })).toHaveCount(0);
   await page.goto("/reports");
   await expect(page.getByText("Reports are for admins")).toBeVisible();
 });
 
-test("rackline admin: lands on Console Home, and reaches the gyms that owe, Gyms and Prices", async ({ page }) => {
+test("dumbelo admin: lands on Console Home, and reaches the gyms that owe, Gyms and Prices", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("Mobile number or email").fill("rackline@rackline.demo");
-  await page.getByLabel("Password", { exact: true }).fill("rackline-demo");
+  await page.getByLabel("Mobile number or email").fill("dumbelo@dumbelo.demo");
+  await page.getByLabel("Password", { exact: true }).fill("dumbelo-demo");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL(/\/console$/);
   const tabs = page.getByRole("navigation", { name: "Console" });
   await expect(tabs.getByRole("link")).toHaveText(["Home", "Gyms", "Server", "More"]);
   await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByText("Owed to Rackline")).toBeVisible();
+  await expect(page.getByText("Owed to Dumbelo")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Server" })).toBeVisible();
 
@@ -305,14 +305,14 @@ test("rackline admin: lands on Console Home, and reaches the gyms that owe, Gyms
 
 async function signInToConsole(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Mobile number or email").fill("rackline@rackline.demo");
-  await page.getByLabel("Password", { exact: true }).fill("rackline-demo");
+  await page.getByLabel("Mobile number or email").fill("dumbelo@dumbelo.demo");
+  await page.getByLabel("Password", { exact: true }).fill("dumbelo-demo");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL(/\/console$/);
 }
 
-test("admin: More → Messages, with filters, why a message failed, and this billing month on Rackline's number", async ({ page }) => {
-  await signIn(page, "meera@rackline.demo");
+test("admin: More → Messages, with filters, why a message failed, and this billing month on Dumbelo's number", async ({ page }) => {
+  await signIn(page, "meera@dumbelo.demo");
   await page.goto("/more");
   await page.getByRole("link", { name: "Messages", exact: true }).click();
   await expect(page).toHaveURL(/\/messages$/);
@@ -347,12 +347,12 @@ test("admin: More → Messages, with filters, why a message failed, and this bil
   await expect(page.getByText(/payment due, members$/)).toBeVisible();
 });
 
-// Rackline's side from start to end, on a gym opened for this run: Rackline opens it and sets its quota, its admin
-// fills the plan and asks for room, Rackline approves, changes its reminder time and suspends it, and its desk is paused.
-test.describe.serial("rackline: from a new gym to a paused one", () => {
+// Dumbelo's side from start to end, on a gym opened for this run: Dumbelo opens it and sets its quota, its admin
+// fills the plan and asks for room, Dumbelo approves, changes its reminder time and suspends it, and its desk is paused.
+test.describe.serial("dumbelo: from a new gym to a paused one", () => {
   const stamp = Date.now().toString(36);
-  const gym = { name: `E2E Gym ${stamp}`, slug: `e2e-${stamp}`, owner: `owner-${stamp}@rackline.demo`, desk: `desk-${stamp}@rackline.demo` };
-  const password = "rackline-e2e-1";
+  const gym = { name: `E2E Gym ${stamp}`, slug: `e2e-${stamp}`, owner: `owner-${stamp}@dumbelo.demo`, desk: `desk-${stamp}@dumbelo.demo` };
+  const password = "dumbelo-e2e-1";
   let gymUrl = "";
 
   async function signInAs(page: Page, email: string) {
@@ -363,7 +363,7 @@ test.describe.serial("rackline: from a new gym to a paused one", () => {
     await page.waitForURL("**/home");
   }
 
-  test("rackline admin: opens a gym and gives it room for 2 branches", async ({ page }) => {
+  test("dumbelo admin: opens a gym and gives it room for 2 branches", async ({ page }) => {
     await signInToConsole(page);
     await page.goto("/console/gyms/new");
     await page.getByLabel("Gym name").fill(gym.name);
@@ -388,7 +388,7 @@ test.describe.serial("rackline: from a new gym to a paused one", () => {
     await expect(page.getByText("Room for 1 more branch")).toBeVisible();
   });
 
-  test("its admin: adds a receptionist and a branch, finds the plan full, and asks Rackline for one more", async ({ page }) => {
+  test("its admin: adds a receptionist and a branch, finds the plan full, and asks Dumbelo for one more", async ({ page }) => {
     await signInAs(page, gym.owner);
     await page.goto("/staff/new?role=receptionist");
     await page.getByLabel("Full name").fill("Dev Desk");
@@ -407,15 +407,15 @@ test.describe.serial("rackline: from a new gym to a paused one", () => {
     await expect(page.getByRole("link", { name: "Add Branch", exact: true })).toHaveCount(0);
 
     await page.getByRole("link", { name: "Add Branch to My Plan" }).click();
-    await page.waitForURL(/\/rackline-plan$/);
+    await page.waitForURL(/\/dumbelo-plan$/);
     await page.getByRole("button", { name: "Add Branch to My Plan" }).click();
-    await page.getByRole("button", { name: "Ask Rackline" }).click();
+    await page.getByRole("button", { name: "Ask Dumbelo" }).click();
     await expect(page.getByText("Request sent")).toBeVisible();
     await page.getByRole("button", { name: "Done" }).click();
     await expect(page.getByText("Your last request")).toBeVisible();
   });
 
-  test("rackline admin: approves it, changes the gym's reminder time, suspends it, and opens Server", async ({ page }) => {
+  test("dumbelo admin: approves it, changes the gym's reminder time, suspends it, and opens Server", async ({ page }) => {
     await signInToConsole(page);
     await page.goto(`${gymUrl}/plan`);
     await page.locator("button.rl-mrow", { hasText: "Asked" }).first().click();
@@ -458,10 +458,10 @@ test.describe.serial("rackline: from a new gym to a paused one", () => {
   });
 });
 
-test("rackline admin: records a payment on the demo gym's invoice, and its admin sees the invoice and the receipt", async ({ page }) => {
+test("dumbelo admin: records a payment on the demo gym's invoice, and its admin sees the invoice and the receipt", async ({ page }) => {
   await signInToConsole(page);
   await page.goto("/console/gyms");
-  await page.locator("a.rl-mrow", { hasText: "Rackline Fitness" }).first().click();
+  await page.locator("a.rl-mrow", { hasText: "Dumbelo Fitness" }).first().click();
   await page.waitForURL(/\/console\/gyms\/\d+$/);
   await page.getByRole("link", { name: "Invoices and payments" }).click();
   await page.locator("a.rl-mrow", { hasText: "to pay" }).first().click();
@@ -476,8 +476,8 @@ test("rackline admin: records a payment on the demo gym's invoice, and its admin
   await sheet.getByRole("button", { name: "Done" }).click();
 
   await page.evaluate(() => localStorage.clear()); // sign out of the Console, so the login page asks again
-  await signIn(page, "meera@rackline.demo");
-  await page.goto("/rackline-plan");
+  await signIn(page, "meera@dumbelo.demo");
+  await page.goto("/dumbelo-plan");
   await page.locator("a.rl-mrow", { hasText: number }).click();
   await expect(page.getByRole("region", { name: "Invoice total" }).getByText(number, { exact: true })).toBeVisible();
   await page.locator("a.rl-mrow", { hasText: "₹100" }).first().click();

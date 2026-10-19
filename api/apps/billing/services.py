@@ -1,4 +1,4 @@
-"""The rules of a gym's Rackline plan: its prices, its branch quota and the requests for more branches.
+"""The rules of a gym's Dumbelo plan: its prices, its branch quota and the requests for more branches.
 
 Anything that opens a branch or changes a quota locks the gym's `GymBilling` row first, so two at once can't both
 squeeze into the last free branch.
@@ -23,7 +23,7 @@ def branches_label(n: int) -> str:
 def locked_plan(gym: Gym) -> GymBilling:
     plan = GymBilling.objects.select_for_update().filter(gym=gym).first()
     if plan is None:  # a gym made by hand in the Django admin, not by create_gym
-        raise RuleBroken("no_plan", "This gym has no Rackline plan yet. Ask Rackline to set it up.")
+        raise RuleBroken("no_plan", "This gym has no Dumbelo plan yet. Ask Dumbelo to set it up.")
     return plan
 
 
@@ -36,7 +36,7 @@ def active_branches(gym: Gym, leaving_out: Branch | None = None) -> int:
 
 @transaction.atomic
 def add_price_list(*, active_from: date, prices: dict, note: str = "", by=None) -> PriceList:
-    """New prices from a day on, today or later. Gyms keep theirs until a Rackline admin moves them."""
+    """New prices from a day on, today or later. Gyms keep theirs until a Dumbelo admin moves them."""
     if active_from < timezone.localdate():
         raise RuleBroken("past_date", "New prices start today or later. Gyms already billed keep what they were billed.")
     try:
@@ -47,17 +47,17 @@ def add_price_list(*, active_from: date, prices: dict, note: str = "", by=None) 
 
 
 def open_plan(gym: Gym, *, quota: int = 1, billing_day: int | None = None) -> GymBilling:
-    """A new gym's Rackline plan, on today's prices. Called inside `create_gym`'s transaction."""
+    """A new gym's Dumbelo plan, on today's prices. Called inside `create_gym`'s transaction."""
     prices = PriceList.current()
     if prices is None:
-        raise RuleBroken("no_prices", "Rackline has no prices yet. Add a price list in Prices first.")
+        raise RuleBroken("no_prices", "Dumbelo has no prices yet. Add a price list in Prices first.")
     day = billing_day or min(clock.today(gym).day, LAST_BILLING_DAY)
     return GymBilling.objects.create(gym=gym, price_list=prices, branch_quota=quota, billing_day=day, **prices.prices())
 
 
 @transaction.atomic
 def change_plan(gym: Gym, *, branch_quota: int | None = None, billing_day: int | None = None, whatsapp_mode: str | None = None) -> GymBilling:
-    """A Rackline admin setting the quota, billing day or WhatsApp mode. A quota never drops below the branches open."""
+    """A Dumbelo admin setting the quota, billing day or WhatsApp mode. A quota never drops below the branches open."""
     plan = locked_plan(gym)
     if branch_quota is not None and branch_quota != plan.branch_quota:
         open_now = active_branches(gym)
@@ -99,10 +99,10 @@ def make_room_for_branch(gym: Gym, branch: Branch | None = None) -> None:
 
 @transaction.atomic
 def ask_for_branches(gym: Gym, *, count: int, note: str, by) -> BranchRequest:
-    """Add Branch to My Plan: one open request at a time, so Rackline answers one question per gym."""
+    """Add Branch to My Plan: one open request at a time, so Dumbelo answers one question per gym."""
     locked_plan(gym)
     if BranchRequest.objects.filter(gym=gym, status=BranchRequest.ASKED).exists():
-        raise RuleBroken("already_asked", "You've already asked for more branches. Rackline will answer soon.")
+        raise RuleBroken("already_asked", "You've already asked for more branches. Dumbelo will answer soon.")
     return BranchRequest.objects.create(gym=gym, count=count, note=note.strip(), asked_by=by)
 
 
@@ -139,7 +139,7 @@ def _decided(req: BranchRequest, by) -> BranchRequest:
     if req.status != BranchRequest.ASKED:
         raise RuleBroken("decided", f"This request was already {req.get_status_display().lower()}")
     if GymRole.objects.filter(gym=req.gym_id, user=by, is_active=True).exists():
-        raise RuleBroken("own_gym", "You work at this gym, so another Rackline admin decides its requests")
+        raise RuleBroken("own_gym", "You work at this gym, so another Dumbelo admin decides its requests")
     req.decided_by, req.decided_at = by, timezone.now()
     return req
 

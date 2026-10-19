@@ -171,14 +171,14 @@ def test_only_a_failed_message_written_out_in_full_can_go_again(w):
     sent = message(w, 1, status=Message.SENT)
     never_written = failed(w, 2, error="Not sent: WhatsApp isn't set up for your gym yet.", error_code="")
     Message.objects.filter(pk=never_written.pk).update(template=None, account=None)
-    owner = failed(w, 3, kind=NotificationRule.RACKLINE_INVOICE_DUE)  # Rackline's own, to the owner
+    owner = failed(w, 3, kind=NotificationRule.DUMBELO_INVOICE_DUE)  # Dumbelo's own, to the owner
     for row in (sent, never_written, owner):
         assert retry(admin, row).status_code == 409
     assert FakeSender.outbox == []
 
 
 @pytest.mark.parametrize("why, expect", [
-    ("archived", "archived"), ("paused", "paused"), ("opted_out", "asked not to"), ("off", "off for your gym"), ("suspended", "Rackline account is paused"),
+    ("archived", "archived"), ("paused", "paused"), ("opted_out", "asked not to"), ("off", "off for your gym"), ("suspended", "Dumbelo account is paused"),
     ("no_number", "mobile number"), ("own_number", "different WhatsApp number"), ("template_off", "isn't approved"),
 ])
 def test_retry_says_why_it_cant_go_now(w, why, expect):
