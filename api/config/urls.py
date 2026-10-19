@@ -15,7 +15,7 @@ from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, Mon
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import (
-    AutomationView, ConsoleMessageViewSet, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
+    AutomationView, ConsoleMessageViewSet, ConsoleUsageView, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
     WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView,
 )
 from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
@@ -90,6 +90,7 @@ urlpatterns = [
     path("api/platform/gyms/<int:gym_id>/messages/", GymMessageTimesView.as_view(), name="platform-gym-messages"),
     path("api/platform/gyms/<int:gym_id>/messages/<slug:kind>/", GymMessageTimeView.as_view(), name="platform-gym-message"),
     path("api/platform/automation/", AutomationView.as_view(), name="platform-automation"),
+    path("api/platform/whatsapp-usage/", ConsoleUsageView.as_view(), name="platform-whatsapp-usage"),
     path("api/platform/summary/", PlatformSummaryView.as_view(), name="platform-summary"),
     path("api/platform/status/", ServerStatusView.as_view(), name="platform-status"),
     path("api/platform/jobs/<slug:job>/run/", JobRunNowView.as_view(), name="platform-job-run"),

@@ -6,21 +6,31 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useInfiniteQuery,
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  GymUsage,
   Message,
   MessagesListParams,
   PaginatedMessageList
@@ -34,10 +44,10 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * The messages a gym has sent, newest first.
+ * The messages a gym has sent, newest first: More → Messages, and a member's profile.
 
-Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
-members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
+Messages go out by themselves; the one thing to post is Retry, for an admin, on a message that failed. Trainers
+and members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
  */
 export type messagesListResponse200 = {
   data: PaginatedMessageList
@@ -81,6 +91,12 @@ export const messagesList = async (params?: MessagesListParams, options?: Reques
 
 
 
+export const getMessagesListInfiniteQueryKey = (params?: MessagesListParams,) => {
+    return [
+    'infinite', `/api/messages/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
 export const getMessagesListQueryKey = (params?: MessagesListParams,) => {
     return [
     `/api/messages/`, ...(params ? [params]: [])
@@ -88,6 +104,70 @@ export const getMessagesListQueryKey = (params?: MessagesListParams,) => {
     }
 
     
+export const getMessagesListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof messagesList>>, MessagesListParams['offset']>, TError = unknown>(params?: MessagesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData, QueryKey, MessagesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMessagesListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof messagesList>>, QueryKey, MessagesListParams['offset']> = ({ signal, pageParam }) => messagesList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData, QueryKey, MessagesListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MessagesListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof messagesList>>>
+export type MessagesListInfiniteQueryError = unknown
+
+
+export function useMessagesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof messagesList>>, MessagesListParams['offset']>, TError = unknown>(
+ params: undefined |  MessagesListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData, QueryKey, MessagesListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagesList>>,
+          TError,
+          Awaited<ReturnType<typeof messagesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMessagesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof messagesList>>, MessagesListParams['offset']>, TError = unknown>(
+ params?: MessagesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData, QueryKey, MessagesListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagesList>>,
+          TError,
+          Awaited<ReturnType<typeof messagesList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMessagesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof messagesList>>, MessagesListParams['offset']>, TError = unknown>(
+ params?: MessagesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData, QueryKey, MessagesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMessagesListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof messagesList>>, MessagesListParams['offset']>, TError = unknown>(
+ params?: MessagesListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData, QueryKey, MessagesListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMessagesListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
 export const getMessagesListQueryOptions = <TData = Awaited<ReturnType<typeof messagesList>>, TError = unknown>(params?: MessagesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof messagesList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
@@ -153,10 +233,10 @@ export function useMessagesList<TData = Awaited<ReturnType<typeof messagesList>>
 
 
 /**
- * The messages a gym has sent, newest first.
+ * The messages a gym has sent, newest first: More → Messages, and a member's profile.
 
-Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
-members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
+Messages go out by themselves; the one thing to post is Retry, for an admin, on a message that failed. Trainers
+and members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
  */
 export type messagesRetrieveResponse200 = {
   data: Message
@@ -253,6 +333,196 @@ export function useMessagesRetrieve<TData = Awaited<ReturnType<typeof messagesRe
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getMessagesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Retry: send a failed message again, on the same row and key, so it still goes once at most. Refused for
+one that may have reached them after all. Audited.
+ */
+export type messagesRetryCreateResponse200 = {
+  data: Message
+  status: 200
+}
+    
+export type messagesRetryCreateResponseSuccess = (messagesRetryCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type messagesRetryCreateResponse = (messagesRetryCreateResponseSuccess)
+
+export const getMessagesRetryCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/messages/${id}/retry/`
+}
+
+export const messagesRetryCreate = async (id: number, options?: RequestInit): Promise<messagesRetryCreateResponse> => {
+  
+  return apiFetch<messagesRetryCreateResponse>(getMessagesRetryCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getMessagesRetryCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof messagesRetryCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof messagesRetryCreate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['messagesRetryCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof messagesRetryCreate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  messagesRetryCreate(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MessagesRetryCreateMutationResult = NonNullable<Awaited<ReturnType<typeof messagesRetryCreate>>>
+    
+    export type MessagesRetryCreateMutationError = unknown
+
+    export const useMessagesRetryCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof messagesRetryCreate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof messagesRetryCreate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+
+      const mutationOptions = getMessagesRetryCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * This billing month's messages on Rackline's shared number, by Meta's category, and what they will come
+to on the next invoice. Two queries.
+ */
+export type messagesUsageRetrieveResponse200 = {
+  data: GymUsage
+  status: 200
+}
+    
+export type messagesUsageRetrieveResponseSuccess = (messagesUsageRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type messagesUsageRetrieveResponse = (messagesUsageRetrieveResponseSuccess)
+
+export const getMessagesUsageRetrieveUrl = () => {
+
+
+  
+
+  return `/api/messages/usage/`
+}
+
+export const messagesUsageRetrieve = async ( options?: RequestInit): Promise<messagesUsageRetrieveResponse> => {
+  
+  return apiFetch<messagesUsageRetrieveResponse>(getMessagesUsageRetrieveUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getMessagesUsageRetrieveQueryKey = () => {
+    return [
+    `/api/messages/usage/`
+    ] as const;
+    }
+
+    
+export const getMessagesUsageRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMessagesUsageRetrieveQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof messagesUsageRetrieve>>> = ({ signal }) => messagesUsageRetrieve({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MessagesUsageRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof messagesUsageRetrieve>>>
+export type MessagesUsageRetrieveQueryError = unknown
+
+
+export function useMessagesUsageRetrieve<TData = Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagesUsageRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof messagesUsageRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMessagesUsageRetrieve<TData = Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof messagesUsageRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof messagesUsageRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMessagesUsageRetrieve<TData = Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMessagesUsageRetrieve<TData = Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof messagesUsageRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMessagesUsageRetrieveQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

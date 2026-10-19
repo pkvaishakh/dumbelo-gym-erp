@@ -8,6 +8,7 @@ from apps.billing.models import GymBilling
 from apps.gyms.models import Gym
 
 from .models import PLACEHOLDER, AutomationSchedule, Message, NotificationRule, WhatsAppAccount, WhatsAppTemplate
+from .services import can_retry
 
 META_ID = re.compile(r"^\d{5,32}$")  # Meta's ids are long numbers; nothing else may reach a Graph API path
 DISPLAY_NUMBER = re.compile(r"^\+?[\d ()-]{6,23}$")
@@ -16,18 +17,33 @@ LANGUAGE = re.compile(r"^[a-z]{2,3}(_[A-Z]{2})?$")
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    """A message as the desk sees it: when it went, what it said, and whether it arrived."""
+    """A message as the gym sees it: who it went to, when, what it said, whether it arrived, and whether an admin may
+    send it again (`can_retry`)."""
 
     member_name = serializers.CharField(source="member.name", read_only=True, allow_null=True, default=None)
+    to_name = serializers.SerializerMethodField()
+    recipient = serializers.SerializerMethodField()
     kind_label = serializers.SerializerMethodField()
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    can_retry = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ["id", "member", "member_name", "kind", "kind_label", "to", "text", "for_date", "status", "error", "created_at"]
+        fields = ["id", "member", "member_name", "user", "to_name", "recipient", "kind", "kind_label", "to", "text", "for_date",
+                  "status", "status_label", "error", "attempts", "can_retry", "created_at", "updated_at", "delivered_at", "read_at"]
         read_only_fields = fields
 
     def get_kind_label(self, message) -> str:
         return message.get_kind_display()
+
+    def get_to_name(self, message) -> str:
+        return (message.member or message.user).name
+
+    def get_recipient(self, message) -> Literal["member", "staff"]:
+        return "member" if message.member_id else "staff"
+
+    def get_can_retry(self, message) -> bool:
+        return can_retry(message)
 
 
 class ConsoleMessageSerializer(serializers.ModelSerializer):
@@ -291,3 +307,44 @@ class GymWhatsAppSerializer(serializers.Serializer):
             "mode": mode, "number": account.display_number if account else None, "verified_name": account.verified_name if account else "",
             "status": status, "checked_at": account.checked_at if account else None,
         }
+
+
+# ---- Usage on Rackline's shared number ----
+
+class UsageLineSerializer(serializers.Serializer):
+    category = serializers.CharField(help_text="Meta's category for the template: utility, marketing or authentication")
+    rate_paise = serializers.IntegerField(help_text="What each one costs once delivered")
+    messages = serializers.IntegerField()
+    amount_paise = serializers.IntegerField()
+
+
+class GymUsageSerializer(serializers.Serializer):
+    """The gym's messages delivered from Rackline's shared number in its billing month so far, and what they come
+    to on the invoice written on `billed_on`."""
+
+    mode = serializers.ChoiceField(choices=GymBilling.WHATSAPP_MODES)
+    starts = serializers.DateField()
+    ends = serializers.DateField()
+    billed_on = serializers.DateField(help_text="The invoice these go on is written this day")
+    messages = serializers.IntegerField()
+    amount_paise = serializers.IntegerField()
+    lines = UsageLineSerializer(many=True)
+
+
+class GymUsageRowSerializer(serializers.Serializer):
+    gym = serializers.IntegerField()
+    gym_name = serializers.CharField()
+    messages = serializers.IntegerField()
+    amount_paise = serializers.IntegerField()
+
+
+class ConsoleUsageSerializer(serializers.Serializer):
+    """A page of gyms by what their shared-number messages came to in a month, with the month's totals."""
+
+    month = serializers.CharField(help_text="YYYY-MM")
+    messages = serializers.IntegerField(help_text="Every gym's, this month")
+    amount_paise = serializers.IntegerField()
+    count = serializers.IntegerField(help_text="Gyms with any")
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = GymUsageRowSerializer(many=True)

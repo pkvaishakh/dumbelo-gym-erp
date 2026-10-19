@@ -302,3 +302,184 @@ test("rackline admin: lands on Console Home, and reaches the gyms that owe, Gyms
   await expect(page).toHaveURL(/\/console\/prices$/);
   await expect(tabs.getByRole("link", { name: "More" })).toHaveAttribute("aria-current", "page");
 });
+
+async function signInToConsole(page: Page) {
+  await page.goto("/login");
+  await page.getByLabel("Mobile number or email").fill("rackline@rackline.demo");
+  await page.getByLabel("Password", { exact: true }).fill("rackline-demo");
+  await page.getByRole("button", { name: "Sign In" }).click();
+  await page.waitForURL(/\/console$/);
+}
+
+test("admin: More → Messages, with filters, why a message failed, and this billing month on Rackline's number", async ({ page }) => {
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/more");
+  await page.getByRole("link", { name: "Messages", exact: true }).click();
+  await expect(page).toHaveURL(/\/messages$/);
+  await expect(page.getByText("So far this billing month")).toBeVisible();
+  await expect(page.getByText("Goes on the invoice of")).toBeVisible();
+  await expect(page.locator("button.rl-mrow").first()).toBeVisible();
+
+  // The demo has two failed reminders: Meta turned one away (Retry is offered) and never answered about the other.
+  await page.getByRole("radio", { name: "Failed" }).click();
+  await expect(page).toHaveURL(/status=failed/);
+  const rows = page.locator("button.rl-mrow");
+  await expect(rows).toHaveCount(2);
+  const seen: string[] = [];
+  for (const i of [0, 1]) {
+    await rows.nth(i).click();
+    const sheet = page.locator(".rl-sheet.is-open");
+    await expect(sheet.getByText("Why it failed")).toBeVisible();
+    const mayHaveGone = (await sheet.getByText(/didn't answer/).count()) > 0;
+    await expect(sheet.getByRole("button", { name: "Retry" })).toHaveCount(mayHaveGone ? 0 : 1);
+    seen.push(mayHaveGone ? "may have gone" : "turned away");
+    await sheet.getByRole("button", { name: "Close" }).click();
+  }
+  expect(seen.sort()).toEqual(["may have gone", "turned away"]);
+
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  const filters = page.locator(".rl-sheet.is-open");
+  await filters.getByLabel("Message").selectOption("payment_due");
+  await filters.getByRole("button", { name: "Members" }).click();
+  await expect(page).toHaveURL(/kind=payment_due/);
+  await expect(page).toHaveURL(/recipient=member/);
+  await filters.getByRole("button", { name: "Show 2 messages" }).click();
+  await expect(page.getByText(/payment due, members$/)).toBeVisible();
+});
+
+// Rackline's side from start to end, on a gym opened for this run: Rackline opens it and sets its quota, its admin
+// fills the plan and asks for room, Rackline approves, changes its reminder time and suspends it, and its desk is paused.
+test.describe.serial("rackline: from a new gym to a paused one", () => {
+  const stamp = Date.now().toString(36);
+  const gym = { name: `E2E Gym ${stamp}`, slug: `e2e-${stamp}`, owner: `owner-${stamp}@rackline.demo`, desk: `desk-${stamp}@rackline.demo` };
+  const password = "rackline-e2e-1";
+  let gymUrl = "";
+
+  async function signInAs(page: Page, email: string) {
+    await page.goto("/login");
+    await page.getByLabel("Mobile number or email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.waitForURL("**/home");
+  }
+
+  test("rackline admin: opens a gym and gives it room for 2 branches", async ({ page }) => {
+    await signInToConsole(page);
+    await page.goto("/console/gyms/new");
+    await page.getByLabel("Gym name").fill(gym.name);
+    await page.getByLabel("Short name").fill(gym.slug);
+    await page.getByLabel("First branch").fill("Main");
+    await page.getByLabel("Owner's email").fill(gym.owner);
+    await page.getByLabel("Owner's name").fill("Esha Owner");
+    await page.getByLabel("First password").fill(password);
+    await page.getByRole("button", { name: "Create Gym" }).click();
+    await expect(page.getByText(`${gym.name} is ready`)).toBeVisible();
+    await page.getByRole("button", { name: "Open Gym" }).click();
+    await page.waitForURL(/\/console\/gyms\/\d+$/);
+    gymUrl = new URL(page.url()).pathname;
+
+    await page.goto(`${gymUrl}/plan`);
+    await page.getByRole("button", { name: "Edit Plan" }).click();
+    const sheet = page.locator(".rl-sheet.is-open");
+    await sheet.getByLabel("Branches it has room for").fill("2");
+    await sheet.getByRole("button", { name: "Save Changes" }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByText("1 of 2", { exact: true })).toBeVisible();
+    await expect(page.getByText("Room for 1 more branch")).toBeVisible();
+  });
+
+  test("its admin: adds a receptionist and a branch, finds the plan full, and asks Rackline for one more", async ({ page }) => {
+    await signInAs(page, gym.owner);
+    await page.goto("/staff/new?role=receptionist");
+    await page.getByLabel("Full name").fill("Dev Desk");
+    await page.getByLabel("Work email").fill(gym.desk);
+    await page.getByLabel("First password").fill(password);
+    await page.getByRole("checkbox", { name: "Main" }).check();
+    await page.getByRole("button", { name: "Add Receptionist" }).click();
+    await expect(page.getByRole("link", { name: "Done" })).toBeVisible();
+
+    await page.goto("/branches");
+    await page.getByRole("link", { name: "Add Branch" }).click();
+    await page.getByLabel("Branch name").fill("Second");
+    await page.getByRole("button", { name: "Add Branch" }).click();
+    await page.waitForURL(/\/branches$/);
+    await expect(page.getByText("Your plan has room for 2 branches")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Add Branch", exact: true })).toHaveCount(0);
+
+    await page.getByRole("link", { name: "Add Branch to My Plan" }).click();
+    await page.waitForURL(/\/rackline-plan$/);
+    await page.getByRole("button", { name: "Add Branch to My Plan" }).click();
+    await page.getByRole("button", { name: "Ask Rackline" }).click();
+    await expect(page.getByText("Request sent")).toBeVisible();
+    await page.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByText("Your last request")).toBeVisible();
+  });
+
+  test("rackline admin: approves it, changes the gym's reminder time, suspends it, and opens Server", async ({ page }) => {
+    await signInToConsole(page);
+    await page.goto(`${gymUrl}/plan`);
+    await page.locator("button.rl-mrow", { hasText: "Asked" }).first().click();
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect(page.locator(".rl-sheet.is-open")).toHaveCount(0);
+    await expect(page.getByText("2 of 3", { exact: true })).toBeVisible();
+
+    await page.goto(gymUrl);
+    await page.getByRole("button", { name: /^Plan ending soon/ }).click();
+    const times = page.locator(".rl-sheet.is-open");
+    await times.getByLabel("Goes out at").selectOption("8");
+    await times.getByRole("button", { name: "Save Times" }).click();
+    await expect(page.getByRole("button", { name: /^Plan ending soon.*8 AM, own time/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Suspend Gym" }).click();
+    const suspend = page.locator(".rl-sheet.is-open");
+    await suspend.getByLabel("Reason").fill("End-to-end check");
+    await suspend.getByRole("button", { name: "Suspend Gym" }).click();
+    await expect(page.getByRole("button", { name: "Activate Gym" })).toBeVisible();
+
+    await page.goto("/console/more");
+    await page.getByRole("link", { name: /WhatsApp usage/ }).click();
+    await expect(page.getByRole("heading", { name: "By gym" })).toBeVisible();
+    const month = page.getByLabel("Month");
+    await month.selectOption({ index: 1 });  // last month
+    await expect(page).toHaveURL(/\/console\/usage\?month=\d{4}-\d{2}$/);
+    await expect(page.getByText("Billed", { exact: true })).toBeVisible();
+
+    await page.getByRole("navigation", { name: "Console" }).getByRole("link", { name: "Server" }).click();
+    await expect(page.getByRole("heading", { name: "Health" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Webhook" })).toBeVisible();
+  });
+
+  test("its desk: sees the paused screen, wherever it goes", async ({ page }) => {
+    await signInAs(page, gym.desk);
+    await expect(page.getByRole("heading", { name: `${gym.name} is paused` })).toBeVisible();
+    await expect(page.getByText("The app is paused for this gym.")).toBeVisible();
+    await page.goto("/members");
+    await expect(page.getByRole("heading", { name: `${gym.name} is paused` })).toBeVisible();
+  });
+});
+
+test("rackline admin: records a payment on the demo gym's invoice, and its admin sees the invoice and the receipt", async ({ page }) => {
+  await signInToConsole(page);
+  await page.goto("/console/gyms");
+  await page.locator("a.rl-mrow", { hasText: "Rackline Fitness" }).first().click();
+  await page.waitForURL(/\/console\/gyms\/\d+$/);
+  await page.getByRole("link", { name: "Invoices and payments" }).click();
+  await page.locator("a.rl-mrow", { hasText: "to pay" }).first().click();
+  await page.waitForURL(/\/console\/invoices\/\d+$/);
+  const number = (await page.getByRole("region", { name: "Invoice total" }).getByText(/^RL\//).textContent())?.trim() ?? "";
+  expect(number).toMatch(/^RL\//);
+  await page.getByRole("button", { name: "Record Payment" }).click();
+  const sheet = page.locator(".rl-sheet.is-open");
+  await sheet.getByLabel("Amount in rupees").fill("100");
+  await sheet.getByRole("button", { name: "Record ₹100" }).click();
+  await expect(sheet.getByText("₹100 recorded")).toBeVisible();
+  await sheet.getByRole("button", { name: "Done" }).click();
+
+  await page.evaluate(() => localStorage.clear()); // sign out of the Console, so the login page asks again
+  await signIn(page, "meera@rackline.demo");
+  await page.goto("/rackline-plan");
+  await page.locator("a.rl-mrow", { hasText: number }).click();
+  await expect(page.getByRole("region", { name: "Invoice total" }).getByText(number, { exact: true })).toBeVisible();
+  await page.locator("a.rl-mrow", { hasText: "₹100" }).first().click();
+  await expect(page.getByRole("heading", { name: /^Receipt RLR\// })).toBeVisible();
+});

@@ -89,6 +89,10 @@ cd web; npm run e2e                                                   # API runn
 
 Don't `npm run build` while `npm run dev` is running: stop it first.
 
+The flows sign in as the demo admin about a dozen times. On a fast machine that passes the sign-in limit (10 a
+minute per account) and a flow times out on the login page. Start that API with higher limits, as CI does:
+`$env:THROTTLE_LOGIN="1000/min"; $env:THROTTLE_LOGIN_IP="1000/min"; python manage.py runserver`.
+
 ## Before a release
 
 ```powershell

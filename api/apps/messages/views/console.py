@@ -5,24 +5,29 @@ Rackline admins only (`RacklineViewMixin`), no X-Gym. Never deleted. Credentials
 the audit log says only which ones changed.
 """
 import re
+from datetime import date, timedelta
 
-from django.db.models import OuterRef, Q
+from django.db.models import Count, OuterRef, Q, Sum
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.audit.models import record
 from apps.core import clock
+from apps.core.params import Pages, open_days
 from apps.core.queries import count_of
 from apps.core.rackline import RacklineViewMixin
 
-from .. import accounts
+from .. import accounts, usage
 from ..accounts import WHERE
 from ..models import Message, WhatsAppAccount, WhatsAppTemplate
 from ..serializers import (
-    ConsoleMessageSerializer, CredentialsSerializer, MessageKindSerializer, WhatsAppAccountChangeSerializer, WhatsAppAccountCreateSerializer,
+    ConsoleMessageSerializer, ConsoleUsageSerializer, CredentialsSerializer, GymUsageRowSerializer, MessageKindSerializer, WhatsAppAccountChangeSerializer, WhatsAppAccountCreateSerializer,
     WhatsAppAccountSerializer, WhatsAppTemplateInputSerializer, WhatsAppTemplateSerializer, message_kinds,
 )
 
@@ -149,6 +154,8 @@ _LOG_FILTERS = [
     OpenApiParameter("q", str, description="The number it went to (4 digits or more), Meta's message id, or the error, 2 characters or more"),
     OpenApiParameter("from", str, description="Sent on or after this day (India time), YYYY-MM-DD"),
     OpenApiParameter("to", str, description="Sent on or before this day (India time), YYYY-MM-DD"),
+    OpenApiParameter("billed_in", str, description="YYYY-MM: only the shared-number messages billed in that month, each "
+                     "gym's days its own, as WhatsApp usage counts them"),
 ]
 
 
@@ -156,7 +163,7 @@ _LOG_FILTERS = [
 @extend_schema_view(list=extend_schema(parameters=_LOG_FILTERS))
 class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     """Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
-    template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+    template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
     a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits)."""
 
     serializer_class = ConsoleMessageSerializer
@@ -166,16 +173,15 @@ class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.G
         qs = (Message.objects.select_related("gym", "account", "template")
               .defer("text", "parameters", *(f"account__{f}" for f in WhatsAppAccount.SECRET_FIELDS))
               .order_by("-created_at", "-id"))
-        p = self.request.query_params
-        first = clock.parse_date(p.get("from"), None, field="from")
-        last = clock.parse_date(p.get("to"), None, field="to")
-        if first and last and first > last:
-            raise ValidationError({"from": ["Pick a start date on or before the end date"]})
+        first, last = open_days(self.request)
         if first:  # days on Rackline's clock (no gym: India time)
             qs = qs.filter(created_at__gte=clock.day_bounds(None, first)[0])
         if last:
             qs = qs.filter(created_at__lt=clock.day_bounds(None, last)[1])
-        return _search(qs, p.get("q", ""))
+        if billed := self.request.query_params.get("billed_in"):
+            first = _month(billed, field="billed_in")
+            qs = qs.filter(usage.billed_in(first, _month_end(first)))
+        return _search(qs, self.request.query_params.get("q", ""))
 
 
 def _search(qs, text: str):
@@ -188,3 +194,39 @@ def _search(qs, text: str):
     if len(digits) >= 4 and not re.search(r"[A-Za-z]", text):
         return qs.filter(Q(to__endswith=digits[-10:]) | Q(error_code=digits))
     return qs.filter(Q(provider_id__icontains=text) | Q(error_code__iexact=text) | Q(error__icontains=text))
+
+
+MONTH = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
+
+
+def _month(value: str | None, field: str = "month") -> date:
+    """The first day of a `YYYY-MM` query parameter; Rackline's this month when it's left out."""
+    if not value:
+        return timezone.localdate().replace(day=1)
+    if not (m := MONTH.match(value)):
+        raise ValidationError({field: ["Use YYYY-MM"]})
+    return date(int(m[1]), int(m[2]), 1)
+
+
+def _month_end(first: date) -> date:
+    return clock.add_months(first, 1) - timedelta(days=1)
+
+
+@extend_schema(tags=["platform"])
+class ConsoleUsageView(RacklineViewMixin, APIView):
+    """Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month (each in the
+    gym's own days, as its invoice counts them) and what they came to, the biggest first, with the month's totals.
+    Counts and Rackline's money only. A fixed number of queries whatever the number of gyms."""
+
+    @extend_schema(responses=ConsoleUsageSerializer, parameters=[
+        OpenApiParameter("month", str, description="YYYY-MM; this month when left out"),
+        OpenApiParameter("limit", int, description="Gyms a page, at most 100"), OpenApiParameter("offset", int),
+    ])
+    def get(self, request):
+        first = _month(request.query_params.get("month"))
+        messages = usage.delivered_anywhere(first, _month_end(first))
+        pages = Pages()
+        page = pages.paginate_queryset(usage.by_gym(messages), request, view=self)
+        answer = pages.get_paginated_response(GymUsageRowSerializer(page, many=True).data).data
+        totals = messages.aggregate(messages=Count("id"), amount_paise=Coalesce(Sum("rate_paise"), 0))
+        return Response(ConsoleUsageSerializer({"month": f"{first:%Y-%m}", **totals, **answer}).data)

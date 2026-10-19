@@ -7,8 +7,9 @@ import type { ConsoleMessage, PlatformMessagesListParams, PlatformMessagesListSt
 import { usePlatformGymsRetrieve, usePlatformMessagesListInfinite } from "@/api/gen/platform/platform";
 import { PageBar } from "@/components/shell";
 import { Chips, Empty, Icon, LoadMore, SearchField, Section, SkeletonRows } from "@/components/ui";
-import { LogFilterSheet, logUrl, MessageBadge, MessageSheet, NO_FILTERS, type LogFilters } from "@/features/console/message-log";
-import { ago, plural } from "@/lib/format";
+import { LogFilterSheet, logUrl, MessageSheet, NO_FILTERS, type LogFilters } from "@/features/console/message-log";
+import { MessageBadge } from "@/features/messages";
+import { ago, monthLabel, plural } from "@/lib/format";
 import { paged, pages, useSearch } from "@/lib/hooks";
 
 const STATUSES = [
@@ -32,13 +33,15 @@ function MessageLog() {
     ...(q ? { q } : {}), ...(f.status !== "all" ? { status: f.status as PlatformMessagesListStatus } : {}),
     ...(f.gym ? { gym: Number(f.gym) } : {}), ...(f.account ? { account: Number(f.account) } : {}),
     ...(f.template ? { template: Number(f.template) } : {}), ...(f.from ? { from: f.from } : {}), ...(f.to ? { to: f.to } : {}),
+    ...(f.billed ? { billed_in: f.billed } : {}),
   };
   const list = usePlatformMessagesListInfinite(query, { query: { ...paged, enabled: !backwards } });
   const { rows, count } = pages(list);
   const gym = usePlatformGymsRetrieve(Number(f.gym), { query: { enabled: Boolean(f.gym) } });
   const gymName = gym.data?.data.name;
-  const filtered = Boolean(f.gym || f.account || f.template || f.from || f.to);
-  const narrowedBy = [gymName, f.account && "one number", f.template && "one template", (f.from || f.to) && "some days"].filter(Boolean).join(", ");
+  const filtered = Boolean(f.gym || f.account || f.template || f.from || f.to || f.billed);
+  const narrowedBy = [gymName, f.account && "one number", f.template && "one template", (f.from || f.to) && "some days",
+    f.billed && `billed in ${monthLabel(f.billed)}`].filter(Boolean).join(", ");
 
   return (
     <div className="rl-app rl-root">

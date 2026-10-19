@@ -2303,11 +2303,16 @@ paths:
     get:
       operationId: messages_list
       description: |-
-        The messages a gym has sent, newest first.
+        The messages a gym has sent, newest first: More → Messages, and a member's profile.
 
-        Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
-        members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
+        Messages go out by themselves; the one thing to post is Retry, for an admin, on a message that failed. Trainers
+        and members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
       parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: For this day or later (the gym's days), YYYY-MM-DD
       - in: query
         name: kind
         schema:
@@ -2345,6 +2350,21 @@ paths:
         schema:
           type: integer
       - in: query
+        name: q
+        schema:
+          type: string
+        description: Their name or number (4 digits or more), 2 characters or more
+      - in: query
+        name: recipient
+        schema:
+          type: string
+          enum:
+          - member
+          - staff
+        description: |-
+          * `member` - A member
+          * `staff` - A staff member
+      - in: query
         name: status
         schema:
           type: string
@@ -2360,6 +2380,11 @@ paths:
           * `delivered` - Delivered
           * `read` - Read
           * `failed` - Failed
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: For this day or earlier, YYYY-MM-DD
       tags:
       - messages
       security:
@@ -2375,10 +2400,10 @@ paths:
     get:
       operationId: messages_retrieve
       description: |-
-        The messages a gym has sent, newest first.
+        The messages a gym has sent, newest first: More → Messages, and a member's profile.
 
-        Read-only everywhere: messages go out by themselves, so there is nothing for a screen to post. Trainers and
-        members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
+        Messages go out by themselves; the one thing to post is Retry, for an admin, on a message that failed. Trainers
+        and members are out because a dues reminder says the amount; the desk sees only its branches' members' messages.
       parameters:
       - in: path
         name: id
@@ -2396,6 +2421,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Message'
+          description: ''
+  /api/messages/{id}/retry/:
+    post:
+      operationId: messages_retry_create
+      description: |-
+        Retry: send a failed message again, on the same row and key, so it still goes once at most. Refused for
+        one that may have reached them after all. Audited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this message.
+        required: true
+      tags:
+      - messages
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/messages/usage/:
+    get:
+      operationId: messages_usage_retrieve
+      description: |-
+        This billing month's messages on Rackline's shared number, by Meta's category, and what they will come
+        to on the next invoice. Two queries.
+      tags:
+      - messages
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymUsage'
           description: ''
   /api/money-moves/:
     get:
@@ -4582,13 +4648,19 @@ paths:
       operationId: platform_messages_list
       description: |-
         Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
-        template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+        template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
         a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits).
       parameters:
       - in: query
         name: account
         schema:
           type: integer
+      - in: query
+        name: billed_in
+        schema:
+          type: string
+        description: 'YYYY-MM: only the shared-number messages billed in that month,
+          each gym''s days its own, as WhatsApp usage counts them'
       - in: query
         name: from
         schema:
@@ -5114,6 +5186,39 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MessageKind'
+          description: ''
+  /api/platform/whatsapp-usage/:
+    get:
+      operationId: platform_whatsapp_usage_retrieve
+      description: |-
+        Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month (each in the
+        gym's own days, as its invoice counts them) and what they came to, the biggest first, with the month's totals.
+        Counts and Rackline's money only. A fixed number of queries whatever the number of gyms.
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Gyms a page, at most 100
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: YYYY-MM; this month when left out
+      - in: query
+        name: offset
+        schema:
+          type: integer
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleUsage'
           description: ''
   /api/recurring-expenses/:
     get:
@@ -8152,6 +8257,40 @@ components:
       - utility_message_paise
       - whatsapp_mode
       - whatsapp_setup_paise
+    ConsoleUsage:
+      type: object
+      description: A page of gyms by what their shared-number messages came to in
+        a month, with the month's totals.
+      properties:
+        month:
+          type: string
+          description: YYYY-MM
+        messages:
+          type: integer
+          description: Every gym's, this month
+        amount_paise:
+          type: integer
+        count:
+          type: integer
+          description: Gyms with any
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GymUsageRow'
+      required:
+      - amount_paise
+      - count
+      - messages
+      - month
+      - next
+      - previous
+      - results
     CredentialsRequest:
       type: object
       description: 'Replace Credentials: either or both. The ones left out stay as
@@ -9260,6 +9399,56 @@ components:
         * `trial` - Trial
         * `active` - Active
         * `suspended` - Suspended
+    GymUsage:
+      type: object
+      description: |-
+        The gym's messages delivered from Rackline's shared number in its billing month so far, and what they come
+        to on the invoice written on `billed_on`.
+      properties:
+        mode:
+          $ref: '#/components/schemas/WhatsappModeEnum'
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+        billed_on:
+          type: string
+          format: date
+          description: The invoice these go on is written this day
+        messages:
+          type: integer
+        amount_paise:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageLine'
+      required:
+      - amount_paise
+      - billed_on
+      - ends
+      - lines
+      - messages
+      - mode
+      - starts
+    GymUsageRow:
+      type: object
+      properties:
+        gym:
+          type: integer
+        gym_name:
+          type: string
+        messages:
+          type: integer
+        amount_paise:
+          type: integer
+      required:
+      - amount_paise
+      - gym
+      - gym_name
+      - messages
     GymWhatsApp:
       type: object
       description: How the gym's messages go out, the number they come from and whether
@@ -10091,8 +10280,9 @@ components:
       - renewals
     Message:
       type: object
-      description: 'A message as the desk sees it: when it went, what it said, and
-        whether it arrived.'
+      description: |-
+        A message as the gym sees it: who it went to, when, what it said, whether it arrived, and whether an admin may
+        send it again (`can_retry`).
       properties:
         id:
           type: integer
@@ -10105,6 +10295,18 @@ components:
           type: string
           readOnly: true
           nullable: true
+        user:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: A staff member it went to; empty when it went to a member
+        to_name:
+          type: string
+          readOnly: true
+        recipient:
+          allOf:
+          - $ref: '#/components/schemas/RecipientEnum'
+          readOnly: true
         kind:
           allOf:
           - $ref: '#/components/schemas/MessageKindEnum'
@@ -10129,16 +10331,45 @@ components:
           allOf:
           - $ref: '#/components/schemas/MessageStatusEnum'
           readOnly: true
+        status_label:
+          type: string
+          readOnly: true
         error:
           type: string
           readOnly: true
           description: Why it failed, in the provider's words
+        attempts:
+          type: integer
+          readOnly: true
+          description: Times it was handed to the provider
+        can_retry:
+          type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
           readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        delivered_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When Meta says it reached their phone
+        read_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When Meta says they opened it
       required:
+      - attempts
+      - can_retry
       - created_at
+      - delivered_at
       - error
       - for_date
       - id
@@ -10146,9 +10377,15 @@ components:
       - kind_label
       - member
       - member_name
+      - read_at
+      - recipient
       - status
+      - status_label
       - text
       - to
+      - to_name
+      - updated_at
+      - user
     MessageCounts:
       type: object
       properties:
@@ -14441,6 +14678,24 @@ components:
       - id
       - kind
       - reason
+    UsageLine:
+      type: object
+      properties:
+        category:
+          type: string
+          description: 'Meta''s category for the template: utility, marketing or authentication'
+        rate_paise:
+          type: integer
+          description: What each one costs once delivered
+        messages:
+          type: integer
+        amount_paise:
+          type: integer
+      required:
+      - amount_paise
+      - category
+      - messages
+      - rate_paise
     VoidRequest:
       type: object
       properties:

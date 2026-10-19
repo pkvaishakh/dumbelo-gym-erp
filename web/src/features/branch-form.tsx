@@ -27,7 +27,7 @@ export function BranchForm({ branch, onSaved }: { branch?: Branch; onSaved: (b: 
     for (const r of rows) if (!r.name.trim() || !r.starts || !r.ends) return setErr("Name every session and give it a start and end");
     setErr(undefined);
     try {
-      const b = await a.run<Branch>(branch ? `/api/branches/${branch.id}/` : "/api/branches/", { ...f, name: f.name.trim(), sessions: rows, ...extra }, { method: branch ? "PATCH" : "POST", refresh: ["/api/branches/", "/api/me/"] });
+      const b = await a.run<Branch>(branch ? `/api/branches/${branch.id}/` : "/api/branches/", { ...f, name: f.name.trim(), sessions: rows, ...extra }, { method: branch ? "PATCH" : "POST", refresh: ["/api/branches/", "/api/me/", "/api/billing/"] });  // opening or closing one changes the plan's room
       onSaved(b!);
     } catch { /* shown */ }
   }

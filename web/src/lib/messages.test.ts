@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { daysLabel, hourLabel, whenLabel } from "./messages";
+import { daysLabel, gymLogFilters, gymLogParams, gymLogUrl, hourLabel, narrowedBy, NO_GYM_FILTERS, recentMonths, whenLabel } from "./messages";
 
 describe("hourLabel", () => {
   it("says a 24-hour clock hour the way people do", () => {
@@ -31,5 +31,33 @@ describe("whenLabel", () => {
   });
   it("says what sends the others", () => {
     expect(whenLabel({ kind: "payment_received", hour: null, days_ahead: null })).toBe("When the desk records a payment");
+  });
+});
+
+describe("the gym's message log filters", () => {
+  const read = (q: string) => gymLogFilters(new URLSearchParams(q));
+
+  it("reads the address and writes it back without the defaults", () => {
+    const f = read("status=failed&kind=payment_due&from=2026-10-01&extra=1");
+    expect(f).toEqual({ ...NO_GYM_FILTERS, status: "failed", kind: "payment_due", from: "2026-10-01" });
+    expect(gymLogUrl(f)).toBe("/messages?status=failed&kind=payment_due&from=2026-10-01");
+    expect(gymLogUrl(NO_GYM_FILTERS)).toBe("/messages");
+  });
+
+  it("asks the API only for filters it knows, so a mistyped address still loads", () => {
+    expect(gymLogParams(read("status=lost&kind=birthday&recipient=staff"), "")).toEqual({ recipient: "staff" });
+    expect(gymLogParams(read("status=all&to=2026-10-05"), "ravi")).toEqual({ q: "ravi", to: "2026-10-05" });
+  });
+
+  it("says what narrows the list", () => {
+    expect(narrowedBy(read("kind=payment_due&recipient=member&to=2026-10-05"))).toBe("payment due, members, some days");
+    expect(narrowedBy(read("status=failed"))).toBe("");
+  });
+});
+
+describe("recentMonths", () => {
+  it("counts back across a new year, newest first", () => {
+    expect(recentMonths("2026-02", 4)).toEqual(["2026-02", "2026-01", "2025-12", "2025-11"]);
+    expect(recentMonths("2026-10")).toHaveLength(24);
   });
 });

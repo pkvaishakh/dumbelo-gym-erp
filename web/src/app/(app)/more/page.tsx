@@ -1,6 +1,6 @@
 "use client";
 import {
-  Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, MessageCircle, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -55,6 +55,7 @@ export default function MorePage() {
               <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
               <MenuRow icon={ScanLine} title="Devices" href="/devices" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
+              <MenuRow icon={MessageCircle} title="Messages" href="/messages" />
               <MenuRow icon={SlidersHorizontal} title="Settings" href="/settings" />
               <MenuRow icon={BadgeIndianRupee} title="Rackline plan" href="/rackline-plan" />
               <MenuRow icon={LifeBuoy} title="Support access" href="/support" />

@@ -20,10 +20,12 @@ from django.utils import timezone
 
 from apps.billing.models import GymBilling
 from apps.core import clock
+from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.gyms.models import Gym
-from apps.members.models import Member
+from apps.members.models import Member, Payment
 from apps.reminders.models import ReminderDue
+from apps.tasks.models import Task
 
 from . import automation
 from .accounts import account_for, approved_templates, whatsapp_mode
@@ -45,6 +47,11 @@ OFF = "Not sent: WhatsApp messages are off for your gym."
 NOT_SET_UP = "Not sent: WhatsApp isn't set up for your gym yet."
 OPTED_OUT = "Not sent: they asked not to get messages."
 INTERRUPTED = "Sending stopped part-way, so it may or may not have gone. It won't be sent again on its own."
+
+#: The error codes of a message that may have reached the phone after all: Meta didn't answer, its answer made no
+#: sense, our worker stopped mid-send, or the provider's own client broke. Retry is never offered for these.
+SEND_ERROR = "send_error"
+MAY_HAVE_GONE = {"no_answer", "bad_answer", "interrupted", SEND_ERROR}
 
 
 def stop_reason(gym: Gym, member: Member | None = None) -> str | None:
@@ -117,7 +124,7 @@ def deliver(row: Message, sender: Sender, now: datetime | None = None) -> Messag
     except Exception as e:
         # Anything the provider's own client raises is this message's failure, not the run's. Not retried: we
         # can't tell whether it went.
-        _failed(row, str(e) or e.__class__.__name__, "", False, now)
+        _failed(row, str(e) or e.__class__.__name__, SEND_ERROR, False, now)
     else:
         row.status, row.next_retry_at, row.error, row.error_code = Message.SENT, None, "", ""
     row.provider = sender.name
@@ -269,3 +276,98 @@ def send_retries(now: datetime | None = None) -> dict[str, int]:
         deliver(row, sender, now)
         counts[{Message.SENT: "sent", Message.FAILED: "failed"}.get(row.status, "waiting")] += 1
     return counts
+
+
+# ---- Retry, by hand ----
+
+#: Why Retry can't be pressed, from what stopped it going. Written for the gym's admin.
+CANT_GO = {
+    PAUSED: "Your gym's Rackline account is paused, so nothing can be sent.",
+    OFF: "WhatsApp messages are off for your gym. Ask Rackline to turn them on.",
+    OPTED_OUT: "They asked not to get messages. Turn their reminders back on first.",
+}
+
+
+def can_retry(row: Message) -> bool:
+    """Whether an admin may send this message again: one of the gym's own that failed, was written out in full,
+    and certainly never reached the phone. From the row alone, so a list can say it without a query."""
+    return (row.status == Message.FAILED and row.kind in NotificationRule.GYM_KINDS and row.template_id is not None
+            and row.error_code not in MAY_HAVE_GONE)
+
+
+def _retry_problem(row: Message) -> str | None:
+    """Why this message can't go again now, in words for the admin; None when it can."""
+    if not can_retry(row):
+        if row.status != Message.FAILED:
+            return "Only a message that failed can be sent again."
+        if row.error_code in MAY_HAVE_GONE:
+            return "This one may have reached them after all, so it isn't sent again."
+        return "This one can't be sent again."
+    gym = row.gym
+    if reason := stop_reason(gym, row.member):
+        return CANT_GO[reason]
+    if not automation.is_on(gym, row.kind):
+        return f"{row.get_kind_display()} messages are paused. Resume them in Settings first."
+    person = row.member or row.user
+    if row.member is not None and row.member.is_archived:
+        return "They're archived, so they get no messages."
+    if not person.phone:
+        return "Add their mobile number first."
+    if stale := _no_longer_true(row, clock.today(gym)):
+        return stale
+    current = account_for(gym)
+    if current is None or current.pk != row.account_id:
+        return "Your gym sends from a different WhatsApp number now, so this one can't go again."
+    if row.template.status != WhatsAppTemplate.APPROVED:
+        return "Its WhatsApp template isn't approved any more."
+    return None
+
+
+def _no_longer_true(row: Message, today: date) -> str | None:
+    """Retry sends the words as they were written, so they must still hold: a reminder only on its own day and
+    while it is still owed (the same amount, for money), a receipt while its payment stands, a task message while
+    the task is open and with the same person. None when they do."""
+    if row.kind in NotificationRule.REMINDERS:
+        if row.for_date != today:
+            return f"This reminder was for {clock.date_label(row.for_date)}. Today's reminders go out on their own."
+        member = Member.objects.with_totals().get(pk=row.member_id)
+        sub = member.current_subscription(today)
+        if row.kind == NotificationRule.PAYMENT_DUE:
+            owed = member.balance_paise()
+            if owed <= 0:
+                return "They've paid since, so there's nothing to remind them about."
+            if rupees(owed) not in row.parameters:
+                return "What they owe has changed since. Tomorrow's reminder says the new amount."
+        elif sub is None or sub.is_frozen(today) or (sub.ends == today) != (row.kind == NotificationRule.PLAN_ENDS_TODAY):
+            return "Their plan has changed since, so this reminder no longer fits."
+        return None
+    kind, ref_id, *rest = row.dedupe_key.split(":") + [""]
+    if not ref_id.isdigit():
+        return None
+    if row.kind == NotificationRule.PAYMENT_RECEIVED and kind == "payment":
+        if Payment.objects.filter(pk=ref_id, gym=row.gym_id, voided=True).exists():
+            return "That payment was voided, so its receipt isn't sent."
+    elif row.kind == NotificationRule.TASK_ASSIGNED and kind == "task":
+        task = Task.objects.filter(pk=ref_id, gym=row.gym_id).select_related("assignee").first()
+        if task is None or task.status == Task.DONE:
+            return "That task is done, so there's nothing to tell them."
+        if str(task.assignee_id) != rest[1] or not task.assignee.is_active:
+            return "That task is with someone else now."
+    return None
+
+
+def retry(row: Message, now: datetime | None = None) -> Message:
+    """Send a failed message again, by hand: the same row, key and words, to the person's number today. Whoever
+    takes the row first sends it, so two taps (or two admins) can't send it twice."""
+    now = now or timezone.now()
+    if problem := _retry_problem(row):
+        raise RuleBroken("cant_retry", problem)
+    person = row.member or row.user
+    claimed = Message.objects.filter(pk=row.pk, status=Message.FAILED, attempts=row.attempts).update(
+        status=Message.QUEUED, attempts=F("attempts") + 1, next_retry_at=None, error="", error_code="", to=person.phone,
+        updated_at=now,
+    )
+    if not claimed:
+        raise RuleBroken("already_retried", "It's already being sent again.")
+    row.refresh_from_db()
+    return deliver(row, get_sender(), now)

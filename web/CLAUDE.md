@@ -20,14 +20,17 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
                               Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen),
                               WhatsApp log (More → WhatsApp log, or from a gym or a number: /console/messages, filters
-                              in the address), Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
+                              in the address), WhatsApp usage (More → WhatsApp usage: /console/usage?month=, each gym's
+                              month on the shared number, opening its log with ?billed= those same messages), Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
                               every 30 s, every 3 s while a run waits or runs).
                               Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
                               AddChargeSheet, ChargeSheet; whatsapp: WhereFields, SecretField, EditAccountSheet,
                               CredentialsSheet, TemplateSheet; messages: HourField, DaysField, AutomationSheet, GymMessages;
                               server: CHECK_ICON, StateBadge, RunBadge, jobLine, JobSheet with Run Now's confirm; message-log: LogFilterSheet,
-                              MessageSheet, MessageBadge, logUrl)
+                              MessageSheet, logUrl)
+src/app/(app)/messages        More → Messages (admins; the desk's own branches through the API): the log, filters in the
+                              address, a message's sheet with Retry, and this billing month on Rackline's number
 src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
@@ -40,7 +43,8 @@ src/features/                 bigger parts shared by routes: homes (Attention, G
                               recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), account-form, drawer (CountRow,
                               CountSheet), refunds (RefundSheet, RefundRows), rackline-plan (PlanCard, BranchRoom,
                               PlanPrices, AskStatus, proRataText: a gym's Rackline plan, for the gym and the Console),
-                              rackline-invoices (InvoiceRowLink, InvoiceCard, InvoiceLines, PaymentRows, PrintFrame,
+                              messages (MessageBadge: also the Console's log, GymLogFilterSheet,
+                              MessageSheet with Retry), rackline-invoices (InvoiceRowLink, InvoiceCard, InvoiceLines, PaymentRows, PrintFrame,
                               InvoicePaper, ReceiptPaper: the same invoice and receipt for the gym and the Console)
                               reports/ (range: useReportRange + ReportControls, period and branch in the URL; screen:
                               ReportScreen, ReportPrint, Download; parts: Lead, Trend, SeriesChart, BarList; one file per
@@ -52,7 +56,8 @@ src/lib/hooks.ts              useGet (loosely typed GETs), useAction (writes + r
 src/lib/format.ts             rupees, dates, clock times, greeting, STATUS_LABEL, gymToday (the gym's day, not the device's)
 src/lib/types.ts              shapes of endpoints the schema leaves loose (summary, collection…)
 src/lib/console-home.ts       Console Home's Needs attention rows from the summary (consoleAttention, serverMeta)
-src/lib/messages.ts           when each WhatsApp message goes out, in words (hourLabel, daysLabel, whenLabel, MESSAGE_TO)
+src/lib/messages.ts           when each WhatsApp message goes out, in words (hourLabel, daysLabel, whenLabel, MESSAGE_TO);
+                              MESSAGE_LABEL; the gym's log filters (gymLogFilters, gymLogUrl, gymLogParams, narrowedBy); recentMonths
 src/lib/reports.ts            report categories, periods, MAX_MONTHS (the API's) and the range check
 src/lib/report-rows.ts        each report as plain rows: its CSV (reportCsv) and its print page
 src/lib/csv.ts                toCsv, plainRupees, download, statementCsv

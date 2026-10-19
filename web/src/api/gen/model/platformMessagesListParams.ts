@@ -11,6 +11,10 @@ import type { PlatformMessagesListStatus } from './platformMessagesListStatus';
 export type PlatformMessagesListParams = {
 account?: number;
 /**
+ * YYYY-MM: only the shared-number messages billed in that month, each gym's days its own, as WhatsApp usage counts them
+ */
+billed_in?: string;
+/**
  * Sent on or after this day (India time), YYYY-MM-DD
  */
 from?: string;

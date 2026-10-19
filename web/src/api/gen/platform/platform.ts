@@ -37,6 +37,7 @@ import type {
   ConsoleInvoice,
   ConsoleInvoicePayment,
   ConsolePlan,
+  ConsoleUsage,
   CredentialsRequest,
   DeclineRequest,
   GymAdmin,
@@ -70,6 +71,7 @@ import type {
   PlatformSummary,
   PlatformWhatsappAccountsListParams,
   PlatformWhatsappTemplatesListParams,
+  PlatformWhatsappUsageRetrieveParams,
   PriceList,
   PriceListCreateRequest,
   RecordPaymentRequest,
@@ -3344,7 +3346,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     /**
  * Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
-template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
 a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits).
  */
 export type platformMessagesListResponse200 = {
@@ -5186,6 +5188,194 @@ export function usePlatformWhatsappTemplatesKindsList<TData = Awaited<ReturnType
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getPlatformWhatsappTemplatesKindsListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month (each in the
+gym's own days, as its invoice counts them) and what they came to, the biggest first, with the month's totals.
+Counts and Rackline's money only. A fixed number of queries whatever the number of gyms.
+ */
+export type platformWhatsappUsageRetrieveResponse200 = {
+  data: ConsoleUsage
+  status: 200
+}
+    
+export type platformWhatsappUsageRetrieveResponseSuccess = (platformWhatsappUsageRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformWhatsappUsageRetrieveResponse = (platformWhatsappUsageRetrieveResponseSuccess)
+
+export const getPlatformWhatsappUsageRetrieveUrl = (params?: PlatformWhatsappUsageRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/whatsapp-usage/?${stringifiedParams}` : `/api/platform/whatsapp-usage/`
+}
+
+export const platformWhatsappUsageRetrieve = async (params?: PlatformWhatsappUsageRetrieveParams, options?: RequestInit): Promise<platformWhatsappUsageRetrieveResponse> => {
+  
+  return apiFetch<platformWhatsappUsageRetrieveResponse>(getPlatformWhatsappUsageRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformWhatsappUsageRetrieveInfiniteQueryKey = (params?: PlatformWhatsappUsageRetrieveParams,) => {
+    return [
+    'infinite', `/api/platform/whatsapp-usage/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformWhatsappUsageRetrieveQueryKey = (params?: PlatformWhatsappUsageRetrieveParams,) => {
+    return [
+    `/api/platform/whatsapp-usage/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformWhatsappUsageRetrieveInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, PlatformWhatsappUsageRetrieveParams['offset']>, TError = unknown>(params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappUsageRetrieveInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']> = ({ signal, pageParam }) => platformWhatsappUsageRetrieve({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappUsageRetrieveInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>>
+export type PlatformWhatsappUsageRetrieveInfiniteQueryError = unknown
+
+
+export function usePlatformWhatsappUsageRetrieveInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, PlatformWhatsappUsageRetrieveParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformWhatsappUsageRetrieveParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappUsageRetrieveInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, PlatformWhatsappUsageRetrieveParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappUsageRetrieveInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, PlatformWhatsappUsageRetrieveParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappUsageRetrieveInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, PlatformWhatsappUsageRetrieveParams['offset']>, TError = unknown>(
+ params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData, QueryKey, PlatformWhatsappUsageRetrieveParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappUsageRetrieveInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformWhatsappUsageRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError = unknown>(params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformWhatsappUsageRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>> = ({ signal }) => platformWhatsappUsageRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformWhatsappUsageRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>>
+export type PlatformWhatsappUsageRetrieveQueryError = unknown
+
+
+export function usePlatformWhatsappUsageRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError = unknown>(
+ params: undefined |  PlatformWhatsappUsageRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappUsageRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError = unknown>(
+ params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformWhatsappUsageRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError = unknown>(
+ params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformWhatsappUsageRetrieve<TData = Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError = unknown>(
+ params?: PlatformWhatsappUsageRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformWhatsappUsageRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformWhatsappUsageRetrieveQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

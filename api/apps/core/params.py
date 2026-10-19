@@ -36,6 +36,16 @@ def day_range(request, today, *, many_days: bool, what: str):
     return first, last
 
 
+def open_days(request):
+    """?from= and ?to=, either of which may be left out (None): for a log, where no end means no limit."""
+    p = request.query_params
+    first = clock.parse_date(p.get("from"), None, field="from")
+    last = clock.parse_date(p.get("to"), None, field="to")
+    if first and last and first > last:
+        raise ValidationError({"from": ["Pick a start date on or before the end date"]})
+    return first, last
+
+
 class Pages(LimitOffsetPagination):
     """50 rows by default, never more than 100: screens ask for the next page instead of one huge one."""
 
