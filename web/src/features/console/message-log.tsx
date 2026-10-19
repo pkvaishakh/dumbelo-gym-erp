@@ -7,11 +7,12 @@ import type { ConsoleMessage } from "@/api/gen/model";
 import { usePlatformGymsList, usePlatformWhatsappAccountsList, usePlatformWhatsappTemplatesList } from "@/api/gen/platform/platform";
 import { Details, Field, Icon, SearchField, Sheet } from "@/components/ui";
 import { MessageBadge } from "@/features/messages";
-import { day, dayTime, lastDigits, rupees } from "@/lib/format";
+import { day, dayTime, lastDigits, monthLabel, rupees } from "@/lib/format";
 import { useSearch } from "@/lib/hooks";
 
-export type LogFilters = { status: string; gym: string; account: string; template: string; from: string; to: string };
-export const NO_FILTERS: LogFilters = { status: "all", gym: "", account: "", template: "", from: "", to: "" };
+/** `billed`: YYYY-MM, the shared-number messages billed in that month (from WhatsApp usage). */
+export type LogFilters = { status: string; gym: string; account: string; template: string; from: string; to: string; billed: string };
+export const NO_FILTERS: LogFilters = { status: "all", gym: "", account: "", template: "", from: "", to: "", billed: "" };
 
 /** Filters live in the address, so Back and a shared link keep the log as it was. */
 export function logUrl(f: LogFilters) {
@@ -31,7 +32,7 @@ export function LogFilterSheet({ open, onClose, f, go, gymName, count }: {
   const accounts = usePlatformWhatsappAccountsList({ limit: 100 }, { query: { enabled: open } });
   const templates = usePlatformWhatsappTemplatesList({ limit: 100, ...(f.account ? { account: Number(f.account) } : {}) }, { query: { enabled: open } });
   const backwards = Boolean(f.from && f.to && f.from > f.to);
-  const any = f.gym || f.account || f.template || f.from || f.to;
+  const any = f.gym || f.account || f.template || f.from || f.to || f.billed;
   return (
     <Sheet open={open} onClose={onClose} title="Filter messages">
       <p className="rl-sheet__label" style={{ marginTop: 0, marginBottom: "var(--space-2)" }}>Gym</p>
@@ -57,6 +58,14 @@ export function LogFilterSheet({ open, onClose, f, go, gymName, count }: {
           )}
         </>
       )}
+      {f.billed && (
+        <ul className="rl-sheet__list">
+          <li><button className="rl-sheet__item" type="button" aria-label={`Billed in ${monthLabel(f.billed)}: tap for any month`} onClick={() => go({ billed: "" })}>
+            <span className="rl-chipicon"><Icon as={IndianRupee} size="sm" /></span><span className="rl-sheet__text">Billed in {monthLabel(f.billed)}</span>
+            <Icon as={X} size="sm" />
+          </button></li>
+        </ul>
+      )}
       <Field label="WhatsApp number">{(id) => (
         <select className="rl-field__input" id={id} value={f.account} onChange={(e) => go({ account: e.target.value, template: "" })}>
           <option value="">Any number</option>
@@ -77,7 +86,7 @@ export function LogFilterSheet({ open, onClose, f, go, gymName, count }: {
       </div>
       <div className="rl-sheet__actions">
         <button className="rl-button rl-button--block" type="button" onClick={onClose}>{count === undefined ? "Done" : `Show ${count.toLocaleString("en-IN")} message${count === 1 ? "" : "s"}`}</button>
-        <button className="rl-button rl-button--secondary rl-button--block" type="button" disabled={!any} onClick={() => go({ gym: "", account: "", template: "", from: "", to: "" })}>Reset</button>
+        <button className="rl-button rl-button--secondary rl-button--block" type="button" disabled={!any} onClick={() => go({ gym: "", account: "", template: "", from: "", to: "", billed: "" })}>Reset</button>
       </div>
     </Sheet>
   );

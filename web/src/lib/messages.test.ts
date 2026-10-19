@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { daysLabel, gymLogFilters, gymLogParams, gymLogUrl, hourLabel, monthDays, narrowedBy, NO_GYM_FILTERS, whenLabel } from "./messages";
+import { daysLabel, gymLogFilters, gymLogParams, gymLogUrl, hourLabel, narrowedBy, NO_GYM_FILTERS, recentMonths, whenLabel } from "./messages";
 
 describe("hourLabel", () => {
   it("says a 24-hour clock hour the way people do", () => {
@@ -55,10 +55,9 @@ describe("the gym's message log filters", () => {
   });
 });
 
-describe("monthDays", () => {
-  it("runs from the 1st to the month's last day", () => {
-    expect(monthDays("2026-02")).toEqual({ from: "2026-02-01", to: "2026-02-28" });
-    expect(monthDays("2028-02")).toEqual({ from: "2028-02-01", to: "2028-02-29" });
-    expect(monthDays("2026-12")).toEqual({ from: "2026-12-01", to: "2026-12-31" });
+describe("recentMonths", () => {
+  it("counts back across a new year, newest first", () => {
+    expect(recentMonths("2026-02", 4)).toEqual(["2026-02", "2026-01", "2025-12", "2025-11"]);
+    expect(recentMonths("2026-10")).toHaveLength(24);
   });
 });

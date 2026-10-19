@@ -21,7 +21,7 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen),
                               WhatsApp log (More → WhatsApp log, or from a gym or a number: /console/messages, filters
                               in the address), WhatsApp usage (More → WhatsApp usage: /console/usage?month=, each gym's
-                              month on the shared number, opening its log), Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
+                              month on the shared number, opening its log with ?billed= those same messages), Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
                               every 30 s, every 3 s while a run waits or runs).
                               Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
@@ -57,7 +57,7 @@ src/lib/format.ts             rupees, dates, clock times, greeting, STATUS_LABEL
 src/lib/types.ts              shapes of endpoints the schema leaves loose (summary, collection…)
 src/lib/console-home.ts       Console Home's Needs attention rows from the summary (consoleAttention, serverMeta)
 src/lib/messages.ts           when each WhatsApp message goes out, in words (hourLabel, daysLabel, whenLabel, MESSAGE_TO);
-                              MESSAGE_LABEL; the gym's log filters (gymLogFilters, gymLogUrl, gymLogParams, narrowedBy); monthDays
+                              MESSAGE_LABEL; the gym's log filters (gymLogFilters, gymLogUrl, gymLogParams, narrowedBy); recentMonths
 src/lib/reports.ts            report categories, periods, MAX_MONTHS (the API's) and the range check
 src/lib/report-rows.ts        each report as plain rows: its CSV (reportCsv) and its print page
 src/lib/csv.ts                toCsv, plainRupees, download, statementCsv

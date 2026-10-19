@@ -88,9 +88,11 @@ export function narrowedBy(f: GymLogFilters) {
   ].filter(Boolean).join(", ");
 }
 
-/** The first and last day of a month ("2026-10" → 1 to 31 Oct), for a log's from and to. */
-export function monthDays(month: string) {
+/** The month and the ones before it, newest first ("2026-10", "2026-09"…), for a month picker. */
+export function recentMonths(month: string, count = 24) {
   const [y, m] = month.split("-").map(Number);
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return { from: `${month}-01`, to: `${month}-${String(last).padStart(2, "0")}` };
+  return Array.from({ length: count }, (_, i) => {
+    const n = y * 12 + (m - 1) - i;
+    return `${Math.floor(n / 12)}-${String((n % 12) + 1).padStart(2, "0")}`;
+  });
 }

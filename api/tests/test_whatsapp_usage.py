@@ -104,3 +104,24 @@ def test_a_bad_month_says_how_to_write_it(w):
 def test_only_rackline_admins_see_every_gyms_usage(w):
     for c in (support(), w.client(w.admin), w.client(w.desk)):
         assert c.get(CONSOLE).status_code == 403
+
+
+def test_a_gyms_usage_opens_the_same_messages_in_the_log(w, other):
+    """The log's `billed_in` counts as usage does: 1 Oct, 1 AM in India is September for a gym in Dubai."""
+    other.gym.timezone = "Asia/Dubai"
+    other.gym.save()
+    at = datetime(2026, 10, 1, 1, 0, tzinfo=INDIA)
+    mine, theirs = delivered(w, 1, at), delivered(other, 1, at)
+    delivered(w, 2, at, billable=False)  # its own number: not billed by Rackline
+    console = rackline()
+
+    def log(**params):
+        r = console.get("/api/platform/messages/", params)
+        assert r.status_code == 200, r.content
+        return [m["id"] for m in r.json()["results"]]
+
+    assert log(billed_in="2026-10") == [mine.pk]
+    assert log(billed_in="2026-09") == [theirs.pk]
+    assert log(billed_in="2026-10", gym=other.gym.pk) == []
+    r = console.get("/api/platform/messages/", {"billed_in": "Oct"})
+    assert r.status_code == 400 and "billed_in" in r.json()["error"]["fields"]

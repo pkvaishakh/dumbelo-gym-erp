@@ -3346,7 +3346,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     /**
  * Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
-template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
 a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits).
  */
 export type platformMessagesListResponse200 = {

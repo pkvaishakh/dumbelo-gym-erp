@@ -49,12 +49,14 @@ apps/messages/       WhatsApp: senders.py (FakeSender by default; CloudSender po
                      temporary, permanent and "no answer", which is never retried); webhook.py (Meta's webhook: signature
                      check, WebhookEvent kept before handling, statuses that only move forward within the sending
                      account, InboundMessage and STOP opt-outs, replay: `manage.py replay_webhook_events`); usage.py (delivered billable messages per gym and
-                     month, counted from the rows, for invoices; delivered_anywhere + by_gym: every gym's month, each in its own days); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
+                     month, counted from the rows, for invoices; billed_in: billed in a span, each gym's days its own;
+                     delivered_anywhere + by_gym: every gym's month); views/webhook.py (/api/whatsapp/webhook/[<slug>/],
                      no sign-in: the signature is the check); views/gym.py
                      (/api/messages/: the log with filters and `q`, Retry, usage: this billing month on the shared number;
                      /api/gym/whatsapp/, /api/gym/messages/[<kind>/]: Pause and Resume), views/console.py
                      (/api/platform/whatsapp-accounts/, /api/platform/whatsapp-templates/, /api/platform/messages/: the log across
-                     gyms, no names or words, the number's last 4 digits only; /api/platform/whatsapp-usage/: each gym's month) and views/automation.py
+                     gyms, no names or words, the number's last 4 digits only, `?billed_in=YYYY-MM` as usage counts;
+                     /api/platform/whatsapp-usage/: each gym's month) and views/automation.py
                      (/api/platform/automation/, /api/platform/gyms/<id>/messages/[<kind>/]). Querysets that show an account defer SECRET_FIELDS.
                      App label "gym_messages": see apps.py
 apps/reports/        views/summary.py (SummaryView: admin Home, including expense dues; writes due dates); one read-only

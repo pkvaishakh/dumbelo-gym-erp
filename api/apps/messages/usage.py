@@ -29,15 +29,20 @@ def usage(gym: Gym, first: date, last: date) -> list[dict]:
              "amount_paise": row["rate"] * row["messages"]} for row in rows]
 
 
-def delivered_anywhere(first: date, last: date):
-    """Every gym's billable messages delivered from local day `first` to `last`, each day read in the gym's own time
-    zone. One query for the time zones gyms are in."""
+def billed_in(first: date, last: date) -> Q:
+    """Billable messages delivered from local day `first` to `last`, each day read in its gym's own time zone, as
+    every gym's invoice counts them. One query for the time zones gyms are in."""
     days = Q(pk__in=[])
     for zone in Gym.objects.order_by().values_list("timezone", flat=True).distinct():
         where = Gym(timezone=zone)
         days |= Q(gym__timezone=zone, delivered_at__gte=clock.day_bounds(where, first)[0],
                   delivered_at__lt=clock.day_bounds(where, last)[1])
-    return Message.objects.filter(days, billable=True)
+    return days & Q(billable=True)
+
+
+def delivered_anywhere(first: date, last: date):
+    """Every gym's billable messages delivered from local day `first` to `last` (see `billed_in`)."""
+    return Message.objects.filter(billed_in(first, last))
 
 
 def by_gym(messages):

@@ -436,6 +436,14 @@ test.describe.serial("rackline: from a new gym to a paused one", () => {
     await suspend.getByRole("button", { name: "Suspend Gym" }).click();
     await expect(page.getByRole("button", { name: "Activate Gym" })).toBeVisible();
 
+    await page.goto("/console/more");
+    await page.getByRole("link", { name: /WhatsApp usage/ }).click();
+    await expect(page.getByRole("heading", { name: "By gym" })).toBeVisible();
+    const month = page.getByLabel("Month");
+    await month.selectOption({ index: 1 });  // last month
+    await expect(page).toHaveURL(/\/console\/usage\?month=\d{4}-\d{2}$/);
+    await expect(page.getByText("Billed", { exact: true })).toBeVisible();
+
     await page.getByRole("navigation", { name: "Console" }).getByRole("link", { name: "Server" }).click();
     await expect(page.getByRole("heading", { name: "Health" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Webhook" })).toBeVisible();

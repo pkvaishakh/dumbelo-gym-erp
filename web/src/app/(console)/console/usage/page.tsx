@@ -10,10 +10,11 @@ import { Empty, Field, Icon, LoadMore, Section, SkeletonRows, Stat } from "@/com
 import { logUrl, NO_FILTERS } from "@/features/console/message-log";
 import { gymToday, monthLabel, plural, rupees } from "@/lib/format";
 import { paged, pages } from "@/lib/hooks";
-import { monthDays } from "@/lib/messages";
+import { recentMonths } from "@/lib/messages";
 
 /** Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month, and what they
- *  came to, the biggest first. Each gym's days are its own, as its invoice counts them. Opens that gym's log. */
+ *  came to, the biggest first. Each gym's days are its own, as its invoice counts them. A gym opens its log, showing
+ *  just the messages counted here. */
 function Usage() {
   const params = useSearchParams();
   const router = useRouter();
@@ -23,15 +24,15 @@ function Usage() {
   const list = usePlatformWhatsappUsageRetrieveInfinite({ month }, { query: paged });
   const { rows, count } = pages(list);
   const totals = list.data?.pages[0]?.data;
-  const days = monthDays(month);
 
   return (
     <div className="rl-app rl-root">
       <PageBar title="WhatsApp usage" sub={`Rackline's shared number • ${monthLabel(month)}`} back="/console/more" />
       <main className="rl-app__main">
         <Field label="Month">{(id) => (
-          <input className="rl-field__input" id={id} type="month" value={month} max={thisMonth}
-            onChange={(e) => e.target.value && router.replace(`/console/usage?month=${e.target.value}`, { scroll: false })} />
+          <select className="rl-field__input" id={id} value={month} onChange={(e) => router.replace(`/console/usage?month=${e.target.value}`, { scroll: false })}>
+            {[...new Set([...recentMonths(thisMonth), month])].map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
         )}</Field>
         <Section label="Totals">
           <div className="rl-kpis rl-kpis--pair">
@@ -49,7 +50,7 @@ function Usage() {
             <>
               <ul className="rl-card rl-mlist rl-mlist--compact">
                 {rows.map((g) => (
-                  <li key={g.gym}><Link className="rl-mrow" href={logUrl({ ...NO_FILTERS, gym: String(g.gym), ...days })}>
+                  <li key={g.gym}><Link className="rl-mrow" href={logUrl({ ...NO_FILTERS, gym: String(g.gym), billed: month })}>
                     <span className="rl-chipicon" aria-hidden="true"><Icon as={Building2} size="sm" /></span>
                     <span className="rl-row__title rl-mrow__name">{g.gym_name}</span>
                     <span className="rl-row__meta rl-mrow__meta">{plural(g.messages, "message")} delivered</span>

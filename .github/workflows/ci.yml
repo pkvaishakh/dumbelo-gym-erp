@@ -118,6 +118,10 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://rackline:rackline@localhost:5432/rackline
+      # The flows sign in as the demo admin a dozen times in under two minutes, from one address: more than the
+      # sign-in limits a real person gets (10 a minute per account). Only this job's API is told to allow it.
+      THROTTLE_LOGIN: 1000/min
+      THROTTLE_LOGIN_IP: 1000/min
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -154,6 +154,8 @@ _LOG_FILTERS = [
     OpenApiParameter("q", str, description="The number it went to (4 digits or more), Meta's message id, or the error, 2 characters or more"),
     OpenApiParameter("from", str, description="Sent on or after this day (India time), YYYY-MM-DD"),
     OpenApiParameter("to", str, description="Sent on or before this day (India time), YYYY-MM-DD"),
+    OpenApiParameter("billed_in", str, description="YYYY-MM: only the shared-number messages billed in that month, each "
+                     "gym's days its own, as WhatsApp usage counts them"),
 ]
 
 
@@ -161,7 +163,7 @@ _LOG_FILTERS = [
 @extend_schema_view(list=extend_schema(parameters=_LOG_FILTERS))
 class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     """Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
-    template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+    template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
     a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits)."""
 
     serializer_class = ConsoleMessageSerializer
@@ -176,6 +178,9 @@ class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.G
             qs = qs.filter(created_at__gte=clock.day_bounds(None, first)[0])
         if last:
             qs = qs.filter(created_at__lt=clock.day_bounds(None, last)[1])
+        if billed := self.request.query_params.get("billed_in"):
+            first = _month(billed, field="billed_in")
+            qs = qs.filter(usage.billed_in(first, _month_end(first)))
         return _search(qs, self.request.query_params.get("q", ""))
 
 
@@ -194,13 +199,17 @@ def _search(qs, text: str):
 MONTH = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 
 
-def _month(value: str | None) -> date:
-    """The first day of `?month=YYYY-MM`; Rackline's this month when it's left out."""
+def _month(value: str | None, field: str = "month") -> date:
+    """The first day of a `YYYY-MM` query parameter; Rackline's this month when it's left out."""
     if not value:
         return timezone.localdate().replace(day=1)
     if not (m := MONTH.match(value)):
-        raise ValidationError({"month": ["Use YYYY-MM"]})
+        raise ValidationError({field: ["Use YYYY-MM"]})
     return date(int(m[1]), int(m[2]), 1)
+
+
+def _month_end(first: date) -> date:
+    return clock.add_months(first, 1) - timedelta(days=1)
 
 
 @extend_schema(tags=["platform"])
@@ -215,7 +224,7 @@ class ConsoleUsageView(RacklineViewMixin, APIView):
     ])
     def get(self, request):
         first = _month(request.query_params.get("month"))
-        messages = usage.delivered_anywhere(first, clock.add_months(first, 1) - timedelta(days=1))
+        messages = usage.delivered_anywhere(first, _month_end(first))
         pages = Pages()
         page = pages.paginate_queryset(usage.by_gym(messages), request, view=self)
         answer = pages.get_paginated_response(GymUsageRowSerializer(page, many=True).data).data

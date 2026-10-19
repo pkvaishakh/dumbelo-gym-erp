@@ -4648,13 +4648,19 @@ paths:
       operationId: platform_messages_list
       description: |-
         Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
-        template, message and status, between two days, or search with `q`. Read-only. Shows no names and no words:
+        template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
         a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits).
       parameters:
       - in: query
         name: account
         schema:
           type: integer
+      - in: query
+        name: billed_in
+        schema:
+          type: string
+        description: 'YYYY-MM: only the shared-number messages billed in that month,
+          each gym''s days its own, as WhatsApp usage counts them'
       - in: query
         name: from
         schema:
