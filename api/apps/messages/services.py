@@ -23,8 +23,9 @@ from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.money import rupees
 from apps.gyms.models import Gym
-from apps.members.models import Member
+from apps.members.models import Member, Payment
 from apps.reminders.models import ReminderDue
+from apps.tasks.models import Task
 
 from . import automation
 from .accounts import account_for, approved_templates, whatsapp_mode
@@ -308,13 +309,50 @@ def _retry_problem(row: Message) -> str | None:
     if not automation.is_on(gym, row.kind):
         return f"{row.get_kind_display()} messages are paused. Resume them in Settings first."
     person = row.member or row.user
+    if row.member is not None and row.member.is_archived:
+        return "They're archived, so they get no messages."
     if not person.phone:
         return "Add their mobile number first."
+    if stale := _no_longer_true(row, clock.today(gym)):
+        return stale
     current = account_for(gym)
     if current is None or current.pk != row.account_id:
         return "Your gym sends from a different WhatsApp number now, so this one can't go again."
     if row.template.status != WhatsAppTemplate.APPROVED:
         return "Its WhatsApp template isn't approved any more."
+    return None
+
+
+def _no_longer_true(row: Message, today: date) -> str | None:
+    """Retry sends the words as they were written, so they must still hold: a reminder only on its own day and
+    while it is still owed (the same amount, for money), a receipt while its payment stands, a task message while
+    the task is open and with the same person. None when they do."""
+    if row.kind in NotificationRule.REMINDERS:
+        if row.for_date != today:
+            return f"This reminder was for {clock.date_label(row.for_date)}. Today's reminders go out on their own."
+        member = Member.objects.with_totals().get(pk=row.member_id)
+        sub = member.current_subscription(today)
+        if row.kind == NotificationRule.PAYMENT_DUE:
+            owed = member.balance_paise()
+            if owed <= 0:
+                return "They've paid since, so there's nothing to remind them about."
+            if rupees(owed) not in row.parameters:
+                return "What they owe has changed since. Tomorrow's reminder says the new amount."
+        elif sub is None or sub.is_frozen(today) or (sub.ends == today) != (row.kind == NotificationRule.PLAN_ENDS_TODAY):
+            return "Their plan has changed since, so this reminder no longer fits."
+        return None
+    kind, ref_id, *rest = row.dedupe_key.split(":") + [""]
+    if not ref_id.isdigit():
+        return None
+    if row.kind == NotificationRule.PAYMENT_RECEIVED and kind == "payment":
+        if Payment.objects.filter(pk=ref_id, gym=row.gym_id, voided=True).exists():
+            return "That payment was voided, so its receipt isn't sent."
+    elif row.kind == NotificationRule.TASK_ASSIGNED and kind == "task":
+        task = Task.objects.filter(pk=ref_id, gym=row.gym_id).select_related("assignee").first()
+        if task is None or task.status == Task.DONE:
+            return "That task is done, so there's nothing to tell them."
+        if str(task.assignee_id) != rest[1] or not task.assignee.is_active:
+            return "That task is with someone else now."
     return None
 
 

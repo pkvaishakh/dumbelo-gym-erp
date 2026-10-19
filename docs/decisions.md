@@ -263,8 +263,10 @@ What was decided, so code and screens stay consistent. Change this file when a d
   the same words, to the person's number as it is now, so it still goes once at most: two taps or two admins send it
   once. It is offered only for the gym's own messages that were written out in full and certainly never reached the
   phone, never for one Meta may already have taken (it didn't answer, its answer made no sense, or the send was cut
-  off), and is refused while the gym is paused or off, the message is paused, they opted out, have no number, the gym
-  now sends from another number, or the template isn't approved. Every Retry is audited.
+  off), and is refused while the gym is paused or off, the message is paused, they opted out, are archived or have no
+  number, the gym now sends from another number, or the template isn't approved. Its words must still be true: a
+  reminder goes again only on its own day and while it is still owed (money: the same amount), a receipt while its
+  payment stands, a task message while the task is open and with the same person. Every Retry is audited.
 - Shared-number usage is shown to a gym's admins for its billing month so far (what goes on the invoice written on its
   next billing day), and to Rackline admins per gym per calendar month, each gym's days in its own time zone.
 - SMS and email are not in the MVP.

@@ -178,12 +178,15 @@ def test_only_a_failed_message_written_out_in_full_can_go_again(w):
 
 
 @pytest.mark.parametrize("why, expect", [
-    ("paused", "paused"), ("opted_out", "asked not to"), ("off", "off for your gym"), ("suspended", "Rackline account is paused"),
+    ("archived", "archived"), ("paused", "paused"), ("opted_out", "asked not to"), ("off", "off for your gym"), ("suspended", "Rackline account is paused"),
     ("no_number", "mobile number"), ("own_number", "different WhatsApp number"), ("template_off", "isn't approved"),
 ])
 def test_retry_says_why_it_cant_go_now(w, why, expect):
     row = failed(w)
-    if why == "paused":
+    if why == "archived":
+        w.member.is_archived = True
+        w.member.save()
+    elif why == "paused":
         NotificationRule.objects.create(gym=w.gym, kind="plan_ending", is_on=False)
     elif why == "opted_out":
         w.member.reminders_opted_out = True
@@ -220,3 +223,79 @@ def test_only_admins_retry_and_never_another_gyms(w, other):
         assert retry(c, row).status_code == 403
     assert retry(other.client(other.admin), row).status_code == 404
     assert FakeSender.outbox == []
+
+
+# ---- Retry sends the words as written, so they must still be true ----
+
+def refused(w, row, words):
+    r = retry(w.client(w.admin), row)
+    assert r.status_code == 409 and words in r.json()["error"]["message"], r.content
+    assert FakeSender.outbox == []
+
+
+def test_a_reminder_goes_again_only_on_its_own_day(w):
+    refused(w, failed(w, for_date=w.today - timedelta(days=1)), "Today's reminders go out on their own")
+
+
+def test_a_reminder_that_no_longer_fits_their_plan_isnt_sent(w):
+    """'Your plan ends in 3 days', after the desk froze it."""
+    sub = w.member.current_subscription(w.today)
+    sub.frozen_from = w.today
+    sub.save()
+    refused(w, failed(w), "no longer fits")
+
+
+def owing(w, amount="₹1,000"):
+    """Asha, owing ₹1,000 on a ₹1,500 plan, and the payment due reminder that told her so."""
+    from apps.members.models import Payment
+
+    Payment.objects.filter(member=w.member).update(voided=True)
+    from apps.members.services import take_payment
+
+    take_payment(w.member, 50000, "cash", by=w.desk)
+    return failed(w, kind="payment_due", parameters=["Asha", amount])
+
+
+def test_money_owed_goes_again_while_they_still_owe_the_same(w):
+    row = owing(w)
+    assert retry(w.client(w.admin), row).json()["status"] == "sent"
+
+
+def test_money_owed_isnt_sent_once_they_paid_or_the_amount_changed(w):
+    from apps.members.services import take_payment
+
+    row = owing(w)
+    take_payment(w.member, 20000, "cash", by=w.desk)
+    refused(w, row, "What they owe has changed")
+    take_payment(w.member, 80000, "cash", by=w.desk)
+    refused(w, row, "They've paid since")
+
+
+def test_a_receipt_for_a_voided_payment_isnt_sent(w):
+    from apps.members.models import Payment
+
+    NotificationRule.objects.create(gym=w.gym, kind="payment_received", is_on=True)  # receipts are off until a gym turns them on
+    pay = Payment.objects.filter(member=w.member).first()
+    row = failed(w, kind="payment_received")
+    Message.objects.filter(pk=row.pk).update(dedupe_key=f"payment:{pay.pk}")
+    row.refresh_from_db()
+    Payment.objects.filter(pk=pay.pk).update(voided=True)
+    refused(w, row, "voided")
+
+
+def test_a_task_message_goes_again_only_while_the_task_is_theirs_and_open(w):
+    from apps.tasks.models import Task
+
+    w.trainer.user.phone = "+919800000098"
+    w.trainer.user.save()
+    task = Task.objects.create(gym=w.gym, title="Clean the mats", assignee=w.trainer, created_by=w.admin, due_date=w.today)
+    row = message(w, 1, to=w.trainer, kind="task_assigned", status=Message.FAILED, attempts=1, error_code="131026", error="Undeliverable")
+    Message.objects.filter(pk=row.pk).update(dedupe_key=f"task:{task.pk}:to:{w.trainer.pk}")
+    row.refresh_from_db()
+
+    Task.objects.filter(pk=task.pk).update(assignee=w.desk)
+    refused(w, row, "with someone else")
+    Task.objects.filter(pk=task.pk).update(assignee=w.trainer, status=Task.DONE)
+    refused(w, row, "task is done")
+    Task.objects.filter(pk=task.pk).update(status=Task.TODO)
+    assert retry(w.client(w.admin), row).json()["status"] == "sent"
