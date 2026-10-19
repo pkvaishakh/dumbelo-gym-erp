@@ -29,7 +29,7 @@ export function useCheckIn() {
       setOutcome({ member, checkin: c });
       await invalidate(qc, "/api/checkins/", "/api/reports/");
     } catch (e) {
-      setOutcome({ member, error: e instanceof ApiError ? e : new ApiError(0, "network", "Can't reach Rackline. Try again.") });
+      setOutcome({ member, error: e instanceof ApiError ? e : new ApiError(0, "network", "Can't reach Dumbelo. Try again.") });
     } finally {
       setBusy(null);
     }

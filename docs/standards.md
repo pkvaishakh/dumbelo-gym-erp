@@ -1,6 +1,6 @@
 # Coding standards
 
-How we write Rackline code. These rules apply to every change. A change that breaks one doesn't get merged, unless it
+How we write Dumbelo code. These rules apply to every change. A change that breaks one doesn't get merged, unless it
 writes the exception down next to the code (the way `MemberViewSet.list` explains its status filter).
 
 This page holds the rules. The how-to lives in the guides it points to:
@@ -32,10 +32,10 @@ Search before you write. If the thing exists, use it. If it nearly exists, exten
 
 - **Single sources** to reuse, never re-implement:
   - Gym, role and branch scoping: `GymViewMixin`, `in_my_branches`, role tuples (`apps/core/tenancy.py`)
-  - Rackline's own views (`/api/platform/`): `RacklineViewMixin` / `IsRacklineAdmin` (`apps/core/rackline.py`)
+  - Dumbelo's own views (`/api/platform/`): `DumbeloViewMixin` / `IsDumbeloAdmin` (`apps/core/dumbelo.py`)
   - Foreign key input: `GymPK` (`apps/members/serializers.py`)
   - A count or total per row without a GROUP BY: `count_of`, `sum_of` (`apps/core/queries.py`)
-  - What a gym owes Rackline: `owed_by_gym` (`apps/billing/invoicing.py`); Rackline invoice and receipt numbers: `next_number`
+  - What a gym owes Dumbelo: `owed_by_gym` (`apps/billing/invoicing.py`); Dumbelo invoice and receipt numbers: `next_number`
   - Opening or reopening a branch: `make_room_for_branch` (`apps/billing/services.py`), the branch quota under a lock
   - Times, days and local formatting: `apps/core/clock.py`
   - Paise and rupees: `apps/core/money.py` (API), `src/lib/format.ts` (web)

@@ -18,7 +18,7 @@ class Gym(TimeStamped):
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True, help_text="Sent by the app as the X-Gym header")
     status = models.CharField(max_length=12, choices=STATUS, default=TRIAL, db_index=True)
-    status_reason = models.CharField(max_length=200, blank=True, help_text="Why a Rackline admin last suspended or activated it")
+    status_reason = models.CharField(max_length=200, blank=True, help_text="Why a Dumbelo admin last suspended or activated it")
     status_changed_at = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=40, default="Asia/Kolkata")
     billing_email = models.EmailField(blank=True)
@@ -97,7 +97,7 @@ class GymRole(TimeStamped):
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name="roles")
     role = models.CharField(max_length=12, choices=ROLES)
     branches = models.ManyToManyField(Branch, blank=True, related_name="people", help_text="Ignored for admins: they see every branch")
-    is_owner = models.BooleanField(default=False, help_text="The admin who handles Rackline billing; other admins can't remove them")
+    is_owner = models.BooleanField(default=False, help_text="The admin who handles Dumbelo billing; other admins can't remove them")
     is_active = models.BooleanField(default=True)
     # staff details shown on the staff profile
     shift = models.CharField(max_length=60, blank=True)
@@ -126,7 +126,7 @@ class GymRole(TimeStamped):
 
 
 class SupportAccess(TimeStamped):
-    """Rackline's team may open a gym only inside a window an admin granted. Every view is audited."""
+    """Dumbelo's team may open a gym only inside a window an admin granted. Every view is audited."""
 
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name="support_windows")
     granted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")

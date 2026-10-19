@@ -1,4 +1,4 @@
-"""The gym's own side of its Rackline plan: `/api/billing/plan/`, `/api/billing/branch-requests/` and
+"""The gym's own side of its Dumbelo plan: `/api/billing/plan/`, `/api/billing/branch-requests/` and
 `/api/billing/invoices/`. Admins only; the plan and invoices stay open while the gym is suspended."""
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
@@ -25,8 +25,8 @@ def gym_plan(gym) -> GymBilling:
 
 
 @extend_schema(tags=["billing"])
-class RacklinePlanView(GymViewMixin, APIView):
-    """What the gym pays Rackline and for how many branches. Open while the gym is suspended: its admins can still
+class DumbeloPlanView(GymViewMixin, APIView):
+    """What the gym pays Dumbelo and for how many branches. Open while the gym is suspended: its admins can still
     see their plan."""
 
     roles = {"*": ADMIN}
@@ -39,7 +39,7 @@ class RacklinePlanView(GymViewMixin, APIView):
 
 @extend_schema(tags=["billing"])
 class BranchRequestViewSet(GymViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
-    """Add Branch to My Plan: the gym's admins ask Rackline for room for more branches. Rackline approves or declines."""
+    """Add Branch to My Plan: the gym's admins ask Dumbelo for room for more branches. Dumbelo approves or declines."""
 
     serializer_class = BranchAskSerializer
     roles = {"*": ADMIN}
@@ -58,7 +58,7 @@ class BranchRequestViewSet(GymViewMixin, mixins.ListModelMixin, mixins.RetrieveM
 
 @extend_schema(tags=["billing"])
 class InvoiceViewSet(GymViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+    """The gym's Dumbelo invoices, newest first, each with its lines and its payments' receipts. Admins only, and
     open while the gym is suspended: it's how they see what to settle."""
 
     roles = {"*": ADMIN}

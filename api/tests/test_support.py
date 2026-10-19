@@ -1,4 +1,4 @@
-"""Rackline support access: who may open a window, what support sees inside it, and ending it early."""
+"""Dumbelo support access: who may open a window, what support sees inside it, and ending it early."""
 from datetime import timedelta
 
 from django.utils import timezone
@@ -10,8 +10,8 @@ from apps.gyms.models import SupportAccess
 
 
 def support_client(gym_slug="iron"):
-    """Someone from Rackline: a staff user with no role in the gym."""
-    user = User.objects.create_user(email="help@rackline.in", password="pass12345", name="Ravi at Rackline", is_staff=True)
+    """Someone from Dumbelo: a staff user with no role in the gym."""
+    user = User.objects.create_user(email="help@dumbelo.com", password="pass12345", name="Ravi at Dumbelo", is_staff=True)
     c = APIClient()
     c.force_authenticate(user)
     c.credentials(HTTP_X_GYM=gym_slug)

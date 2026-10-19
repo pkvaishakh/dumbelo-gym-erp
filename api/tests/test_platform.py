@@ -1,4 +1,4 @@
-"""Rackline's side: the Console's gyms and their admins, who may use it, and what a suspended gym can still do."""
+"""Dumbelo's side: the Console's gyms and their admins, who may use it, and what a suspended gym can still do."""
 import pytest
 from django.core.management import call_command
 from rest_framework.test import APIClient, APIRequestFactory
@@ -18,16 +18,16 @@ NEW_GYM = {
 }
 
 
-def rackline(email="ops@rackline.in", **extra):
-    user = User.objects.create_superuser(email=email, password="pass12345", name="Rackline Ops", **extra)
+def dumbelo(email="ops@dumbelo.com", **extra):
+    user = User.objects.create_superuser(email=email, password="pass12345", name="Dumbelo Ops", **extra)
     c = APIClient()
     c.force_authenticate(user)
     return c
 
 
 def support():
-    """Rackline support: `is_staff` without `is_superuser`. It reads inside a gym's window, never the Console."""
-    user = User.objects.create_user(email="help@rackline.in", password="pass12345", name="Ravi at Rackline", is_staff=True)
+    """Dumbelo support: `is_staff` without `is_superuser`. It reads inside a gym's window, never the Console."""
+    user = User.objects.create_user(email="help@dumbelo.com", password="pass12345", name="Ravi at Dumbelo", is_staff=True)
     c = APIClient()
     c.force_authenticate(user)
     return c
@@ -42,7 +42,7 @@ def admins(c, gym):
     return c.get(f"{GYMS}{gym.id}/admins/").json()
 
 
-def test_only_rackline_admins_reach_the_console(w):
+def test_only_dumbelo_admins_reach_the_console(w):
     refused = [w.client(w.admin), w.client(w.desk), w.client(w.trainer), w.member_client(), support()]
     for c in refused:
         assert c.get(GYMS).status_code == 403
@@ -52,19 +52,19 @@ def test_only_rackline_admins_reach_the_console(w):
         assert c.get(f"{GYMS}{w.gym.id}/admins/").status_code == 403
         assert c.post(f"{GYMS}{w.gym.id}/admins/{w.admin.id}/make-owner/").status_code == 403
     assert APIClient().get(GYMS).status_code == 401
-    inactive = rackline("gone@rackline.in", is_active=False)
+    inactive = dumbelo("gone@dumbelo.com", is_active=False)
     assert inactive.get(GYMS).status_code == 403
-    assert rackline().get(GYMS).status_code == 200
+    assert dumbelo().get(GYMS).status_code == 200
 
 
 def test_me_says_who_runs_the_console(w):
-    assert w.client(w.admin).get("/api/me/").json()["is_rackline_admin"] is False
-    me = rackline().get("/api/me/").json()
-    assert me["is_rackline_admin"] is True and me["roles"] == []
+    assert w.client(w.admin).get("/api/me/").json()["is_dumbelo_admin"] is False
+    me = dumbelo().get("/api/me/").json()
+    assert me["is_dumbelo_admin"] is True and me["roles"] == []
 
 
 def test_new_gym_owner_can_sign_in(prices, client):
-    c = rackline()
+    c = dumbelo()
     r = c.post(GYMS, NEW_GYM, format="json")
     assert r.status_code == 201, r.content
     body = r.json()
@@ -81,12 +81,12 @@ def test_new_gym_owner_can_sign_in(prices, client):
     assert gym.branches.get().sessions.count() == 1  # open all day until the gym sets its hours
 
     row = AuditLog.objects.get(action="gym.created")
-    assert row.gym == gym and row.actor.email == "ops@rackline.in"
+    assert row.gym == gym and row.actor.email == "ops@dumbelo.com"
     assert "first-pass-123" not in str(row.after)
 
 
 def test_new_gym_can_use_an_existing_login(w):
-    c = rackline()
+    c = dumbelo()
     r = c.post(GYMS, {**NEW_GYM, "owner_email": "ADMIN0@x.in", "owner_name": "", "owner_password": ""}, format="json")
     assert r.status_code == 201, r.content
     assert r.json()["owner_new_login"] is False and r.json()["owner_name"] == w.admin.user.name
@@ -96,7 +96,7 @@ def test_new_gym_can_use_an_existing_login(w):
 
 
 def test_new_gym_form_errors(w):
-    c = rackline()
+    c = dumbelo()
     r = c.post(GYMS, {**NEW_GYM, "slug": "iron", "timezone": "Mars/Base"}, format="json")
     assert r.status_code == 400
     assert set(r.json()["error"]["fields"]) == {"slug", "timezone"}
@@ -104,8 +104,8 @@ def test_new_gym_form_errors(w):
     assert "slug" in r.json()["error"]["fields"]
     r = c.post(GYMS, {**NEW_GYM, "owner_name": "", "owner_password": ""}, format="json")
     assert set(r.json()["error"]["fields"]) == {"owner_name", "owner_password"}  # a new login needs both
-    r = c.post(GYMS, {**NEW_GYM, "owner_email": "ops@rackline.in"}, format="json")
-    assert r.status_code == 409 and r.json()["error"]["code"] == "rackline_login"
+    r = c.post(GYMS, {**NEW_GYM, "owner_email": "ops@dumbelo.com"}, format="json")
+    assert r.status_code == 409 and r.json()["error"]["code"] == "dumbelo_login"
     assert not Gym.objects.filter(slug="pulse").exists()
 
 
@@ -122,7 +122,7 @@ def test_gyms_list_search_status_and_counts(w, other, django_assert_max_num_quer
     for i in range(6):
         create_gym(name=f"Gym {i}", slug=f"gym-{i}", timezone_name="Asia/Kolkata", branch="Main", owner_email=f"o{i}@g.in", owner_name="Owner", owner_password="first-pass-123")
     suspend(other)
-    c = rackline()
+    c = dumbelo()
     with django_assert_max_num_queries(4):
         body = c.get(GYMS).json()
     assert body["count"] == 8
@@ -138,7 +138,7 @@ def test_gyms_list_search_status_and_counts(w, other, django_assert_max_num_quer
 
 
 def test_gym_screen_shows_branches_and_edits_are_audited(w):
-    c = rackline()
+    c = dumbelo()
     r = c.get(f"{GYMS}{w.gym.id}/")
     assert {b["name"]: b["member_count"] for b in r.json()["branches"]} == {"A": 1, "B": 0}
     r = c.patch(f"{GYMS}{w.gym.id}/", {"name": "Iron House Kochi", "timezone": "Asia/Dubai", "slug": "hacked"}, format="json")
@@ -150,7 +150,7 @@ def test_gym_screen_shows_branches_and_edits_are_audited(w):
 
 
 def test_suspend_and_activate_with_a_reason(w):
-    c = rackline()
+    c = dumbelo()
     assert c.post(f"{GYMS}{w.gym.id}/suspend/", {"reason": " "}, format="json").status_code == 400
     r = c.post(f"{GYMS}{w.gym.id}/suspend/", {"reason": "October invoice unpaid"}, format="json")
     assert r.status_code == 200 and r.json()["status"] == "suspended" and r.json()["status_reason"] == "October invoice unpaid"
@@ -169,7 +169,7 @@ def test_suspended_gym_refuses_staff_and_members_but_admins_reach_me(w):
     for c in (w.client(w.desk), w.client(w.trainer), w.member_client(), w.client(w.admin)):
         r = c.get("/api/members/")
         assert r.status_code == 403 and r.json()["error"]["code"] == "gym_suspended"
-        assert "Contact Rackline" in r.json()["error"]["message"]
+        assert "Contact Dumbelo" in r.json()["error"]["message"]
     me = w.client(w.admin).get("/api/me/")
     assert me.status_code == 200 and me.json()["roles"][0]["gym_status"] == "suspended"
     # The paused screen needs to know who you are, so /api/me/ answers everyone; the gym's endpoints don't.
@@ -184,7 +184,7 @@ def test_a_suspended_gym_you_are_not_in_is_still_not_found(w, other):
 
 
 def test_views_open_when_suspended_let_admins_only(w):
-    class RacklinePlan(APIView):
+    class DumbeloPlan(APIView):
         permission_classes = [InGym]
         open_when_suspended = True
 
@@ -199,7 +199,7 @@ def test_views_open_when_suspended_let_admins_only(w):
         from rest_framework.test import force_authenticate
         req = factory.get("/x/", HTTP_X_GYM="iron")
         force_authenticate(req, role.user)
-        return RacklinePlan.as_view()(req)
+        return DumbeloPlan.as_view()(req)
 
     assert call(w.admin).status_code == 200
     assert call(w.desk).status_code == 403
@@ -217,7 +217,7 @@ def test_suspended_gym_refuses_qr_and_turnstile_check_ins(w):
 
 
 def test_admins_list_and_add(w, other):
-    c = rackline()
+    c = dumbelo()
     rows = admins(c, w.gym)
     assert [(a["email"], a["is_owner"], a["other_gyms"]) for a in rows] == [("admin0@x.in", True, 0)]
     r = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "new@x.in", "name": "Nisha", "password": "first-pass-123"}, format="json")
@@ -235,7 +235,7 @@ def test_admins_list_and_add(w, other):
 
 
 def test_another_gyms_admin_is_not_found(w, other):
-    c = rackline()
+    c = dumbelo()
     assert c.post(f"{GYMS}{w.gym.id}/admins/{other.admin.id}/deactivate/").status_code == 404
     assert c.post(f"{GYMS}{w.gym.id}/admins/{w.desk.id}/deactivate/").status_code == 404  # admins only
     other.admin.refresh_from_db()
@@ -243,7 +243,7 @@ def test_another_gyms_admin_is_not_found(w, other):
 
 
 def test_owner_cannot_be_deactivated(w):
-    c = rackline()
+    c = dumbelo()
     r = c.post(f"{GYMS}{w.gym.id}/admins/{w.admin.id}/deactivate/")
     assert r.status_code == 409 and r.json()["error"]["code"] == "owner"
     w.admin.refresh_from_db()
@@ -252,7 +252,7 @@ def test_owner_cannot_be_deactivated(w):
 
 
 def test_deactivate_reactivate_and_make_owner(w, client):
-    c = rackline()
+    c = dumbelo()
     second = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "second@x.in", "name": "Second", "password": "first-pass-123"}, format="json").json()
     r = c.post(f"{GYMS}{w.gym.id}/admins/{second['id']}/deactivate/")
     assert r.status_code == 200 and r.json()["is_active"] is False
@@ -276,7 +276,7 @@ def test_deactivate_reactivate_and_make_owner(w, client):
 
 
 def test_reset_an_admins_password(w, client):
-    c = rackline()
+    c = dumbelo()
     url = f"{GYMS}{w.gym.id}/admins/{w.admin.id}/reset-password/"
     assert c.post(url, {"password": "123"}, format="json").status_code == 400
     assert c.post(url, {"password": "brand-new-pass-9"}, format="json").status_code == 204
@@ -288,4 +288,4 @@ def test_reset_an_admins_password(w, client):
 
 @pytest.mark.parametrize("path", ["deactivate", "make-owner", "reactivate"])
 def test_admin_actions_answer_404_for_a_missing_gym(w, path):
-    assert rackline().post(f"{GYMS}99999/admins/{w.admin.id}/{path}/").status_code == 404
+    assert dumbelo().post(f"{GYMS}99999/admins/{w.admin.id}/{path}/").status_code == 404

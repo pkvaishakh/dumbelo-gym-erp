@@ -1,6 +1,6 @@
 """Meta's webhook: what happened to the messages we sent, and what people sent back.
 
-Each WhatsApp account has its own address (`/api/whatsapp/webhook/` for Rackline's shared number,
+Each WhatsApp account has its own address (`/api/whatsapp/webhook/` for Dumbelo's shared number,
 `/api/whatsapp/webhook/<slug>/` for a gym's own) and its own app secret, which signs every call. A call is kept
 (`WebhookEvent`) once its signature checks, then handled. Only what belongs to that account's number is touched:
 a status moves a message the account sent, a reply opts out the people that number writes to.

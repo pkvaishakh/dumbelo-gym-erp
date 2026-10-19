@@ -83,7 +83,7 @@ function SalaryForm({ staff, rule }: { staff: Staff; rule?: SalaryRule }) {
             {(id, desc) => <input className="rl-field__input" id={id} type="number" inputMode="decimal" aria-describedby={desc} value={f.rate} onChange={(e) => { setF({ ...f, rate: e.target.value }); setErrs({ ...errs, rate: "" }); }} />}
           </Field>
           {f.pay_type === "hourly" && (
-            <Field label="Hours a day" error={errs.hours ?? fieldError(a.error, "hours_per_day")} hint="Rackline records check-in time only, so each day they check in counts these hours.">
+            <Field label="Hours a day" error={errs.hours ?? fieldError(a.error, "hours_per_day")} hint="Dumbelo records check-in time only, so each day they check in counts these hours.">
               {(id, desc) => <input className="rl-field__input" id={id} type="number" inputMode="decimal" step="0.5" min={0} max={24} aria-describedby={desc} value={f.hours} onChange={(e) => { setF({ ...f, hours: e.target.value }); setErrs({ ...errs, hours: "" }); }} />}
             </Field>
           )}

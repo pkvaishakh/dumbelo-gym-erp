@@ -17,8 +17,8 @@ function Loading() {
   );
 }
 
-// What a suspended gym's admins can still open: More, and their Rackline plan (the API keeps the rest shut).
-const OPEN_WHEN_PAUSED = ["/more", "/rackline-plan"];
+// What a suspended gym's admins can still open: More, and their Dumbelo plan (the API keeps the rest shut).
+const OPEN_WHEN_PAUSED = ["/more", "/dumbelo-plan"];
 
 /** A suspended gym shows its paused screen everywhere, except OPEN_WHEN_PAUSED for its admins. */
 function Frame({ children }: { children: React.ReactNode }) {

@@ -23,10 +23,10 @@ def _verify_token() -> str:
 
 
 class WhatsAppAccount(TimeStamped):
-    """A WhatsApp number Rackline sends from: Rackline's shared number (no gym) or a gym's own Meta account.
+    """A WhatsApp number Dumbelo sends from: Dumbelo's shared number (no gym) or a gym's own Meta account.
 
-    Rackline admins set it up in the Console. The access token and app secret are encrypted (`crypto.py`) and
-    write-only: all anyone reads back is their last 4 characters. The verify token is Rackline's own, made here and
+    Dumbelo admins set it up in the Console. The access token and app secret are encrypted (`crypto.py`) and
+    write-only: all anyone reads back is their last 4 characters. The verify token is Dumbelo's own, made here and
     typed into Meta's webhook settings, so the Console shows it; a gym's admins never see any of these.
     """
 
@@ -34,7 +34,7 @@ class WhatsAppAccount(TimeStamped):
     STATUS = [(NEW, "Not checked yet"), (WORKING, "Working"), (FAILING, "Not working")]
 
     gym = models.ForeignKey("gyms.Gym", null=True, blank=True, on_delete=models.CASCADE, related_name="whatsapp_accounts",
-                            help_text="Empty for Rackline's shared number")
+                            help_text="Empty for Dumbelo's shared number")
     waba_id = models.CharField(max_length=32, help_text="Meta's id for the WhatsApp Business account")
     phone_number_id = models.CharField(max_length=32, unique=True, help_text="Meta's id for the number, which messages are sent through")
     display_number = models.CharField(max_length=24, help_text="The number people see, e.g. +91 98000 00000")
@@ -83,15 +83,15 @@ class WhatsAppTemplate(TimeStamped):
 
     Meta sends only approved templates, filled in with values in order: `parameters` says which of the message's
     details goes in `{{1}}`, `{{2}}`… of `body`, the text as approved. The status is copied from Meta's dashboard
-    by a Rackline admin. A number has at most one approved template for each message and language.
+    by a Dumbelo admin. A number has at most one approved template for each message and language.
     """
 
     PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE, PAYMENT_RECEIVED = "plan_ending", "plan_ends_today", "payment_due", "payment_received"
-    TASK_ASSIGNED, RACKLINE_INVOICE_DUE, RACKLINE_PAYMENT_RECEIVED = "task_assigned", "rackline_invoice_due", "rackline_payment_received"
+    TASK_ASSIGNED, DUMBELO_INVOICE_DUE, DUMBELO_PAYMENT_RECEIVED = "task_assigned", "dumbelo_invoice_due", "dumbelo_payment_received"
     KINDS = [
         (PLAN_ENDING, "Plan ending soon"), (PLAN_ENDS_TODAY, "Plan ends today"), (PAYMENT_DUE, "Payment due"),
         (PAYMENT_RECEIVED, "Payment received"), (TASK_ASSIGNED, "Task assigned"),
-        (RACKLINE_INVOICE_DUE, "Rackline invoice due"), (RACKLINE_PAYMENT_RECEIVED, "Rackline payment received"),
+        (DUMBELO_INVOICE_DUE, "Dumbelo invoice due"), (DUMBELO_PAYMENT_RECEIVED, "Dumbelo payment received"),
     ]
     #: The details each message can fill a template with, and what they are. The sender fills them by these names.
     PARAMETERS = {
@@ -103,9 +103,9 @@ class WhatsAppTemplate(TimeStamped):
                            "gym": "The gym's name", "paid_on": "The day they paid"},
         TASK_ASSIGNED: {"first_name": "The staff member's first name", "task": "The task", "gym": "The gym's name",
                         "due_date": "The day it's due"},
-        RACKLINE_INVOICE_DUE: {"first_name": "The owner's first name", "gym": "The gym's name", "invoice_number": "The invoice's number",
+        DUMBELO_INVOICE_DUE: {"first_name": "The owner's first name", "gym": "The gym's name", "invoice_number": "The invoice's number",
                                "amount": "What it still owes", "due_date": "The day it's due"},
-        RACKLINE_PAYMENT_RECEIVED: {"first_name": "The owner's first name", "gym": "The gym's name", "amount": "What was paid",
+        DUMBELO_PAYMENT_RECEIVED: {"first_name": "The owner's first name", "gym": "The gym's name", "amount": "What was paid",
                                     "receipt_number": "The receipt's number"},
     }
 
@@ -180,7 +180,7 @@ class Message(GymScoped):
     delivered_at = models.DateTimeField(null=True, blank=True, help_text="When Meta says it reached their phone")
     read_at = models.DateTimeField(null=True, blank=True, help_text="When Meta says they opened it")
     # Shared-number messages are billed per delivered message, at the gym's rate for the template's category
-    billable = models.BooleanField(default=False, help_text="Sent from Rackline's shared number, so billed to the gym")
+    billable = models.BooleanField(default=False, help_text="Sent from Dumbelo's shared number, so billed to the gym")
     rate_paise = models.PositiveIntegerField(default=0, help_text="What it costs the gym once delivered")
 
     class Meta:
@@ -245,7 +245,7 @@ class WebhookEvent(TimeStamped):
 
 
 class InboundMessage(TimeStamped):
-    """A message someone sent to one of the numbers Rackline sends from: the only one acted on is STOP.
+    """A message someone sent to one of the numbers Dumbelo sends from: the only one acted on is STOP.
 
     Kept once (Meta's id is unique), so Meta sending the same one twice changes nothing.
     """
@@ -276,18 +276,18 @@ def _days_ahead() -> list[int]:
 
 
 class AutomationSchedule(TimeStamped):
-    """When Rackline's automation runs, for every gym: one row, set by Rackline admins (the Console's Automation).
+    """When Dumbelo's automation runs, for every gym: one row, set by Dumbelo admins (the Console's Automation).
 
     The reminders go out at `reminder_hour` on each gym's own clock, warning members `days_ahead` days before a
-    plan ends; a gym's Rackline invoice is written on its billing day at `invoice_hour`. A gym's own times, where a
-    Rackline admin set them, are on its `NotificationRule` rows. The jobs read this on every tick, so a change
+    plan ends; a gym's Dumbelo invoice is written on its billing day at `invoice_hour`. A gym's own times, where a
+    Dumbelo admin set them, are on its `NotificationRule` rows. The jobs read this on every tick, so a change
     applies on the next one without restarting anything.
     """
 
     reminder_hour = models.PositiveSmallIntegerField(default=6, validators=HOURS, help_text="The hour reminders go out, on each gym's clock")
     days_ahead = models.JSONField(default=_days_ahead, help_text="How many days before a plan ends members are warned")
     invoice_hour = models.PositiveSmallIntegerField(default=0, validators=HOURS,
-                                                    help_text="The hour on a gym's billing day its Rackline invoice is written")
+                                                    help_text="The hour on a gym's billing day its Dumbelo invoice is written")
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
     class Meta:
@@ -298,35 +298,35 @@ class AutomationSchedule(TimeStamped):
 
     @classmethod
     def current(cls) -> "AutomationSchedule":
-        """The schedule in force. Before a Rackline admin first saves one, the defaults (unsaved): reading it on
+        """The schedule in force. Before a Dumbelo admin first saves one, the defaults (unsaved): reading it on
         every tick never writes."""
         return cls.objects.filter(pk=1).first() or cls(pk=1)
 
 
 class NotificationRule(GymScoped):
     """One gym's word on one of its messages: on or paused, and (for the ones sent at an hour) the times a
-    Rackline admin set for this gym in place of Rackline's.
+    Dumbelo admin set for this gym in place of Dumbelo's.
 
-    No row means the defaults: on, except the member's receipt, which a gym turns on itself; and Rackline's times.
-    The gym's admins pause and resume their own messages; Rackline admins the messages Rackline sends the gym's
+    No row means the defaults: on, except the member's receipt, which a gym turns on itself; and Dumbelo's times.
+    The gym's admins pause and resume their own messages; Dumbelo admins the messages Dumbelo sends the gym's
     owner, and every time. Pausing stops the messages, never the desk's reminder list.
     """
 
     PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE = WhatsAppTemplate.PLAN_ENDING, WhatsAppTemplate.PLAN_ENDS_TODAY, WhatsAppTemplate.PAYMENT_DUE
     PAYMENT_RECEIVED, TASK_ASSIGNED = WhatsAppTemplate.PAYMENT_RECEIVED, WhatsAppTemplate.TASK_ASSIGNED
-    RACKLINE_INVOICE_DUE, RACKLINE_PAYMENT_RECEIVED = WhatsAppTemplate.RACKLINE_INVOICE_DUE, WhatsAppTemplate.RACKLINE_PAYMENT_RECEIVED
+    DUMBELO_INVOICE_DUE, DUMBELO_PAYMENT_RECEIVED = WhatsAppTemplate.DUMBELO_INVOICE_DUE, WhatsAppTemplate.DUMBELO_PAYMENT_RECEIVED
 
     REMINDERS = (PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE)  # the daily list's messages, one a member a day
     GYM_KINDS = (*REMINDERS, PAYMENT_RECEIVED, TASK_ASSIGNED)  # the gym's own messages: its admins switch them
-    RACKLINE_KINDS = (RACKLINE_INVOICE_DUE, RACKLINE_PAYMENT_RECEIVED)  # Rackline's to the owner: Rackline admins switch them
-    SCHEDULED = (*REMINDERS, RACKLINE_INVOICE_DUE)  # sent at an hour, rather than when something happens
+    DUMBELO_KINDS = (DUMBELO_INVOICE_DUE, DUMBELO_PAYMENT_RECEIVED)  # Dumbelo's to the owner: Dumbelo admins switch them
+    SCHEDULED = (*REMINDERS, DUMBELO_INVOICE_DUE)  # sent at an hour, rather than when something happens
     OFF_BY_DEFAULT = (PAYMENT_RECEIVED,)
 
     kind = models.CharField(max_length=32, choices=WhatsAppTemplate.KINDS)
     is_on = models.BooleanField(default=True)
     hour = models.PositiveSmallIntegerField(null=True, blank=True, validators=HOURS,
-                                            help_text="This gym's hour in place of Rackline's; empty means Rackline's")
-    days_ahead = models.JSONField(null=True, blank=True, help_text="A plan ending soon: this gym's days in place of Rackline's")
+                                            help_text="This gym's hour in place of Dumbelo's; empty means Dumbelo's")
+    days_ahead = models.JSONField(null=True, blank=True, help_text="A plan ending soon: this gym's days in place of Dumbelo's")
 
     class Meta:
         ordering = ["gym", "kind"]

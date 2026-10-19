@@ -160,7 +160,7 @@ def test_the_reads_dont_grow_with_the_number_of_members(w, django_assert_max_num
     for i in range(2):
         w.plan_ending_on(w.today + timedelta(days=7), f"Two {i}", f"97{6000 + i:08d}")
     queue_for(w.gym, w.today)
-    with django_assert_max_num_queries(12) as few:  # 2 of them the gym's switches and Rackline's schedule
+    with django_assert_max_num_queries(12) as few:  # 2 of them the gym's switches and Dumbelo's schedule
         send_due(w.gym, w.today)
     reads = len(few.captured_queries) - 2  # two members, two inserts
 
@@ -234,7 +234,7 @@ def test_the_reminder_list_costs_the_same_however_many_rows(w, django_assert_max
 
 # ---- the gym's settings ----
 
-def test_the_settings_say_how_rackline_set_the_gym_up_and_change_nothing(w):
+def test_the_settings_say_how_dumbelo_set_the_gym_up_and_change_nothing(w):
     c = w.client(w.admin)
     assert c.get(SETTINGS).json() == {"name": w.gym.name, "slug": "iron", "timezone": "Asia/Kolkata"}
     assert c.patch(SETTINGS, {"name": "Not My Gym", "timezone": "Europe/London"}, format="json").status_code == 405

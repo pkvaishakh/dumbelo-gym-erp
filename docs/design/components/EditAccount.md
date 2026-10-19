@@ -29,7 +29,7 @@ A task screen opened from Edit on Account Details, with the current values fille
 </div>
 <div class="rl-field">
   <label class="rl-field__label" for="ac-email">Email</label>
-  <div class="rl-field__control"><input class="rl-field__input" id="ac-email" name="ac-email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" enterkeyhint="done" value="meera.nair@rackline.example"></div>
+  <div class="rl-field__control"><input class="rl-field__input" id="ac-email" name="ac-email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" enterkeyhint="done" value="meera.nair@dumbelo.example"></div>
   <p class="rl-field__error" role="alert" hidden><Icon/><span>Enter an email address, like name@example.com</span></p>
   <p class="rl-field__hint">Receipts and reports are sent here.</p>
 </div>

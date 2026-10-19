@@ -3,7 +3,7 @@
 What was decided, so code and screens stay consistent. Change this file when a decision changes.
 
 ## Product
-- SaaS for many gyms in India. Billed monthly: a base fee plus a fee per branch (see Rackline billing). Web app /
+- SaaS for many gyms in India. Billed monthly: a base fee plus a fee per branch (see Dumbelo billing). Web app /
   PWA only (no native apps yet).
 - MVP in about 3 months with 2–3 developers; pilot at the current client from week 9.
 - One sign-in for every role; the account decides where you land. Staff sign in with email + password;
@@ -22,19 +22,19 @@ What was decided, so code and screens stay consistent. Change this file when a d
   settling a count.
 - Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks.
 - Member: their own membership, visits, and self check-in.
-- Rackline support sees a gym only with the gym's time-limited permission (read-only, logged).
-- Rackline admins (`User.is_superuser`) run the business side: gyms, their admin accounts, prices, Rackline
+- Dumbelo support sees a gym only with the gym's time-limited permission (read-only, logged).
+- Dumbelo admins (`User.is_superuser`) run the business side: gyms, their admin accounts, prices, Dumbelo
   invoices and payments, WhatsApp accounts and templates, when automation runs, and the server's status (health,
   background jobs, messages and webhook, Run Now for the safe-to-repeat jobs). Only they see the server's status:
-  not gym admins, and not Rackline support. They use the same sign-in and the same app, landing on
+  not gym admins, and not Dumbelo support. They use the same sign-in and the same app, landing on
   the Console (`/console`, mobile first, the design system's screens). They never see inside a gym (members,
-  payments, check-ins) except through a support window like anyone else on Rackline's team. Their changes are
+  payments, check-ins) except through a support window like anyone else on Dumbelo's team. Their changes are
   audited.
-- The Console opens on Home: gyms by status and new this month, what gyms owe Rackline and how much of it is
+- The Console opens on Home: gyms by status and new this month, what gyms owe Dumbelo and how much of it is
   overdue, the shared number's messages and amount this month, branch requests waiting, WhatsApp messages delivered,
   failed and waiting today, and whatever on the server is down or whose job's last run failed, with a Needs attention
   card built from these. One summary (`/api/platform/summary/`) in a fixed number of queries; days and months are
-  Rackline's (India). It shows counts and Rackline's own money only. Its tabs are Home, Gyms, Server and More; Prices,
+  Dumbelo's (India). It shows counts and Dumbelo's own money only. Its tabs are Home, Gyms, Server and More; Prices,
   Branch requests, WhatsApp, WhatsApp log and Automation are in More.
 - Staff change their own name, email, mobile number and password (More). A member's details are changed by
   the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and not for
@@ -121,7 +121,7 @@ What was decided, so code and screens stay consistent. Change this file when a d
   sheet (plain rupees with two decimals, no ₹ or grouping, out as negative, opening and closing balance rows), made
   in the browser from the statement shown, and prints (or saves as a PDF) from a print page like the salary slip.
 
-## Reports (admins; Rackline support may read and download inside its window)
+## Reports (admins; Dumbelo support may read and download inside its window)
 - Reports is a list of categories, each its own screen fetching only its own figures: Revenue, Expenses (salaries
   and bills paid are expenses, so payroll lives here, with what is still owed), Cash and bank, Members, Attendance and
   Tasks. The list shows each category's lead figure and its trend (`GET /api/reports/overview/`).
@@ -149,29 +149,29 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Admins assign tasks to trainers and receptionists with a due date (and optional time); staff start them,
   post updates and mark them done; admins see each step and can reopen or delete.
 
-## Rackline billing (Rackline admins set it; a gym's admins see it)
-- One price list, kept by Rackline admins: a monthly base fee, a monthly fee per branch, a one-time WhatsApp setup
-  fee, a one-time attendance machine setup fee (per device), and the rate per delivered message on Rackline's
+## Dumbelo billing (Dumbelo admins set it; a gym's admins see it)
+- One price list, kept by Dumbelo admins: a monthly base fee, a monthly fee per branch, a one-time WhatsApp setup
+  fee, a one-time attendance machine setup fee (per device), and the rate per delivered message on Dumbelo's
   shared WhatsApp number (by Meta's message category: utility for reminders and receipts, marketing, authentication).
   All in paise. A price list starts on a day (today or later, one list per day) and is never edited or deleted:
-  new prices are a new list. The current list is the latest one that has started, on Rackline's own day (India).
-  No gym opens until Rackline has a price list. Gyms that were on Rackline before price lists got a starting list at
-  ₹0, with room for the branches they had open, until a Rackline admin moves them to real prices.
-- Each gym has its Rackline plan (`GymBilling`): the prices copied from the price list when it was set (a new
-  price list never reprices a gym until a Rackline admin moves it), a branch quota, a billing day and its WhatsApp
+  new prices are a new list. The current list is the latest one that has started, on Dumbelo's own day (India).
+  No gym opens until Dumbelo has a price list. Gyms that were on Dumbelo before price lists got a starting list at
+  ₹0, with room for the branches they had open, until a Dumbelo admin moves them to real prices.
+- Each gym has its Dumbelo plan (`GymBilling`): the prices copied from the price list when it was set (a new
+  price list never reprices a gym until a Dumbelo admin moves it), a branch quota, a billing day and its WhatsApp
   mode. The monthly charge is the base fee plus the per-branch fee times the **quota**, not the branches in use,
   so the bill is predictable. It is charged in advance for the month ahead. A new gym starts with room for 1
   branch, on that day's prices, and its billing day is the day it joined (the 28th at most, so every month has
-  one). Rackline admins set the quota, billing day and WhatsApp mode from the gym's Rackline plan in the Console.
+  one). Dumbelo admins set the quota, billing day and WhatsApp mode from the gym's Dumbelo plan in the Console.
 - A gym opens branches up to its quota. Opening or reactivating one past it is refused ("Your plan has room for 2
   branches. Ask for another one to open this branch."). An admin asks for more from the app (Add Branch to My
-  Plan); a Rackline admin approves it, the quota goes up at once, and the rest of the current month is charged
+  Plan); a Dumbelo admin approves it, the quota goes up at once, and the rest of the current month is charged
   **pro rata from the day it is approved** (per-branch fee × days left ÷ days in the billing month, rounded to
   the rupee) on the next invoice. A quota is never lowered below the branches in use.
 - The billing month runs from the billing day to the day before the next one (billing day 15: 15 Mar to 14 Apr).
   Days left count the approval day itself, in the gym's time zone; half a rupee rounds up. The request keeps the
   days, the rate and the amount, so the invoice shows how it was worked out. A gym has one open request at a time
-  (1 to 5 branches, with a note for Rackline); a declined one says why, and the admin can ask again. A Rackline admin
+  (1 to 5 branches, with a note for Dumbelo); a declined one says why, and the admin can ask again. A Dumbelo admin
   who is also an admin of the gym can't decide its requests. A closed branch takes no place in the plan, so adding
   one closed is allowed; reopening it needs room.
 - Invoices are written monthly on the billing day: the plan for the month ahead, pro-rata branches, one-time setup
@@ -182,59 +182,59 @@ What was decided, so code and screens stay consistent. Change this file when a d
   a gym on trial or suspended on its billing day gets none for that month. A billing month has one invoice, ever:
   running the job again writes nothing, and a voided month isn't written again. An invoice that comes to ₹0 (a
   plan at the starting prices) is paid as it's written. A new billing day takes effect from the next invoice.
-- What waits for the next invoice: setup fees and other charges a Rackline admin adds (Add Charge, at the gym's
+- What waits for the next invoice: setup fees and other charges a Dumbelo admin adds (Add Charge, at the gym's
   own prices unless one is typed; taken back until billed) and the pro-rata cost of each approved request. A
   request approved on or after the billing day of the month being invoiced is already in its quota, so that
   month's branch line counts it once, on its own pro-rata line.
 - Voiding an invoice keeps its number and lines and bills nothing again by itself (Add Charge bills what should
   be); an invoice with payments is voided once its payments are. `paid_until` is the last day the gym's paid
   invoices cover, and follows every payment and void. Receipts number like invoices (`RLR/2026-27/0001`).
-- Payments to Rackline are recorded by Rackline admins (no payment gateway): part payments allowed, never more than
+- Payments to Dumbelo are recorded by Dumbelo admins (no payment gateway): part payments allowed, never more than
   the invoice owes, voided with a reason, never deleted. Each payment has a receipt that prints like the salary
   slip. Invoices are voided with a reason, never deleted. Everything here is audited.
 - No automatic suspension during the pilot. The owner is reminded before an invoice is due and after it is late;
-  a Rackline admin suspends a gym by hand (with a reason) and reactivates it. While a gym is suspended its staff
-  and members can't use the app, but its admins can still sign in and see their Rackline plan, invoices and
+  a Dumbelo admin suspends a gym by hand (with a reason) and reactivates it. While a gym is suspended its staff
+  and members can't use the app, but its admins can still sign in and see their Dumbelo plan, invoices and
   receipts. Suspending stops every message the gym would send.
 
 ## Messages
 - Every WhatsApp message is an approved Meta template, filled with the message's details in order; the words as
   the person read them are kept on the `Message` row so the desk can see them.
-- A gym sends from Rackline's shared number (usage billed monthly), from its own Meta WhatsApp Business account
-  (it pays Meta itself; Rackline charges the setup only), or not at all. Rackline admins set up accounts, phone
+- A gym sends from Dumbelo's shared number (usage billed monthly), from its own Meta WhatsApp Business account
+  (it pays Meta itself; Dumbelo charges the setup only), or not at all. Dumbelo admins set up accounts, phone
   numbers, credentials and templates; a gym's admins see the number and whether it works, never the credentials.
   Credentials are encrypted in the database (`FIELD_ENCRYPTION_KEY`), write-only, and never in a response, a log
   or the audit log (it says only that they changed).
-- A WhatsApp account is a number Rackline sends from: Rackline's shared number (one, belonging to no gym) or a
+- A WhatsApp account is a number Dumbelo sends from: Dumbelo's shared number (one, belonging to no gym) or a
   gym's own (at most one per gym). It is never deleted. Its status is "not checked yet" until Test Connection,
   which only asks Meta for the number's details (it sends nothing), then "working" or "not working" with Meta's
-  reason; new ids or new credentials put it back to "not checked yet". The webhook's verify token is Rackline's
+  reason; new ids or new credentials put it back to "not checked yet". The webhook's verify token is Dumbelo's
   own, not Meta's, so the Console shows it to type into Meta; a gym's admins never see it.
 - Each account has its templates: one per message kind and language may be approved at a time (the sender never
   has to choose), each listing which of the message's details fills `{{1}}`, `{{2}}`… of its approved text. The
-  details each message can use are fixed in code (`WhatsAppTemplate.PARAMETERS`). Rackline admins copy a
+  details each message can use are fixed in code (`WhatsAppTemplate.PARAMETERS`). Dumbelo admins copy a
   template's status from Meta's dashboard by hand; templates are never deleted, only disabled.
 - Messages: plan ending in 7 and 3 days, plan ends today, payment due (to members); payment received, the member's
   receipt (**off by default** for each gym); task assigned (to the trainer or receptionist, when an admin assigns
-  it); Rackline invoice due and Rackline payment received (to the gym's owner, controlled by Rackline admins).
+  it); Dumbelo invoice due and Dumbelo payment received (to the gym's owner, controlled by Dumbelo admins).
 - Each gym's admins switch each of its messages on or off (pause and resume), in More → Settings → Messages, at
   every branch at once. Pausing stops the messages, not the list, so the desk still sees who to chase. Pausing one
   reminder never stops another: a member whose plan ends today and who owes money hears about the money when "plan
-  ends today" is paused. Rackline's two messages to the owner are switched by Rackline admins, per gym, in the
+  ends today" is paused. Dumbelo's two messages to the owner are switched by Dumbelo admins, per gym, in the
   Console. Every switch is audited. `reminders_on` was replaced by these switches (a gym that had it off got its
   three reminders paused).
 - The member's receipt goes after a payment is recorded (once the payment is saved; never for one that didn't save
   or was voided), the task message to the trainer or receptionist when an admin gives them a task, and again to
   whoever it is handed to; an edit sends nothing. A staff member with no mobile number, or who has left, gets none.
-- Rackline's messages to a gym's owner (the account owner) go from Rackline's shared number whatever the gym's
+- Dumbelo's messages to a gym's owner (the account owner) go from Dumbelo's shared number whatever the gym's
   WhatsApp mode, are never billed to the gym, and still go while the gym is suspended (paying is how it opens again).
   An open invoice is chased 3 days before its due day, then 1 and 7 days after it, while anything is still owed, at
-  the gym's reminder hour; Rackline payment received goes once a payment is recorded, with the receipt's number.
-- When automation runs is Rackline's to set, not the gym's: Rackline admins set one schedule for every gym (the
+  the gym's reminder hour; Dumbelo payment received goes once a payment is recorded, with the receipt's number.
+- When automation runs is Dumbelo's to set, not the gym's: Dumbelo admins set one schedule for every gym (the
   reminders' hour, default 6 AM in each gym's own time zone; how many days ahead, default 7 and 3; the hour the
   invoice job runs on a billing day, default just after midnight) and can change the reminders' hour and days
   ahead for one gym (each reminder, and the owner's invoice reminder, can have its own hour for that gym; Use
-  Rackline's Times goes back). Whole hours only. A gym's admins see when their messages go out but can't change it.
+  Dumbelo's Times goes back). Whole hours only. A gym's admins see when their messages go out but can't change it.
   A member's one reminder for the day is chosen first, then goes at that reminder's hour. Invoices are written from
   the invoice hour on (a tick missed that hour still writes it later the same day). Retry
   waits (1, 5 and 15 minutes) are fixed in code: they follow Meta's limits, not a business choice. Changes take
@@ -244,7 +244,7 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Nothing is sent twice: every message has a key unique in its gym (a member's reminder for a day, a task's
   assignment, a payment's receipt), and its row is written before it is sent. Nothing goes to someone with no
   number or who asked us to stop (the opt-out on their profile; replying STOP sets it too). A STOP to a gym's own
-  number opts out that gym's member; a STOP to Rackline's shared number opts them out at every gym that has messaged
+  number opts out that gym's member; a STOP to Dumbelo's shared number opts them out at every gym that has messaged
   them from it, and not at gyms that never have. "Stop", "STOP ALL" and "Unsubscribe" count, in any case and with
   any punctuation, as does a Stop button; a longer sentence doesn't. Every reply is kept; the opt-out is audited.
 - Delivery follows Meta's webhook: sent, delivered, read or failed, never going back. A failure keeps Meta's code
@@ -255,7 +255,7 @@ What was decided, so code and screens stay consistent. Change this file when a d
   gym's time zone), at the rate kept on it when it was sent; "read" without a "delivered" before it counts as
   delivered at that time. Meta's word on a message is only taken from the account that sent it. Meta's own
   "billable" flag isn't used: every message delivered from the shared number is billed at the gym's rate, including
-  ones Meta doesn't charge Rackline for (such as a utility message inside the member's 24-hour chat window).
+  ones Meta doesn't charge Dumbelo for (such as a utility message inside the member's 24-hour chat window).
   Every signed webhook call is kept, and `manage.py replay_webhook_events` runs kept calls again (a status that came
   before the send saved Meta's id, or a call that broke).
 - A gym's admins read every message the gym sent in More → Messages (the desk only its branches' members'), with
@@ -268,7 +268,7 @@ What was decided, so code and screens stay consistent. Change this file when a d
   reminder goes again only on its own day and while it is still owed (money: the same amount), a receipt while its
   payment stands, a task message while the task is open and with the same person. Every Retry is audited.
 - Shared-number usage is shown to a gym's admins for its billing month so far (what goes on the invoice written on its
-  next billing day), and to Rackline admins per gym per calendar month, each gym's days in its own time zone.
+  next billing day), and to Dumbelo admins per gym per calendar month, each gym's days in its own time zone.
 - SMS and email are not in the MVP.
 
 ## Stack and hosting
@@ -280,7 +280,7 @@ What was decided, so code and screens stay consistent. Change this file when a d
   The web app on Vercel. Every step, and every setting a server needs, is in `docs/deploy.md`.
 - A server runs with `PRODUCTION=true`, which refuses to start without `SECRET_KEY`, `ALLOWED_HOSTS`,
   `DATABASE_URL` and `CACHE_URL`. `/api/health/` is the load balancer's question: no sign-in, no gym.
-- The server's status is for Rackline admins only (Console → Server): the version and when it was deployed, the
+- The server's status is for Dumbelo admins only (Console → Server): the version and when it was deployed, the
   database, Redis, the worker (a 2-second ping) and beat (its last tick), each job's last run, messages waiting for a
   retry or failed today, and Meta's webhook calls. Something down shows as down, never as an error. Every scheduled
   job keeps a record of each run (what it did, or why it broke): a run that found nothing to do is kept only as its

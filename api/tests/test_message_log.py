@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from django.utils import timezone
 
 from apps.messages.models import Message, WhatsAppAccount, WhatsAppTemplate
-from tests.test_platform import rackline, support
+from tests.test_platform import dumbelo, support
 
 LOG = "/api/platform/messages/"
 INDIA = ZoneInfo("Asia/Kolkata")
@@ -35,7 +35,7 @@ def ids(r):
     return [m["id"] for m in r.json()["results"]]
 
 
-def test_only_rackline_admins_see_the_log(w, shared_number):
+def test_only_dumbelo_admins_see_the_log(w, shared_number):
     sent(w, shared_number, 1)
     for c in (support(), w.client(w.admin), w.client(w.desk), w.client(w.trainer), w.member_client()):
         assert c.get(LOG).status_code == 403
@@ -48,7 +48,7 @@ def test_the_log_shows_how_each_message_went_but_never_who_or_what(w, other, sha
         sent(other, shared_number, n, status=Message.FAILED, error="Message undeliverable (code 131026)", error_code="131026")
 
     with django_assert_max_num_queries(3):
-        r = rackline().get(LOG)
+        r = dumbelo().get(LOG)
 
     body = r.json()
     assert body["count"] == 12 and len({m["gym"] for m in body["results"]}) == 2
@@ -67,7 +67,7 @@ def test_filters_by_gym_number_template_message_and_status(w, other, shared_numb
     mine = sent(w, own, 1)
     shared = sent(w, shared_number, 2, status=Message.FAILED)
     theirs = sent(other, shared_number, 3, kind="payment_due")
-    ops = rackline()
+    ops = dumbelo()
 
     assert ids(ops.get(LOG, {"gym": other.gym.pk})) == [theirs.pk]
     assert ids(ops.get(LOG, {"account": own.pk})) == [mine.pk]
@@ -83,7 +83,7 @@ def test_search_by_number_meta_id_or_error(w, other, shared_number):
     by_number = sent(w, shared_number, 1, to="+919811112222")
     by_meta = sent(w, shared_number, 2, provider_id="wamid.HBgMOTE5ODAwMDAwMDAx")
     by_error = sent(other, shared_number, 3, status=Message.FAILED, error="Re-engagement message (code 131047)", error_code="131047")
-    ops = rackline()
+    ops = dumbelo()
 
     assert ids(ops.get(LOG, {"q": "2222"})) == [by_number.pk]
     assert ids(ops.get(LOG, {"q": "+91 98111 12222"})) == [by_number.pk]  # a whole number, typed as people write it
@@ -93,11 +93,11 @@ def test_search_by_number_meta_id_or_error(w, other, shared_number):
     assert len(ids(ops.get(LOG, {"q": "2"}))) == 3  # under 2 characters: no search
 
 
-def test_days_are_rackline_days_and_a_backwards_span_is_refused(w, shared_number):
+def test_days_are_dumbelo_days_and_a_backwards_span_is_refused(w, shared_number):
     morning = sent(w, shared_number, 1, at=datetime(2026, 10, 18, 0, 30, tzinfo=INDIA))  # 17 Oct in UTC, 18 Oct in India
     late = sent(w, shared_number, 2, at=datetime(2026, 10, 18, 23, 50, tzinfo=INDIA))
     sent(w, shared_number, 3, at=datetime(2026, 10, 19, 0, 10, tzinfo=INDIA))
-    ops = rackline()
+    ops = dumbelo()
 
     assert set(ids(ops.get(LOG, {"from": "2026-10-18", "to": "2026-10-18"}))) == {morning.pk, late.pk}
     assert len(ids(ops.get(LOG, {"from": "2026-10-19"}))) == 1
@@ -110,4 +110,4 @@ def test_newest_first(w, shared_number):
     now = timezone.now()
     old = sent(w, shared_number, 1, at=now - timedelta(days=1))
     new = sent(w, shared_number, 2, at=now)
-    assert ids(rackline().get(LOG)) == [new.pk, old.pk]
+    assert ids(dumbelo().get(LOG)) == [new.pk, old.pk]

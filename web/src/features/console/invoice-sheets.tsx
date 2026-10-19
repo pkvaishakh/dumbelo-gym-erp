@@ -1,17 +1,17 @@
 "use client";
-/* Changing a gym's Rackline invoices in the Console: Record Payment, Void Invoice or Void Payment, Add Charge, and a
+/* Changing a gym's Dumbelo invoices in the Console: Record Payment, Void Invoice or Void Payment, Add Charge, and a
  * pending charge to take back. */
 import { Banknote, CalendarDays, Landmark, Receipt, Smartphone, UserRound } from "lucide-react";
 import { useState } from "react";
 
-import type { Charge, ChargeCreateKindEnum, ConsoleInvoice, ConsolePlan, RacklinePayMethodEnum } from "@/api/gen/model";
+import type { Charge, ChargeCreateKindEnum, ConsoleInvoice, ConsolePlan, DumbeloPayMethodEnum } from "@/api/gen/model";
 import { Choices, Confirm, Details, ErrorText, Field, Sheet } from "@/components/ui";
 import { day, isoDate, rupees, toPaise } from "@/lib/format";
 import { fieldError, useAction } from "@/lib/hooks";
 
 const REFRESH = ["/api/platform/"];
 
-const METHODS: { value: RacklinePayMethodEnum; title: string; icon: typeof Landmark }[] = [
+const METHODS: { value: DumbeloPayMethodEnum; title: string; icon: typeof Landmark }[] = [
   { value: "bank", title: "Bank transfer", icon: Landmark },
   { value: "upi", title: "UPI", icon: Smartphone },
   { value: "cheque", title: "Cheque", icon: Receipt },
@@ -21,7 +21,7 @@ const METHODS: { value: RacklinePayMethodEnum; title: string; icon: typeof Landm
 /** Record Payment: all or part of what the invoice owes, never more, with the bank's reference for the receipt. */
 export function RecordPaymentSheet({ inv, open, onClose }: { inv: ConsoleInvoice; open: boolean; onClose: () => void }) {
   const today = isoDate(new Date());
-  const fresh = () => ({ amount: String(inv.owed_paise / 100), method: "bank" as RacklinePayMethodEnum, reference: "", paid_on: today });
+  const fresh = () => ({ amount: String(inv.owed_paise / 100), method: "bank" as DumbeloPayMethodEnum, reference: "", paid_on: today });
   const [f, setF] = useState(fresh);
   const [err, setErr] = useState<string>();
   const [done, setDone] = useState<ConsoleInvoice | null>(null);
@@ -169,7 +169,7 @@ export function ChargeSheet({ charge, onClose }: { charge: Charge | null; onClos
         <>
           <Details rows={[
             { icon: Receipt, label: "On the next invoice", value: rupees(charge.amount_paise) },
-            { icon: UserRound, label: byHand ? "Added by" : "Approved by", value: charge.added_by_name ?? "Rackline" },
+            { icon: UserRound, label: byHand ? "Added by" : "Approved by", value: charge.added_by_name ?? "Dumbelo" },
             { icon: CalendarDays, label: "Added", value: day(charge.created_at) },
           ]} />
           {byHand ? (

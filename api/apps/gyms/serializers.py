@@ -88,7 +88,7 @@ class BranchSerializer(serializers.ModelSerializer):
 
 
 class GymSettingsSerializer(serializers.ModelSerializer):
-    """The gym as Rackline set it up: its name, slug and time zone. Its message switches are /api/gym/messages/."""
+    """The gym as Dumbelo set it up: its name, slug and time zone. Its message switches are /api/gym/messages/."""
 
     class Meta:
         model = Gym
@@ -187,9 +187,9 @@ class StaffPasswordSerializer(serializers.Serializer):
 
 
 class SupportAccessSerializer(serializers.ModelSerializer):
-    """A window an admin opened for Rackline support. `open` says whether it is running right now."""
+    """A window an admin opened for Dumbelo support. `open` says whether it is running right now."""
 
-    hours = serializers.IntegerField(write_only=True, min_value=1, max_value=72, help_text="How long Rackline support may look")
+    hours = serializers.IntegerField(write_only=True, min_value=1, max_value=72, help_text="How long Dumbelo support may look")
     granted_by_name = serializers.CharField(source="granted_by.name", read_only=True)
     open = serializers.SerializerMethodField()
 
@@ -205,5 +205,5 @@ class SupportAccessSerializer(serializers.ModelSerializer):
         req = self.context["request"]
         now = timezone.now()
         if SupportAccess.open_for(req.gym):
-            raise RuleBroken("already_open", "Rackline already has access. End it first to change how long it lasts.")
+            raise RuleBroken("already_open", "Dumbelo already has access. End it first to change how long it lasts.")
         return SupportAccess.objects.create(gym=req.gym, granted_by=req.user, starts=now, ends=now + timedelta(hours=data["hours"]))

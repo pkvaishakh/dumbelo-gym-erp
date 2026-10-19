@@ -22,10 +22,10 @@ export default function BranchesPage() {
             <div className="rl-card rl-card--pad">
               <p className="rl-row__title" style={{ margin: 0 }}>Your plan has room for {plural(plan.branch_quota, "branch", "branches")}</p>
               <p className="rl-row__meta">
-                {plan.branch_quota === 1 ? "It's open" : `All ${plan.branch_quota} are open`}. To open another, ask Rackline to add one to
+                {plan.branch_quota === 1 ? "It's open" : `All ${plan.branch_quota} are open`}. To open another, ask Dumbelo to add one to
                 your plan, or close a branch first.
               </p>
-              <Link className="rl-button rl-button--block" href="/rackline-plan"><Icon as={Plus} />Add Branch to My Plan</Link>
+              <Link className="rl-button rl-button--block" href="/dumbelo-plan"><Icon as={Plus} />Add Branch to My Plan</Link>
             </div>
           </Section>
         ) : (

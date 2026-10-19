@@ -1,4 +1,4 @@
-"""Console → Home: Rackline at a glance, for Rackline admins only, in a fixed number of queries."""
+"""Console → Home: Dumbelo at a glance, for Dumbelo admins only, in a fixed number of queries."""
 from datetime import date, datetime, timedelta
 from unittest import mock
 from zoneinfo import ZoneInfo
@@ -15,13 +15,13 @@ from apps.gyms.models import Gym, SupportAccess
 from apps.messages.models import Message
 from apps.platform.summary import summary
 from tests.conftest import World
-from tests.test_platform import rackline, support
+from tests.test_platform import dumbelo, support
 from tests.test_server import message, on_a_server  # noqa: F401 (a fixture)
 
 HOME = "/api/platform/summary/"
 GYMS = "/api/platform/gyms/"
 IST = ZoneInfo("Asia/Kolkata")
-NOW = datetime(2026, 10, 19, 14, 0, tzinfo=IST)  # a Monday afternoon, Rackline's day 19 Oct
+NOW = datetime(2026, 10, 19, 14, 0, tzinfo=IST)  # a Monday afternoon, Dumbelo's day 19 Oct
 TODAY = NOW.date()
 
 
@@ -51,14 +51,14 @@ def run(job, error="", finished=True):
 
 # ---- who may look ----
 
-def test_only_rackline_admins_see_home(w):
+def test_only_dumbelo_admins_see_home(w):
     SupportAccess.objects.create(gym=w.gym, granted_by=w.admin.user, starts=timezone.now() - timedelta(minutes=5),
                                  ends=timezone.now() + timedelta(hours=1))
     for c in (w.client(w.admin), w.client(w.desk), w.client(w.trainer), w.member_client(), support()):
         assert c.get(HOME, HTTP_X_GYM=w.gym.slug).status_code == 403
         assert c.get(HOME).status_code == 403
     assert APIClient().get(HOME).status_code == 401
-    assert rackline().get(HOME).status_code == 200
+    assert dumbelo().get(HOME).status_code == 200
 
 
 # ---- what it counts ----
@@ -130,8 +130,8 @@ def test_home_with_nothing_yet(db):
     assert s["server"]["failed_jobs"] == [] and s["branch_requests"] == {"waiting": 0}
 
 
-def test_home_is_counts_and_rackline_money_only_within_a_query_budget(w, other, busy, django_assert_max_num_queries):
-    c = rackline()
+def test_home_is_counts_and_dumbelo_money_only_within_a_query_budget(w, other, busy, django_assert_max_num_queries):
+    c = dumbelo()
     with django_assert_max_num_queries(11):
         r = c.get(HOME)
     assert r.status_code == 200, r.content
@@ -156,7 +156,7 @@ def test_home_is_counts_and_rackline_money_only_within_a_query_budget(w, other, 
 # ---- the gyms it links to ----
 
 def test_the_gyms_list_shows_the_gyms_that_owe(w, other, busy):
-    c = rackline()
+    c = dumbelo()
     names = lambda q: {g["name"] for g in c.get(GYMS, q).json()["results"]}  # noqa: E731
     with mock.patch("apps.platform.queries.timezone.localdate", return_value=TODAY):
         assert names({"owes": "any"}) == {w.gym.name, busy.gym.name}

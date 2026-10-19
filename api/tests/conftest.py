@@ -20,13 +20,13 @@ PRICES = {
 
 
 def price_list():
-    """Rackline's prices since 2026: what a gym's Rackline plan copies when it opens."""
+    """Dumbelo's prices since 2026: what a gym's Dumbelo plan copies when it opens."""
     return PriceList.objects.get_or_create(active_from=date(2026, 1, 1), defaults=PRICES)[0]
 
 
 class World:
     """A small gym: two branches, an admin, a receptionist at branch A, a trainer at A, a member on a monthly plan.
-    Its Rackline plan has room for the two branches and no more."""
+    Its Dumbelo plan has room for the two branches and no more."""
 
     def __init__(self, slug="iron", n=0):
         self.gym = Gym.objects.create(name=f"Iron House {slug}", slug=slug, status="active")
@@ -104,7 +104,7 @@ def empty_outbox():
 
 @pytest.fixture(autouse=True)
 def shared_number(request):
-    """Rackline's shared WhatsApp number with an approved template for each message (the demo's words), as a real
+    """Dumbelo's shared WhatsApp number with an approved template for each message (the demo's words), as a real
     server has, for every test that uses the database. Messages go from it unless a test sets up a gym's own."""
     db = next((f for f in ("transactional_db", "db") if f in request.fixturenames), None)
     if db is None:

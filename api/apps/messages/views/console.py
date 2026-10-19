@@ -1,7 +1,7 @@
-"""The Console's WhatsApp: accounts (Rackline's shared number and gyms' own), their templates, and the log of every
+"""The Console's WhatsApp: accounts (Dumbelo's shared number and gyms' own), their templates, and the log of every
 message sent.
 
-Rackline admins only (`RacklineViewMixin`), no X-Gym. Never deleted. Credentials go in and never come out, and
+Dumbelo admins only (`DumbeloViewMixin`), no X-Gym. Never deleted. Credentials go in and never come out, and
 the audit log says only which ones changed.
 """
 import re
@@ -21,7 +21,7 @@ from apps.audit.models import record
 from apps.core import clock
 from apps.core.params import Pages, open_days
 from apps.core.queries import count_of
-from apps.core.rackline import RacklineViewMixin
+from apps.core.dumbelo import DumbeloViewMixin
 
 from .. import accounts, usage
 from ..accounts import WHERE
@@ -41,9 +41,9 @@ def _template(t: WhatsAppTemplate) -> dict:
 
 
 @extend_schema(tags=["platform"])
-class WhatsAppAccountViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+class WhatsAppAccountViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
                              mixins.UpdateModelMixin, viewsets.GenericViewSet):
-    """WhatsApp accounts: Rackline's shared number first, then gyms' own. Filter with `?gym=` or `?status=`."""
+    """WhatsApp accounts: Dumbelo's shared number first, then gyms' own. Filter with `?gym=` or `?status=`."""
 
     serializer_class = WhatsAppAccountSerializer
     filterset_fields = ["gym", "status"]
@@ -105,7 +105,7 @@ class WhatsAppAccountViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.Re
 
 
 @extend_schema(tags=["platform"])
-class WhatsAppTemplateViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+class WhatsAppTemplateViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
                               mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """An account's templates (`?account=`), by message. Never deleted: one Meta no longer sends is Disabled."""
 
@@ -146,7 +146,7 @@ class WhatsAppTemplateViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.R
     @extend_schema(responses=MessageKindSerializer(many=True), filters=False)
     @action(detail=False, methods=["get"], pagination_class=None)
     def kinds(self, request):
-        """The messages Rackline sends and the details each can fill a template with. A fixed list of seven."""
+        """The messages Dumbelo sends and the details each can fill a template with. A fixed list of seven."""
         return Response(MessageKindSerializer(message_kinds(), many=True).data)
 
 
@@ -161,7 +161,7 @@ _LOG_FILTERS = [
 
 @extend_schema(tags=["platform"])
 @extend_schema_view(list=extend_schema(parameters=_LOG_FILTERS))
-class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class ConsoleMessageViewSet(DumbeloViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     """Console → WhatsApp log: every message sent, newest first, across gyms. Filter by gym, WhatsApp account,
     template, message and status, between two days or billed in a month, or search with `q`. Read-only. Shows no names and no words:
     a message says who it was to and what they owe, and that is the gym's (only the number's last 4 digits)."""
@@ -174,7 +174,7 @@ class ConsoleMessageViewSet(RacklineViewMixin, mixins.ListModelMixin, viewsets.G
               .defer("text", "parameters", *(f"account__{f}" for f in WhatsAppAccount.SECRET_FIELDS))
               .order_by("-created_at", "-id"))
         first, last = open_days(self.request)
-        if first:  # days on Rackline's clock (no gym: India time)
+        if first:  # days on Dumbelo's clock (no gym: India time)
             qs = qs.filter(created_at__gte=clock.day_bounds(None, first)[0])
         if last:
             qs = qs.filter(created_at__lt=clock.day_bounds(None, last)[1])
@@ -200,7 +200,7 @@ MONTH = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 
 
 def _month(value: str | None, field: str = "month") -> date:
-    """The first day of a `YYYY-MM` query parameter; Rackline's this month when it's left out."""
+    """The first day of a `YYYY-MM` query parameter; Dumbelo's this month when it's left out."""
     if not value:
         return timezone.localdate().replace(day=1)
     if not (m := MONTH.match(value)):
@@ -213,10 +213,10 @@ def _month_end(first: date) -> date:
 
 
 @extend_schema(tags=["platform"])
-class ConsoleUsageView(RacklineViewMixin, APIView):
-    """Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month (each in the
+class ConsoleUsageView(DumbeloViewMixin, APIView):
+    """Console → WhatsApp usage: each gym's messages delivered from Dumbelo's shared number in a month (each in the
     gym's own days, as its invoice counts them) and what they came to, the biggest first, with the month's totals.
-    Counts and Rackline's money only. A fixed number of queries whatever the number of gyms."""
+    Counts and Dumbelo's money only. A fixed number of queries whatever the number of gyms."""
 
     @extend_schema(responses=ConsoleUsageSerializer, parameters=[
         OpenApiParameter("month", str, description="YYYY-MM; this month when left out"),

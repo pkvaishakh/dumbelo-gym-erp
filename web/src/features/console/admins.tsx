@@ -61,7 +61,7 @@ function AdminSheet({ gymId, admin, onClose }: { gymId: number; admin: GymAdmin;
     <Sheet open onClose={onClose} title={step === "reset-done" ? undefined : admin.name}>
       {step === "menu" && (
         <>
-          <p className="rl-row__meta">{admin.is_owner ? "The account owner: they look after the gym's Rackline plan and can't be deactivated." : admin.is_active ? "An admin of this gym." : "Deactivated: they can't open this gym."}</p>
+          <p className="rl-row__meta">{admin.is_owner ? "The account owner: they look after the gym's Dumbelo plan and can't be deactivated." : admin.is_active ? "An admin of this gym." : "Deactivated: they can't open this gym."}</p>
           <Details rows={[{ icon: Mail, label: "Email", value: admin.email }, { icon: Phone, label: "Mobile number", value: phone(admin.phone) }]} />
           {failed}
           <div className="rl-sheet__actions">
@@ -93,7 +93,7 @@ function AdminSheet({ gymId, admin, onClose }: { gymId: number; admin: GymAdmin;
       )}
       {step === "owner" && (
         <>
-          <p className="rl-row__meta">{admin.name} becomes the account owner: they look after the gym&apos;s Rackline plan and can&apos;t be deactivated. The current owner stays an admin.</p>
+          <p className="rl-row__meta">{admin.name} becomes the account owner: they look after the gym&apos;s Dumbelo plan and can&apos;t be deactivated. The current owner stays an admin.</p>
           {failed}
           <div className="rl-sheet__actions">
             <button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={() => act("make-owner/")}>{a.busy ? "Saving…" : "Make Owner"}</button>
@@ -139,10 +139,10 @@ function AddAdminSheet({ gymId, open, onClose }: { gymId: number; open: boolean;
           <Field label="Email" error={err ?? fieldError(a.error, "email")} hint="They sign in with it.">
             {(id) => <input className="rl-field__input" id={id} type="email" inputMode="email" autoComplete="off" autoCapitalize="none" value={f.email} onChange={(e) => { setF({ ...f, email: e.target.value }); setErr(undefined); }} />}
           </Field>
-          <Field label="Name" error={fieldError(a.error, "name")} hint="Leave it empty if they already sign in to Rackline.">
+          <Field label="Name" error={fieldError(a.error, "name")} hint="Leave it empty if they already sign in to Dumbelo.">
             {(id) => <input className="rl-field__input" id={id} autoComplete="off" autoCapitalize="words" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}
           </Field>
-          <Field label="First password" error={fieldError(a.error, "password")} hint="For someone new to Rackline: tell them. Leave it empty if they already sign in.">
+          <Field label="First password" error={fieldError(a.error, "password")} hint="For someone new to Dumbelo: tell them. Leave it empty if they already sign in.">
             {(id) => <input className="rl-field__input" id={id} type="text" autoComplete="new-password" autoCapitalize="none" spellCheck={false} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />}
           </Field>
           <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>

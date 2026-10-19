@@ -9,7 +9,7 @@ Each row is a branch with its active member count; the current branch carries th
 ```html
 <div class="rl-app rl-root">
 <header class="rl-appbar" id="rl-appbar"><div class="rl-appbar__in">
-  <a class="rl-logo" href="#" aria-label="Rackline home"><Mark/></a>
+  <a class="rl-logo" href="#" aria-label="Dumbelo home"><Mark/></a>
   <div class="rl-appbar__spacer"><button class="rl-chip rl-appbar__title" type="button" data-sheet="rl-sheet-branch" aria-haspopup="dialog" tabindex="-1">Indiranagar<Icon class="rl-icon rl-icon--xs"/></button></div>
   <button class="rl-iconbtn" type="button" aria-label="Notifications, 5 unread"><Icon class="rl-icon"/><span class="rl-badge" aria-hidden="true">5</span></button>
   <button class="rl-avatar rl-pressable" type="button" aria-label="Profile: Meera Nair">MN</button>

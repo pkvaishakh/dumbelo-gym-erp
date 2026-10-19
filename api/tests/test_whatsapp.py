@@ -16,7 +16,7 @@ from apps.audit.models import AuditLog
 from apps.billing.models import GymBilling
 from apps.messages import accounts, crypto
 from apps.messages.models import WhatsAppAccount, WhatsAppTemplate
-from tests.test_platform import rackline, support
+from tests.test_platform import dumbelo, support
 
 ACCOUNTS = "/api/platform/whatsapp-accounts/"
 TEMPLATES = "/api/platform/whatsapp-templates/"
@@ -31,7 +31,7 @@ PLAN_ENDING = {"kind": "plan_ending", "name": "plan_ending_v1", "language": "en"
 
 @pytest.fixture(autouse=True)
 def shared_number():
-    """These tests add Rackline's shared number themselves, through the Console."""
+    """These tests add Dumbelo's shared number themselves, through the Console."""
     return None
 
 
@@ -89,7 +89,7 @@ def meta_error(status, body):
 
 # ---- Who may ----
 
-def test_only_rackline_admins_set_up_whatsapp(w):
+def test_only_dumbelo_admins_set_up_whatsapp(w):
     account = accounts.add_account(gym=None, **SHARED)
     for c in [w.client(w.admin), w.client(w.desk), w.client(w.trainer), w.member_client(), support()]:
         assert c.get(ACCOUNTS).status_code == 403
@@ -102,11 +102,11 @@ def test_only_rackline_admins_set_up_whatsapp(w):
         assert c.post(TEMPLATES, {**PLAN_ENDING, "account": account.id}, format="json").status_code == 403
         assert c.get(f"{TEMPLATES}kinds/").status_code == 403
     assert APIClient().get(ACCOUNTS).status_code == 401
-    assert rackline().get(ACCOUNTS).status_code == 200
+    assert dumbelo().get(ACCOUNTS).status_code == 200
 
 
 def test_accounts_are_never_deleted(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     assert c.delete(f"{ACCOUNTS}{account['id']}/").status_code == 405
     assert c.put(f"{ACCOUNTS}{account['id']}/", SHARED, format="json").status_code == 405
@@ -115,7 +115,7 @@ def test_accounts_are_never_deleted(w):
 # ---- Adding and showing an account ----
 
 def test_add_the_shared_number_and_a_gyms_own(w):
-    c = rackline()
+    c = dumbelo()
     shared = add(c)
     assert shared["is_shared"] is True and shared["gym"] is None and shared["status"] == "new"
     assert shared["access_token_last4"] == TOKEN[-4:] and shared["app_secret_last4"] == SECRET[-4:]
@@ -135,7 +135,7 @@ def test_add_the_shared_number_and_a_gyms_own(w):
 
 
 def test_one_shared_number_one_account_a_gym_and_a_number_once(w, other):
-    c = rackline()
+    c = dumbelo()
     add(c)
     again = c.post(ACCOUNTS, {**SHARED, "phone_number_id": "299999999999999"}, format="json")
     assert again.status_code == 409 and again.json()["error"]["code"] == "account_exists"
@@ -149,7 +149,7 @@ def test_one_shared_number_one_account_a_gym_and_a_number_once(w, other):
 
 
 def test_bad_input_is_a_field_error_that_never_repeats_a_credential(w):
-    c = rackline()
+    c = dumbelo()
     r = c.post(ACCOUNTS, {**SHARED, "phone_number_id": "../me/accounts", "access_token": TOKEN * 30, "app_secret": "short"}, format="json")
     assert r.status_code == 400
     fields = r.json()["error"]["fields"]
@@ -162,7 +162,7 @@ def test_bad_input_is_a_field_error_that_never_repeats_a_credential(w):
 
 def test_no_response_log_line_or_audit_row_holds_a_credential(w, caplog):
     caplog.set_level(logging.DEBUG)
-    c = rackline()
+    c = dumbelo()
     responses = [c.post(ACCOUNTS, SHARED, format="json")]
     pk = responses[0].json()["id"]
     responses += [c.post(ACCOUNTS, own(w.gym), format="json")]
@@ -228,14 +228,14 @@ def test_rotation_with_a_missing_key_changes_nothing(w, settings):
 
 def test_lists_never_decrypt_a_credential(w, settings):
     """A screen showing accounts doesn't need the key: a wrong one can't break the Console's list."""
-    c = rackline()
+    c = dumbelo()
     add(c)
     settings.FIELD_ENCRYPTION_KEY = [Fernet.generate_key().decode()]
     assert c.get(ACCOUNTS).status_code == 200
 
 
 def test_replace_credentials_needs_one_and_checks_again(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     WhatsAppAccount.objects.filter(pk=account["id"]).update(status=WhatsAppAccount.WORKING)
 
@@ -252,7 +252,7 @@ def test_replace_credentials_needs_one_and_checks_again(w):
 
 
 def test_new_ids_mean_checking_again_and_are_audited(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     WhatsAppAccount.objects.filter(pk=account["id"]).update(status=WhatsAppAccount.WORKING)
 
@@ -269,15 +269,15 @@ def test_new_ids_mean_checking_again_and_are_audited(w):
 
 def test_test_connection_asks_meta_for_the_number(w, settings):
     settings.WHATSAPP_API_VERSION = "v23.0"
-    c = rackline()
+    c = dumbelo()
     account = add(c)
-    meta = Meta({"display_phone_number": "+91 80000 00001", "verified_name": "Rackline", "quality_rating": "GREEN", "id": "200000000000001"})
+    meta = Meta({"display_phone_number": "+91 80000 00001", "verified_name": "Dumbelo", "quality_rating": "GREEN", "id": "200000000000001"})
     with mock.patch("apps.messages.meta.urlopen", meta):
         r = c.post(f"{ACCOUNTS}{account['id']}/test/")
 
     assert r.status_code == 200, r.content
     body = r.json()
-    assert body["status"] == "working" and body["verified_name"] == "Rackline" and body["checked_at"] and body["last_error"] == ""
+    assert body["status"] == "working" and body["verified_name"] == "Dumbelo" and body["checked_at"] and body["last_error"] == ""
     [req] = meta.requests
     assert req.full_url.startswith("https://graph.facebook.com/v23.0/200000000000001?fields=")
     assert req.get_method() == "GET" and TOKEN not in req.full_url
@@ -287,7 +287,7 @@ def test_test_connection_asks_meta_for_the_number(w, settings):
 
 
 def test_a_failed_test_keeps_metas_reason(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     error = meta_error(400, {"error": {"message": "Unsupported get request. Object with ID does not exist", "code": 100}})
     with mock.patch("apps.messages.meta.urlopen", Meta(error=error)):
@@ -302,7 +302,7 @@ def test_a_failed_test_keeps_metas_reason(w):
 # ---- A gym's own view ----
 
 def test_a_gyms_admins_see_the_number_they_send_from(w, other):
-    c = rackline()
+    c = dumbelo()
     shared = add(c)
     add(c, own(other.gym, 5))  # another gym's own number: never this gym's business
     admin = w.client(w.admin)
@@ -328,7 +328,7 @@ def test_a_gyms_admins_see_the_number_they_send_from(w, other):
 # ---- Templates ----
 
 def test_templates_say_which_detail_goes_where(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     r = c.post(TEMPLATES, {**PLAN_ENDING, "account": account["id"]}, format="json")
     assert r.status_code == 201, r.content
@@ -346,7 +346,7 @@ def test_templates_say_which_detail_goes_where(w):
 
 
 def test_a_template_must_match_its_message_and_its_text(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     wrong = c.post(TEMPLATES, {**PLAN_ENDING, "account": account["id"], "parameters": ["first_name", "amount", "gym", "end_date"]}, format="json")
     assert wrong.status_code == 400 and "amount" in wrong.json()["error"]["fields"]["parameters"][0]
@@ -362,7 +362,7 @@ def test_a_template_must_match_its_message_and_its_text(w):
 
 
 def test_one_approved_template_per_message_and_language(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     first = c.post(TEMPLATES, {**PLAN_ENDING, "account": account["id"]}, format="json").json()
 
@@ -384,7 +384,7 @@ def test_one_approved_template_per_message_and_language(w):
 
 
 def test_a_template_stays_with_its_number(w):
-    c = rackline()
+    c = dumbelo()
     account = add(c)
     other_account = add(c, own(w.gym))
     t = c.post(TEMPLATES, {**PLAN_ENDING, "account": account["id"]}, format="json").json()
@@ -393,7 +393,7 @@ def test_a_template_stays_with_its_number(w):
 
 
 def test_the_messages_a_template_can_be_for(w):
-    kinds = rackline().get(f"{TEMPLATES}kinds/").json()
+    kinds = dumbelo().get(f"{TEMPLATES}kinds/").json()
     assert [k["kind"] for k in kinds] == [k for k, _ in WhatsAppTemplate.KINDS]
     assert len(kinds) == 7
     plan_ending = kinds[0]
@@ -404,7 +404,7 @@ def test_the_messages_a_template_can_be_for(w):
 # ---- Query budgets ----
 
 def test_the_lists_keep_a_query_budget(w, other, django_assert_max_num_queries):
-    c = rackline()
+    c = dumbelo()
     shared = add(c)
     for i, gym in enumerate([w.gym, other.gym]):
         add(c, own(gym, 7 + i))

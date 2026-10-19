@@ -1,5 +1,5 @@
 """The scheduled side of messages, and the messages queued when something happens. The rules live in services.py,
-automation.py (when, and whether) and notify.py (receipts, tasks and Rackline's own)."""
+automation.py (when, and whether) and notify.py (receipts, tasks and Dumbelo's own)."""
 from datetime import datetime, timedelta
 
 from celery import shared_task
@@ -34,7 +34,7 @@ def reminder_tick(now: datetime | None = None) -> dict[str, int]:
 @shared_task
 def send_reminders(at: str | None = None, run_id: int | None = None):
     """Give every gym whose own clock has reached one of its reminder hours its reminder list, send the reminders
-    whose hour it is, and remind owners about their Rackline invoices.
+    whose hour it is, and remind owners about their Dumbelo invoices.
 
     This is the job beat runs every quarter hour (`CELERY_BEAT_SCHEDULE`). The hours and days come from the
     database on every tick (`automation.py`), so a change applies on the next one. Everything here is safe to
@@ -82,6 +82,6 @@ def send_task_assigned(task_id: int):
 
 
 @shared_task
-def send_rackline_receipt(payment_id: int):
-    """The owner's message that Rackline received their payment, queued once it is recorded."""
-    notify.rackline_payment_received(payment_id)
+def send_dumbelo_receipt(payment_id: int):
+    """The owner's message that Dumbelo received their payment, queued once it is recorded."""
+    notify.dumbelo_payment_received(payment_id)

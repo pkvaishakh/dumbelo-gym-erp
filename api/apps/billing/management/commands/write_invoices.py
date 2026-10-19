@@ -1,4 +1,4 @@
-"""Write the Rackline invoices due today, the same as the hourly job: `python manage.py write_invoices`.
+"""Write the Dumbelo invoices due today, the same as the hourly job: `python manage.py write_invoices`.
 
     python manage.py write_invoices --day 2026-11-01   # a billing day the worker missed
 
@@ -12,7 +12,7 @@ from apps.billing.tasks import write_invoices
 
 
 class Command(BaseCommand):
-    help = "Write each active gym's Rackline invoice on its billing day (the hourly job, by hand)."
+    help = "Write each active gym's Dumbelo invoice on its billing day (the hourly job, by hand)."
 
     def add_arguments(self, parser):
         parser.add_argument("--day", default="", help="YYYY-MM-DD: bill the gyms whose billing day this was. Today on each gym's clock if left out")

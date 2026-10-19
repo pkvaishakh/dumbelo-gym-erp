@@ -73,7 +73,7 @@ export default function WhatsAppAccountScreen() {
         </Section>
         <Section title="Details">
           <Details rows={[
-            { icon: Building2, label: "Belongs to", value: account.is_shared ? "Rackline: the shared number" : account.gym ? <Link href={`/console/gyms/${account.gym}`}>{account.gym_name}</Link> : null },
+            { icon: Building2, label: "Belongs to", value: account.is_shared ? "Dumbelo: the shared number" : account.gym ? <Link href={`/console/gyms/${account.gym}`}>{account.gym_name}</Link> : null },
             { icon: Hash, label: "Phone number id", value: account.phone_number_id },
             { icon: Hash, label: "WhatsApp Business account id", value: account.waba_id },
             { icon: Clock, label: "Added", value: day(account.created_at) },
@@ -84,7 +84,7 @@ export default function WhatsAppAccountScreen() {
             { icon: Link2, label: "Callback URL", value: <span style={{ wordBreak: "break-all" }}>{account.webhook_url}</span> },
             { icon: ShieldCheck, label: "Verify token", value: <span style={{ wordBreak: "break-all" }}>{account.verify_token}</span> },
           ]} />
-          <p className="rl-row__meta">Paste both into the Meta app&apos;s WhatsApp webhook settings and subscribe to messages, so delivery updates reach Rackline.</p>
+          <p className="rl-row__meta">Paste both into the Meta app&apos;s WhatsApp webhook settings and subscribe to messages, so delivery updates reach Dumbelo.</p>
         </Section>
         <Section title="Credentials">
           <Details rows={[

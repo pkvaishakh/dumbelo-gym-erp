@@ -1,5 +1,5 @@
 """Who needs a nudge today, and writing it down. Nothing here sends anything, and nothing here decides when:
-the times are Rackline's (`apps.messages.automation`)."""
+the times are Dumbelo's (`apps.messages.automation`)."""
 from collections.abc import Iterable
 from datetime import date
 

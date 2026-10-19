@@ -29,7 +29,7 @@ export function EditGymSheet({ gym, open, onClose }: { gym: GymDetail; open: boo
           {(id) => <input className="rl-field__input" id={id} autoCapitalize="words" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}
         </Field>
         <TimeZoneField value={f.timezone} onChange={(timezone) => setF({ ...f, timezone })} error={fieldError(a.error, "timezone")} />
-        <Field label="Billing email" optional hint="Where Rackline's invoices go." error={fieldError(a.error, "billing_email")}>
+        <Field label="Billing email" optional hint="Where Dumbelo's invoices go." error={fieldError(a.error, "billing_email")}>
           {(id) => <input className="rl-field__input" id={id} type="email" inputMode="email" autoCapitalize="none" value={f.billing_email} onChange={(e) => setF({ ...f, billing_email: e.target.value })} />}
         </Field>
         <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
@@ -42,7 +42,7 @@ export function EditGymSheet({ gym, open, onClose }: { gym: GymDetail; open: boo
 const STATUS_COPY = {
   suspend: {
     title: (name: string) => `Suspend ${name}?`,
-    text: "Its staff and members can't use the app from their next tap, and the gym sends no messages. Its admins can still sign in to see their Rackline plan.",
+    text: "Its staff and members can't use the app from their next tap, and the gym sends no messages. Its admins can still sign in to see their Dumbelo plan.",
     button: "Suspend Gym", busy: "Suspending…", keep: "Keep Active", placeholder: "October invoice unpaid",
   },
   activate: {

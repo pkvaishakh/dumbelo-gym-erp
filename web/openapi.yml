@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Rackline API
+  title: Dumbelo API
   version: 0.1.0
   description: 'Gym management for many gyms. Send `X-Gym: <gym slug>` with every
     call inside a gym.'
@@ -455,8 +455,8 @@ paths:
   /api/billing/branch-requests/:
     get:
       operationId: billing_branch_requests_list
-      description: 'Add Branch to My Plan: the gym''s admins ask Rackline for room
-        for more branches. Rackline approves or declines.'
+      description: 'Add Branch to My Plan: the gym''s admins ask Dumbelo for room
+        for more branches. Dumbelo approves or declines.'
       parameters:
       - name: limit
         required: false
@@ -483,8 +483,8 @@ paths:
           description: ''
     post:
       operationId: billing_branch_requests_create
-      description: 'Add Branch to My Plan: the gym''s admins ask Rackline for room
-        for more branches. Rackline approves or declines.'
+      description: 'Add Branch to My Plan: the gym''s admins ask Dumbelo for room
+        for more branches. Dumbelo approves or declines.'
       tags:
       - billing
       requestBody:
@@ -510,8 +510,8 @@ paths:
   /api/billing/branch-requests/{id}/:
     get:
       operationId: billing_branch_requests_retrieve
-      description: 'Add Branch to My Plan: the gym''s admins ask Rackline for room
-        for more branches. Rackline approves or declines.'
+      description: 'Add Branch to My Plan: the gym''s admins ask Dumbelo for room
+        for more branches. Dumbelo approves or declines.'
       parameters:
       - in: path
         name: id
@@ -534,7 +534,7 @@ paths:
     get:
       operationId: billing_invoices_list
       description: |-
-        The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+        The gym's Dumbelo invoices, newest first, each with its lines and its payments' receipts. Admins only, and
         open while the gym is suspended: it's how they see what to settle.
       parameters:
       - name: limit
@@ -564,7 +564,7 @@ paths:
     get:
       operationId: billing_invoices_retrieve
       description: |-
-        The gym's Rackline invoices, newest first, each with its lines and its payments' receipts. Admins only, and
+        The gym's Dumbelo invoices, newest first, each with its lines and its payments' receipts. Admins only, and
         open while the gym is suspended: it's how they see what to settle.
       parameters:
       - in: path
@@ -588,7 +588,7 @@ paths:
     get:
       operationId: billing_plan_retrieve
       description: |-
-        What the gym pays Rackline and for how many branches. Open while the gym is suspended: its admins can still
+        What the gym pays Dumbelo and for how many branches. Open while the gym is suspended: its admins can still
         see their plan.
       tags:
       - billing
@@ -1818,7 +1818,7 @@ paths:
       operationId: gym_messages_list
       description: |-
         More → Settings → Messages: each of the gym's messages, on or paused, and when it goes out. Admins only.
-        When is Rackline's to set, so it is only shown here.
+        When is Dumbelo's to set, so it is only shown here.
       tags:
       - gym
       security:
@@ -1876,7 +1876,7 @@ paths:
     get:
       operationId: gym_settings_retrieve
       description: |-
-        The gym as Rackline set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
+        The gym as Dumbelo set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
         changes: the gym's message switches are `/api/gym/messages/`.
       tags:
       - gym
@@ -1893,8 +1893,8 @@ paths:
     get:
       operationId: gym_whatsapp_retrieve
       description: |-
-        More → Settings → WhatsApp: whether messages go from Rackline's number, the gym's own or not at all, the
-        number, and whether it works. Admins only; set up by Rackline, so there is nothing here to change.
+        More → Settings → WhatsApp: whether messages go from Dumbelo's number, the gym's own or not at all, the
+        number, and whether it works. Admins only; set up by Dumbelo, so there is nothing here to change.
       tags:
       - gym
       security:
@@ -2318,12 +2318,12 @@ paths:
         schema:
           type: string
           enum:
+          - dumbelo_invoice_due
+          - dumbelo_payment_received
           - payment_due
           - payment_received
           - plan_ending
           - plan_ends_today
-          - rackline_invoice_due
-          - rackline_payment_received
           - task_assigned
         description: |-
           * `plan_ending` - Plan ending soon
@@ -2331,8 +2331,8 @@ paths:
           * `payment_due` - Payment due
           * `payment_received` - Payment received
           * `task_assigned` - Task assigned
-          * `rackline_invoice_due` - Rackline invoice due
-          * `rackline_payment_received` - Rackline payment received
+          * `dumbelo_invoice_due` - Dumbelo invoice due
+          * `dumbelo_payment_received` - Dumbelo payment received
       - name: limit
         required: false
         in: query
@@ -2450,7 +2450,7 @@ paths:
     get:
       operationId: messages_usage_retrieve
       description: |-
-        This billing month's messages on Rackline's shared number, by Meta's category, and what they will come
+        This billing month's messages on Dumbelo's shared number, by Meta's category, and what they will come
         to on the next invoice. Two queries.
       tags:
       - messages
@@ -3875,7 +3875,7 @@ paths:
   /api/platform/gyms/:
     get:
       operationId: platform_gyms_list
-      description: 'Every gym on Rackline. Gyms are never deleted: a gym that stops
+      description: 'Every gym on Dumbelo. Gyms are never deleted: a gym that stops
         paying is suspended.'
       parameters:
       - name: limit
@@ -3898,7 +3898,7 @@ paths:
           - any
           - overdue
         description: |-
-          * `any` - Owes Rackline anything
+          * `any` - Owes Dumbelo anything
           * `overdue` - Has an invoice past its due day
       - in: query
         name: q
@@ -3983,7 +3983,7 @@ paths:
     post:
       operationId: platform_gyms_admins_create
       description: |-
-        Add Admin: someone new to Rackline gets a login with the first password you set; someone who already
+        Add Admin: someone new to Dumbelo gets a login with the first password you set; someone who already
         signs in (at another gym) keeps theirs. A deactivated admin is turned back on.
       parameters:
       - in: path
@@ -4047,7 +4047,7 @@ paths:
   /api/platform/gyms/{gym_id}/admins/{id}/make-owner/:
     post:
       operationId: platform_gyms_admins_make_owner_create
-      description: 'Make this admin the account owner: they handle Rackline billing.
+      description: 'Make this admin the account owner: they handle Dumbelo billing.
         The old owner stays an admin.'
       parameters:
       - in: path
@@ -4143,8 +4143,8 @@ paths:
     get:
       operationId: platform_gyms_messages_list
       description: |-
-        A gym's messages as Rackline sees them: on or paused, and when each goes out (Rackline's times, or the
-        gym's own where a Rackline admin set them).
+        A gym's messages as Dumbelo sees them: on or paused, and when each goes out (Dumbelo's times, or the
+        gym's own where a Dumbelo admin set them).
       parameters:
       - in: path
         name: gym_id
@@ -4169,8 +4169,8 @@ paths:
     patch:
       operationId: platform_gyms_messages_partial_update
       description: |-
-        Set this gym's hour (and, for a plan ending soon, its days) in place of Rackline's; both null is Use
-        Rackline's Times. Pause or Resume (`is_on`) only for the messages Rackline sends the gym's owner.
+        Set this gym's hour (and, for a plan ending soon, its days) in place of Dumbelo's; both null is Use
+        Dumbelo's Times. Pause or Resume (`is_on`) only for the messages Dumbelo sends the gym's owner.
       parameters:
       - in: path
         name: gym_id
@@ -4183,12 +4183,12 @@ paths:
         schema:
           type: string
           enum:
+          - dumbelo_invoice_due
+          - dumbelo_payment_received
           - payment_due
           - payment_received
           - plan_ending
           - plan_ends_today
-          - rackline_invoice_due
-          - rackline_payment_received
           - task_assigned
         required: true
       tags:
@@ -4216,8 +4216,8 @@ paths:
   /api/platform/gyms/{gym_id}/plan/:
     get:
       operationId: platform_gyms_plan_retrieve
-      description: 'A gym''s Rackline plan: its prices, branch quota, billing day
-        and WhatsApp mode.'
+      description: 'A gym''s Dumbelo plan: its prices, branch quota, billing day and
+        WhatsApp mode.'
       parameters:
       - in: path
         name: gym_id
@@ -4295,7 +4295,7 @@ paths:
   /api/platform/gyms/{id}/:
     get:
       operationId: platform_gyms_retrieve
-      description: 'Every gym on Rackline. Gyms are never deleted: a gym that stops
+      description: 'Every gym on Dumbelo. Gyms are never deleted: a gym that stops
         paying is suspended.'
       parameters:
       - in: path
@@ -4386,7 +4386,7 @@ paths:
     post:
       operationId: platform_gyms_suspend_create
       description: 'Pause the gym: staff and members are refused at once, admins keep
-        their Rackline plan, messages stop.'
+        their Dumbelo plan, messages stop.'
       parameters:
       - in: path
         name: id
@@ -4420,7 +4420,7 @@ paths:
   /api/platform/invoice-payments/{id}/:
     get:
       operationId: platform_invoice_payments_retrieve
-      description: 'A payment to Rackline. Never deleted: Void Payment keeps it, with
+      description: 'A payment to Dumbelo. Never deleted: Void Payment keeps it, with
         a reason, and the invoice owes it again.'
       parameters:
       - in: path
@@ -4443,7 +4443,7 @@ paths:
   /api/platform/invoice-payments/{id}/void/:
     post:
       operationId: platform_invoice_payments_void_create
-      description: 'A payment to Rackline. Never deleted: Void Payment keeps it, with
+      description: 'A payment to Dumbelo. Never deleted: Void Payment keeps it, with
         a reason, and the invoice owes it again.'
       parameters:
       - in: path
@@ -4479,7 +4479,7 @@ paths:
     get:
       operationId: platform_invoices_list
       description: |-
-        Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+        Every gym's Dumbelo invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
         job, never by hand; corrected by voiding.
       parameters:
       - in: query
@@ -4525,7 +4525,7 @@ paths:
     get:
       operationId: platform_invoices_retrieve
       description: |-
-        Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+        Every gym's Dumbelo invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
         job, never by hand; corrected by voiding.
       parameters:
       - in: path
@@ -4675,12 +4675,12 @@ paths:
         schema:
           type: string
           enum:
+          - dumbelo_invoice_due
+          - dumbelo_payment_received
           - payment_due
           - payment_received
           - plan_ending
           - plan_ends_today
-          - rackline_invoice_due
-          - rackline_payment_received
           - task_assigned
         description: |-
           * `plan_ending` - Plan ending soon
@@ -4688,8 +4688,8 @@ paths:
           * `payment_due` - Payment due
           * `payment_received` - Payment received
           * `task_assigned` - Task assigned
-          * `rackline_invoice_due` - Rackline invoice due
-          * `rackline_payment_received` - Rackline payment received
+          * `dumbelo_invoice_due` - Dumbelo invoice due
+          * `dumbelo_payment_received` - Dumbelo payment received
       - name: limit
         required: false
         in: query
@@ -4747,7 +4747,7 @@ paths:
   /api/platform/prices/:
     get:
       operationId: platform_prices_list
-      description: 'Rackline''s price lists, newest first. Added, never edited: gyms
+      description: 'Dumbelo''s price lists, newest first. Added, never edited: gyms
         move to new prices one by one.'
       parameters:
       - name: limit
@@ -4775,7 +4775,7 @@ paths:
           description: ''
     post:
       operationId: platform_prices_create
-      description: 'Rackline''s price lists, newest first. Added, never edited: gyms
+      description: 'Dumbelo''s price lists, newest first. Added, never edited: gyms
         move to new prices one by one.'
       tags:
       - platform
@@ -4821,7 +4821,7 @@ paths:
     get:
       operationId: platform_summary_retrieve
       description: |-
-        Console → Home: gyms by status, what they owe Rackline, branch requests waiting, today's WhatsApp messages
+        Console → Home: gyms by status, what they owe Dumbelo, branch requests waiting, today's WhatsApp messages
         and the shared number's month, and what on the server is down or failed. A fixed number of queries.
       tags:
       - platform
@@ -4837,7 +4837,7 @@ paths:
   /api/platform/whatsapp-accounts/:
     get:
       operationId: platform_whatsapp_accounts_list
-      description: 'WhatsApp accounts: Rackline''s shared number first, then gyms''
+      description: 'WhatsApp accounts: Dumbelo''s shared number first, then gyms''
         own. Filter with `?gym=` or `?status=`.'
       parameters:
       - in: query
@@ -4908,7 +4908,7 @@ paths:
   /api/platform/whatsapp-accounts/{id}/:
     get:
       operationId: platform_whatsapp_accounts_retrieve
-      description: 'WhatsApp accounts: Rackline''s shared number first, then gyms''
+      description: 'WhatsApp accounts: Dumbelo''s shared number first, then gyms''
         own. Filter with `?gym=` or `?status=`.'
       parameters:
       - in: path
@@ -5032,12 +5032,12 @@ paths:
         schema:
           type: string
           enum:
+          - dumbelo_invoice_due
+          - dumbelo_payment_received
           - payment_due
           - payment_received
           - plan_ending
           - plan_ends_today
-          - rackline_invoice_due
-          - rackline_payment_received
           - task_assigned
         description: |-
           * `plan_ending` - Plan ending soon
@@ -5045,8 +5045,8 @@ paths:
           * `payment_due` - Payment due
           * `payment_received` - Payment received
           * `task_assigned` - Task assigned
-          * `rackline_invoice_due` - Rackline invoice due
-          * `rackline_payment_received` - Rackline payment received
+          * `dumbelo_invoice_due` - Dumbelo invoice due
+          * `dumbelo_payment_received` - Dumbelo payment received
       - name: limit
         required: false
         in: query
@@ -5172,7 +5172,7 @@ paths:
   /api/platform/whatsapp-templates/kinds/:
     get:
       operationId: platform_whatsapp_templates_kinds_list
-      description: The messages Rackline sends and the details each can fill a template
+      description: The messages Dumbelo sends and the details each can fill a template
         with. A fixed list of seven.
       tags:
       - platform
@@ -5191,9 +5191,9 @@ paths:
     get:
       operationId: platform_whatsapp_usage_retrieve
       description: |-
-        Console → WhatsApp usage: each gym's messages delivered from Rackline's shared number in a month (each in the
+        Console → WhatsApp usage: each gym's messages delivered from Dumbelo's shared number in a month (each in the
         gym's own days, as its invoice counts them) and what they came to, the biggest first, with the month's totals.
-        Counts and Rackline's money only. A fixed number of queries whatever the number of gyms.
+        Counts and Dumbelo's money only. A fixed number of queries whatever the number of gyms.
       parameters:
       - in: query
         name: limit
@@ -6388,7 +6388,7 @@ paths:
     get:
       operationId: support_access_list
       description: |-
-        An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+        An admin lets Dumbelo support look inside the gym for a few hours, and can take it back at any time.
 
         A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
         written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
@@ -6420,7 +6420,7 @@ paths:
     post:
       operationId: support_access_create
       description: |-
-        An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+        An admin lets Dumbelo support look inside the gym for a few hours, and can take it back at any time.
 
         A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
         written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
@@ -6451,7 +6451,7 @@ paths:
   /api/support-access/{id}/end/:
     post:
       operationId: support_access_end_create
-      description: Take the access back now. Rackline loses the gym on its next call.
+      description: Take the access back now. Dumbelo loses the gym on its next call.
       parameters:
       - in: path
         name: id
@@ -6902,7 +6902,7 @@ components:
           type: string
           format: date
           readOnly: true
-          description: 'The day it was added to Rackline: money recorded from then
+          description: 'The day it was added to Dumbelo: money recorded from then
             on moves its balance'
         is_active:
           type: boolean
@@ -7167,7 +7167,7 @@ components:
       - trainer
     AutomationSchedule:
       type: object
-      description: Rackline's times, for every gym that has no times of its own.
+      description: Dumbelo's times, for every gym that has no times of its own.
       properties:
         reminder_hour:
           type: integer
@@ -7271,7 +7271,7 @@ components:
         note:
           type: string
           readOnly: true
-          description: What the admin told Rackline, e.g. where it opens
+          description: What the admin told Dumbelo, e.g. where it opens
         status:
           allOf:
           - $ref: '#/components/schemas/BranchAskStatusEnum'
@@ -7471,7 +7471,7 @@ components:
         * `other` - Other
     Charge:
       type: object
-      description: 'A charge waiting for the gym''s next invoice: added by a Rackline
+      description: 'A charge waiting for the gym''s next invoice: added by a Dumbelo
         admin, or branches approved in the month.'
       properties:
         id:
@@ -7683,7 +7683,7 @@ components:
         note:
           type: string
           readOnly: true
-          description: What the admin told Rackline, e.g. where it opens
+          description: What the admin told Dumbelo, e.g. where it opens
         status:
           allOf:
           - $ref: '#/components/schemas/BranchAskStatusEnum'
@@ -7813,7 +7813,7 @@ components:
         tax_paise:
           type: integer
           readOnly: true
-          description: 'GST: zero until Rackline charges it'
+          description: 'GST: zero until Dumbelo charges it'
         total_paise:
           type: integer
           readOnly: true
@@ -7883,8 +7883,7 @@ components:
       - voided_by_name
     ConsoleInvoicePayment:
       type: object
-      description: A payment to Rackline and its receipt, as the gym's admins see
-        it.
+      description: A payment to Dumbelo and its receipt, as the gym's admins see it.
       properties:
         id:
           type: integer
@@ -7898,7 +7897,7 @@ components:
           readOnly: true
         method:
           allOf:
-          - $ref: '#/components/schemas/RacklinePayMethodEnum'
+          - $ref: '#/components/schemas/DumbeloPayMethodEnum'
           readOnly: true
         reference:
           type: string
@@ -7984,7 +7983,7 @@ components:
         tax_paise:
           type: integer
           readOnly: true
-          description: 'GST: zero until Rackline charges it'
+          description: 'GST: zero until Dumbelo charges it'
         total_paise:
           type: integer
           readOnly: true
@@ -8062,7 +8061,7 @@ components:
           nullable: true
         is_shared:
           type: boolean
-          description: Sent from Rackline's shared number (an account with no gym).
+          description: Sent from Dumbelo's shared number (an account with no gym).
           readOnly: true
         template:
           type: integer
@@ -8113,7 +8112,7 @@ components:
         billable:
           type: boolean
           readOnly: true
-          description: Sent from Rackline's shared number, so billed to the gym
+          description: Sent from Dumbelo's shared number, so billed to the gym
         rate_paise:
           type: integer
           readOnly: true
@@ -8169,7 +8168,7 @@ components:
     ConsolePlan:
       type: object
       description: |-
-        A gym's Rackline plan as both its admins and the Console see it. `branches_in_use`, `owed_paise` and
+        A gym's Dumbelo plan as both its admins and the Console see it. `branches_in_use`, `owed_paise` and
         `current_prices` are filled in by the view (one query each).
       properties:
         base_paise:
@@ -8602,6 +8601,20 @@ components:
       required:
       - branch
       - counted_paise
+    DumbeloPayMethodEnum:
+      enum:
+      - bank
+      - upi
+      - cheque
+      - card
+      - cash
+      type: string
+      description: |-
+        * `bank` - Bank transfer
+        * `upi` - UPI
+        * `cheque` - Cheque
+        * `card` - Card
+        * `cash` - Cash
     EntryRefRequest:
       type: object
       properties:
@@ -9016,8 +9029,8 @@ components:
         is_owner:
           type: boolean
           readOnly: true
-          description: The admin who handles Rackline billing; other admins can't
-            remove them
+          description: The admin who handles Dumbelo billing; other admins can't remove
+            them
         is_active:
           type: boolean
           readOnly: true
@@ -9034,7 +9047,7 @@ components:
       - phone
     GymAdminAddRequest:
       type: object
-      description: 'Add Admin: their email, and for someone new to Rackline, their
+      description: 'Add Admin: their email, and for someone new to Dumbelo, their
         name and a first password.'
       properties:
         email:
@@ -9181,7 +9194,7 @@ components:
         owed_paise:
           type: integer
           readOnly: true
-          description: What its open Rackline invoices still owe
+          description: What its open Dumbelo invoices still owe
         created_at:
           type: string
           format: date-time
@@ -9189,7 +9202,7 @@ components:
         status_reason:
           type: string
           readOnly: true
-          description: Why a Rackline admin last suspended or activated it
+          description: Why a Dumbelo admin last suspended or activated it
         status_changed_at:
           type: string
           format: date-time
@@ -9351,7 +9364,7 @@ components:
         owed_paise:
           type: integer
           readOnly: true
-          description: What its open Rackline invoices still owe
+          description: What its open Dumbelo invoices still owe
         created_at:
           type: string
           format: date-time
@@ -9371,7 +9384,7 @@ components:
       - timezone
     GymSettings:
       type: object
-      description: 'The gym as Rackline set it up: its name, slug and time zone. Its
+      description: 'The gym as Dumbelo set it up: its name, slug and time zone. Its
         message switches are /api/gym/messages/.'
       properties:
         name:
@@ -9402,7 +9415,7 @@ components:
     GymUsage:
       type: object
       description: |-
-        The gym's messages delivered from Rackline's shared number in its billing month so far, and what they come
+        The gym's messages delivered from Dumbelo's shared number in its billing month so far, and what they come
         to on the invoice written on `billed_on`.
       properties:
         mode:
@@ -9528,7 +9541,7 @@ components:
         tax_paise:
           type: integer
           readOnly: true
-          description: 'GST: zero until Rackline charges it'
+          description: 'GST: zero until Dumbelo charges it'
         total_paise:
           type: integer
           readOnly: true
@@ -9658,8 +9671,7 @@ components:
         * `adjustment` - Other charge
     InvoicePayment:
       type: object
-      description: A payment to Rackline and its receipt, as the gym's admins see
-        it.
+      description: A payment to Dumbelo and its receipt, as the gym's admins see it.
       properties:
         id:
           type: integer
@@ -9673,7 +9685,7 @@ components:
           readOnly: true
         method:
           allOf:
-          - $ref: '#/components/schemas/RacklinePayMethodEnum'
+          - $ref: '#/components/schemas/DumbeloPayMethodEnum'
           readOnly: true
         reference:
           type: string
@@ -9750,7 +9762,7 @@ components:
         tax_paise:
           type: integer
           readOnly: true
-          description: 'GST: zero until Rackline charges it'
+          description: 'GST: zero until Dumbelo charges it'
         total_paise:
           type: integer
           readOnly: true
@@ -9818,7 +9830,7 @@ components:
       type: string
       description: |-
         * `reminders` - Reminders
-        * `invoices` - Rackline invoices
+        * `invoices` - Dumbelo invoices
         * `retries` - Message retries
         * `webhook_replay` - Webhook replay
     JobRun:
@@ -9995,14 +10007,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Role'
-        is_rackline_admin:
+        is_dumbelo_admin:
           type: boolean
           description: 'Runs the Console (/console): gyms, their admins, prices'
       required:
       - email
       - id
       - initials
-      - is_rackline_admin
+      - is_dumbelo_admin
       - name
       - phone
       - roles
@@ -10398,7 +10410,7 @@ components:
       - waiting_retry
     MessageKind:
       type: object
-      description: A message Rackline sends, and the details a template for it can
+      description: A message Dumbelo sends, and the details a template for it can
         use.
       properties:
         kind:
@@ -10420,8 +10432,8 @@ components:
       - payment_due
       - payment_received
       - task_assigned
-      - rackline_invoice_due
-      - rackline_payment_received
+      - dumbelo_invoice_due
+      - dumbelo_payment_received
       type: string
       description: |-
         * `plan_ending` - Plan ending soon
@@ -10429,8 +10441,8 @@ components:
         * `payment_due` - Payment due
         * `payment_received` - Payment received
         * `task_assigned` - Task assigned
-        * `rackline_invoice_due` - Rackline invoice due
-        * `rackline_payment_received` - Rackline payment received
+        * `dumbelo_invoice_due` - Dumbelo invoice due
+        * `dumbelo_payment_received` - Dumbelo payment received
     MessageStatusEnum:
       enum:
       - queued
@@ -10701,7 +10713,7 @@ components:
         owed_paise:
           type: integer
           readOnly: true
-          description: What its open Rackline invoices still owe
+          description: What its open Dumbelo invoices still owe
         created_at:
           type: string
           format: date-time
@@ -10709,7 +10721,7 @@ components:
         status_reason:
           type: string
           readOnly: true
-          description: Why a Rackline admin last suspended or activated it
+          description: Why a Dumbelo admin last suspended or activated it
         status_changed_at:
           type: string
           format: date-time
@@ -10723,7 +10735,7 @@ components:
         owner_new_login:
           type: boolean
           readOnly: true
-          description: 'False: the owner already had a Rackline login and keeps their
+          description: 'False: the owner already had a Dumbelo login and keeps their
             password'
       required:
       - billing_email
@@ -10950,7 +10962,7 @@ components:
       properties:
         owed_paise:
           type: integer
-          description: What every gym owes Rackline on its open invoices
+          description: What every gym owes Dumbelo on its open invoices
         gyms_owing:
           type: integer
         overdue_paise:
@@ -11692,7 +11704,7 @@ components:
           format: int64
     PatchedAutomationScheduleRequest:
       type: object
-      description: Rackline's times, for every gym that has no times of its own.
+      description: Dumbelo's times, for every gym that has no times of its own.
       properties:
         reminder_hour:
           type: integer
@@ -11783,8 +11795,8 @@ components:
     PatchedGymTimesRequest:
       type: object
       description: |-
-        A Rackline admin's word on one of a gym's messages: its own hour and days (null for both: Use Rackline's
-        Times), and Pause or Resume for the messages Rackline sends the owner.
+        A Dumbelo admin's word on one of a gym's messages: its own hour and days (null for both: Use Dumbelo's
+        Times), and Pause or Resume for the messages Dumbelo sends the owner.
       properties:
         hour:
           type: integer
@@ -12093,7 +12105,7 @@ components:
     PatchedSwitchRequest:
       type: object
       description: 'Pause or Resume. The only thing a gym''s admins change about a
-        message: when it goes is Rackline''s.'
+        message: when it goes is Dumbelo''s.'
       properties:
         is_on:
           type: boolean
@@ -12731,7 +12743,7 @@ components:
       - price_paise
     PlatformSummary:
       type: object
-      description: 'Console → Home. Counts and Rackline''s own money only: nothing
+      description: 'Console → Home. Counts and Dumbelo''s own money only: nothing
         from inside a gym.'
       properties:
         checked_at:
@@ -12911,20 +12923,6 @@ components:
           description: The code printed on the branch's wall QR
       required:
       - code
-    RacklinePayMethodEnum:
-      enum:
-      - bank
-      - upi
-      - cheque
-      - card
-      - cash
-      type: string
-      description: |-
-        * `bank` - Bank transfer
-        * `upi` - UPI
-        * `cheque` - Cheque
-        * `card` - Card
-        * `cash` - Cash
     RecipientEnum:
       enum:
       - member
@@ -12972,7 +12970,7 @@ components:
           maximum: 1000000000
           minimum: 1
         method:
-          $ref: '#/components/schemas/RacklinePayMethodEnum'
+          $ref: '#/components/schemas/DumbeloPayMethodEnum'
         reference:
           type: string
           default: ''
@@ -13722,8 +13720,8 @@ components:
           $ref: '#/components/schemas/RoleEnum'
         is_owner:
           type: boolean
-          description: The admin who handles Rackline billing; other admins can't
-            remove them
+          description: The admin who handles Dumbelo billing; other admins can't remove
+            them
         branches:
           type: array
           items:
@@ -13751,7 +13749,7 @@ components:
     Rule:
       type: object
       description: 'One message for one gym: on or paused, who switches it, and when
-        it goes (Rackline''s times or the gym''s own).'
+        it goes (Dumbelo''s times or the gym''s own).'
       properties:
         kind:
           $ref: '#/components/schemas/MessageKindEnum'
@@ -13763,7 +13761,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/SwitchedByEnum'
           readOnly: true
-          description: 'Who pauses and resumes it: the gym''s admins or Rackline'
+          description: 'Who pauses and resumes it: the gym''s admins or Dumbelo'
         hour:
           type: integer
           nullable: true
@@ -13777,7 +13775,7 @@ components:
           description: 'A plan ending soon: how many days before the end'
         gyms_own_time:
           type: boolean
-          description: A Rackline admin set this gym's time in place of Rackline's
+          description: A Dumbelo admin set this gym's time in place of Dumbelo's
       required:
       - days_ahead
       - gyms_own_time
@@ -14081,8 +14079,8 @@ components:
         is_owner:
           type: boolean
           readOnly: true
-          description: The admin who handles Rackline billing; other admins can't
-            remove them
+          description: The admin who handles Dumbelo billing; other admins can't remove
+            them
         is_active:
           type: boolean
         shift:
@@ -14329,7 +14327,7 @@ components:
       - plan
     SupportAccess:
       type: object
-      description: A window an admin opened for Rackline support. `open` says whether
+      description: A window an admin opened for Dumbelo support. `open` says whether
         it is running right now.
       properties:
         id:
@@ -14361,7 +14359,7 @@ components:
       - starts
     SupportAccessRequest:
       type: object
-      description: A window an admin opened for Rackline support. `open` says whether
+      description: A window an admin opened for Dumbelo support. `open` says whether
         it is running right now.
       properties:
         hours:
@@ -14369,13 +14367,13 @@ components:
           maximum: 72
           minimum: 1
           writeOnly: true
-          description: How long Rackline support may look
+          description: How long Dumbelo support may look
       required:
       - hours
     SwitchedByEnum:
       enum:
       - gym
-      - rackline
+      - dumbelo
       type: string
     Task:
       type: object
@@ -14730,7 +14728,7 @@ components:
       - numbers
     WhatsAppAccount:
       type: object
-      description: An account as Rackline admins see it. `template_count` comes from
+      description: An account as Dumbelo admins see it. `template_count` comes from
         the queryset.
       properties:
         id:
@@ -14740,7 +14738,7 @@ components:
           type: integer
           readOnly: true
           nullable: true
-          description: Empty for Rackline's shared number
+          description: Empty for Dumbelo's shared number
         gym_name:
           type: string
           readOnly: true
@@ -14819,7 +14817,7 @@ components:
       - webhook_url
     WhatsAppAccountCreateRequest:
       type: object
-      description: Add Account. No gym means Rackline's shared number.
+      description: Add Account. No gym means Dumbelo's shared number.
       properties:
         waba_id:
           type: string
@@ -14838,8 +14836,8 @@ components:
         gym:
           type: integer
           nullable: true
-          description: The gym whose own number this is; leave out for Rackline's
-            shared number
+          description: The gym whose own number this is; leave out for Dumbelo's shared
+            number
         access_token:
           type: string
           writeOnly: true
@@ -15013,7 +15011,7 @@ components:
       - 'off'
       type: string
       description: |-
-        * `shared` - Rackline's number
+        * `shared` - Dumbelo's number
         * `own` - The gym's own number
         * `off` - Off
     WhatsappTemplateStatusEnum:

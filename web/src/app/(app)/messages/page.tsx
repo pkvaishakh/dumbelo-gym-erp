@@ -18,10 +18,10 @@ const STATUSES = [
   { value: "sent", label: "Sent" }, { value: "delivered", label: "Delivered" }, { value: "read", label: "Read" },
 ];
 
-/** What this billing month's messages on Rackline's number come to so far. A gym on its own number pays Meta. */
+/** What this billing month's messages on Dumbelo's number come to so far. A gym on its own number pays Meta. */
 function Usage({ u }: { u: GymUsage }) {
   if (u.mode !== "shared") {
-    return <p className="rl-row__meta">{u.mode === "own" ? "Your messages go from your own WhatsApp number, and Meta bills you for them." : "WhatsApp messages are off for your gym. Ask Rackline to turn them on."}</p>;
+    return <p className="rl-row__meta">{u.mode === "own" ? "Your messages go from your own WhatsApp number, and Meta bills you for them." : "WhatsApp messages are off for your gym. Ask Dumbelo to turn them on."}</p>;
   }
   return (
     <>
@@ -29,7 +29,7 @@ function Usage({ u }: { u: GymUsage }) {
         <Stat icon={IndianRupee} accent value={rupees(u.amount_paise)} label="So far this billing month" note={`${plural(u.messages, "message")} delivered`} />
         <Stat icon={CalendarClock} value={day(u.billed_on)} label="Goes on the invoice of" note={`For ${day(u.starts)} to ${day(u.ends)}`} />
       </div>
-      <p className="rl-row__meta">Each message delivered from Rackline&apos;s number is billed at your plan&apos;s rate. One that never reached the phone costs nothing.</p>
+      <p className="rl-row__meta">Each message delivered from Dumbelo&apos;s number is billed at your plan&apos;s rate. One that never reached the phone costs nothing.</p>
     </>
   );
 }
@@ -59,7 +59,7 @@ function MessagesLog() {
       <PageBar title="Messages" sub={list.data ? `${plural(count, "message")}${narrowed ? ` • ${narrowed}` : ""}` : "Every WhatsApp message sent"} back="/more" />
       <main className="rl-app__main">
         {admin && (
-          <Section title="Rackline's number" aside={<span className="rl-row__meta">This billing month</span>}>
+          <Section title="Dumbelo's number" aside={<span className="rl-row__meta">This billing month</span>}>
             {usage ? <Usage u={usage} /> : <SkeletonRows n={1} />}
           </Section>
         )}

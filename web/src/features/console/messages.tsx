@@ -1,6 +1,6 @@
 "use client";
-/* When messages go out, in the Console: Rackline's times for every gym (Automation) and one gym's messages, with
-   its own times and Use Rackline's Times. Gyms only pause and resume their own messages; the times are set here. */
+/* When messages go out, in the Console: Dumbelo's times for every gym (Automation) and one gym's messages, with
+   its own times and Use Dumbelo's Times. Gyms only pause and resume their own messages; the times are set here. */
 import type { LucideIcon } from "lucide-react";
 import { AlertCircle, BadgeIndianRupee, CalendarClock, CalendarX, ClipboardList, FileText, Receipt, ReceiptText } from "lucide-react";
 import { useState } from "react";
@@ -13,7 +13,7 @@ import { DAY_CHOICES, daysLabel, hourLabel, HOURS, MAX_WARNINGS, MESSAGE_TO, whe
 
 const ICON: Record<string, LucideIcon> = {
   plan_ending: CalendarClock, plan_ends_today: CalendarX, payment_due: BadgeIndianRupee, payment_received: Receipt,
-  task_assigned: ClipboardList, rackline_invoice_due: FileText, rackline_payment_received: ReceiptText,
+  task_assigned: ClipboardList, dumbelo_invoice_due: FileText, dumbelo_payment_received: ReceiptText,
 };
 
 /** An hour of the day on the gym's own clock. */
@@ -54,7 +54,7 @@ export function DaysField({ value, onChange, error }: { value: number[]; onChang
   );
 }
 
-/** Edit Times: Rackline's reminder hour, days ahead and invoice hour, for every gym without its own. */
+/** Edit Times: Dumbelo's reminder hour, days ahead and invoice hour, for every gym without its own. */
 export function AutomationSheet({ schedule, open, onClose }: { schedule: AutomationSchedule; open: boolean; onClose: () => void }) {
   const fresh = () => ({ reminder_hour: schedule.reminder_hour, days_ahead: schedule.days_ahead, invoice_hour: schedule.invoice_hour });
   const [f, setF] = useState(fresh);
@@ -78,7 +78,7 @@ export function AutomationSheet({ schedule, open, onClose }: { schedule: Automat
     <Sheet open={open} onClose={close} title="Edit Times">
       <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
         <HourField label="Reminders go out at" value={f.reminder_hour} onChange={(reminder_hour) => setF({ ...f, reminder_hour })}
-          error={fieldError(a.error, "reminder_hour")} hint="On each gym's own clock. Rackline's invoice reminders to owners go at this hour too." />
+          error={fieldError(a.error, "reminder_hour")} hint="On each gym's own clock. Dumbelo's invoice reminders to owners go at this hour too." />
         <DaysField value={f.days_ahead} onChange={(days_ahead) => setF({ ...f, days_ahead })} error={err ?? fieldError(a.error, "days_ahead")} />
         <HourField label="Invoices are written at" value={f.invoice_hour} onChange={(invoice_hour) => setF({ ...f, invoice_hour })}
           error={fieldError(a.error, "invoice_hour")} hint="On a gym's billing day, on its own clock." />
@@ -89,7 +89,7 @@ export function AutomationSheet({ schedule, open, onClose }: { schedule: Automat
   );
 }
 
-/** One of a gym's messages: Pause or Resume for Rackline's own, and this gym's times for the ones sent at an hour. */
+/** One of a gym's messages: Pause or Resume for Dumbelo's own, and this gym's times for the ones sent at an hour. */
 function MessageSheet({ gymId, rule, onClose }: { gymId: number; rule: Rule | null; onClose: () => void }) {
   const [f, setF] = useState({ hour: 0, days: [] as number[] });
   const [kind, setKind] = useState<string | null>(null);
@@ -114,7 +114,7 @@ function MessageSheet({ gymId, rule, onClose }: { gymId: number; rule: Rule | nu
       {rule && (
         <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); send(days ? { hour: f.hour, days_ahead: f.days } : { hour: f.hour }); }}>
           <p className="rl-row__meta" style={{ margin: 0 }}>{MESSAGE_TO[rule.kind]} • {whenLabel(rule)}{rule.gyms_own_time ? " • This gym's own time" : ""}</p>
-          {rule.switched_by === "rackline" && (
+          {rule.switched_by === "dumbelo" && (
             <div className="rl-card">
               <Setting name={`send-${rule.kind}`} title="Send it" note={rule.is_on ? "On for this gym" : "Paused for this gym"} checked={rule.is_on}
                 disabled={a.busy} onChange={(on) => send({ is_on: on }, false)} />
@@ -123,7 +123,7 @@ function MessageSheet({ gymId, rule, onClose }: { gymId: number; rule: Rule | nu
           {scheduled && (
             <>
               <HourField label="Goes out at" value={f.hour} onChange={(hour) => setF({ ...f, hour })} error={fieldError(a.error, "hour")}
-                hint="On the gym's own clock. Saving makes it this gym's own time, in place of Rackline's." />
+                hint="On the gym's own clock. Saving makes it this gym's own time, in place of Dumbelo's." />
               {days && <DaysField value={f.days} onChange={(d) => setF({ ...f, days: d })} error={fieldError(a.error, "days_ahead")} />}
             </>
           )}
@@ -133,7 +133,7 @@ function MessageSheet({ gymId, rule, onClose }: { gymId: number; rule: Rule | nu
               <button className="rl-button rl-button--block" type="submit" disabled={a.busy || (days && !f.days.length)}>{a.busy ? "Saving…" : "Save Times"}</button>
               {rule.gyms_own_time && (
                 <button className="rl-button rl-button--secondary rl-button--block" type="button" disabled={a.busy}
-                  onClick={() => send({ hour: null, days_ahead: null })}>Use Rackline&apos;s Times</button>
+                  onClick={() => send({ hour: null, days_ahead: null })}>Use Dumbelo&apos;s Times</button>
               )}
             </div>
           )}
@@ -168,10 +168,10 @@ export function GymMessages({ gymId }: { gymId: number }) {
           <ul className="rl-card rl-remind">
             {rules.map((r) => {
               const icon = ICON[r.kind] ?? FileText;
-              if (r.hour != null || r.switched_by === "rackline") {
+              if (r.hour != null || r.switched_by === "dumbelo") {
                 return <MenuRow key={r.kind} icon={icon} title={r.label} value={standing(r)} onClick={() => setOpen(r.kind)} />;
               }
-              return ( // the gym's own switch, sent as it happens: nothing for Rackline to set
+              return ( // the gym's own switch, sent as it happens: nothing for Dumbelo to set
                 <li key={r.kind}><div className="rl-remind__row">
                   <span className="rl-chipicon" aria-hidden="true"><Icon as={icon} size="sm" /></span>
                   <span className="rl-remind__text"><span className="rl-row__title">{r.label}</span></span>
@@ -180,7 +180,7 @@ export function GymMessages({ gymId }: { gymId: number }) {
               );
             })}
           </ul>
-          <p className="rl-row__meta">The gym&apos;s admins pause and resume its own messages. Times without &ldquo;own time&rdquo; are Rackline&apos;s, from Automation.</p>
+          <p className="rl-row__meta">The gym&apos;s admins pause and resume its own messages. Times without &ldquo;own time&rdquo; are Dumbelo&apos;s, from Automation.</p>
         </>
       )}
       <MessageSheet gymId={gymId} rule={rule} onClose={() => setOpen(null)} />

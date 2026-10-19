@@ -32,17 +32,17 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: rackline
-          POSTGRES_PASSWORD: rackline
-          POSTGRES_DB: rackline
+          POSTGRES_USER: dumbelo
+          POSTGRES_PASSWORD: dumbelo
+          POSTGRES_DB: dumbelo
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U rackline -d rackline"
+          --health-cmd "pg_isready -U dumbelo -d dumbelo"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgres://rackline:rackline@localhost:5432/rackline
+      DATABASE_URL: postgres://dumbelo:dumbelo@localhost:5432/dumbelo
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -80,23 +80,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build the image a server runs
-        run: docker build -t rackline-api:ci api
+        run: docker build -t dumbelo-api:ci api
       - name: Start it and ask whether it is well
         run: |
           # No DATABASE_URL, so the container falls back to SQLite: enough to prove gunicorn serves and the
           # health check answers. What it talks to on a server is in docs/deploy.md.
-          docker run -d --name rackline-api -p 8000:8000 rackline-api:ci
+          docker run -d --name dumbelo-api -p 8000:8000 dumbelo-api:ci
           for _ in $(seq 1 20); do
             body=$(curl -fsS http://localhost:8000/api/health/ || true)
             case "$body" in *'"status":"ok"'*) echo "$body"; exit 0 ;; esac
             sleep 3
           done
           echo "The image never answered on port 8000:"
-          docker logs rackline-api
+          docker logs dumbelo-api
           exit 1
       - name: Stop it
         if: always()
-        run: docker rm -f rackline-api || true
+        run: docker rm -f dumbelo-api || true
 
   e2e:
     name: Flows
@@ -107,17 +107,17 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: rackline
-          POSTGRES_PASSWORD: rackline
-          POSTGRES_DB: rackline
+          POSTGRES_USER: dumbelo
+          POSTGRES_PASSWORD: dumbelo
+          POSTGRES_DB: dumbelo
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U rackline -d rackline"
+          --health-cmd "pg_isready -U dumbelo -d dumbelo"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgres://rackline:rackline@localhost:5432/rackline
+      DATABASE_URL: postgres://dumbelo:dumbelo@localhost:5432/dumbelo
       # The flows sign in as the demo admin a dozen times in under two minutes, from one address: more than the
       # sign-in limits a real person gets (10 a minute per account). Only this job's API is told to allow it.
       THROTTLE_LOGIN: 1000/min

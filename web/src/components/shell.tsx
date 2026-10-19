@@ -59,7 +59,7 @@ export function HomeBar({ home = "/home" }: { home?: string }) {
   return (
     <>
       <header className="rl-appbar"><div className="rl-appbar__in">
-        <Link className="rl-logo" href={home} aria-label="Rackline home"><Mark /></Link>
+        <Link className="rl-logo" href={home} aria-label="Dumbelo home"><Mark /></Link>
         <div className="rl-appbar__spacer" />
         <Avatar />
       </div></header>
@@ -205,7 +205,7 @@ const CONSOLE_UNDER: Record<string, RegExp> = {
   "/console/more": /^\/console\/(prices|requests|whatsapp|messages|automation)(\/|$)/,
 };
 
-/** The Console's bottom navigation, for Rackline admins. */
+/** The Console's bottom navigation, for Dumbelo admins. */
 export function ConsoleTabBar() {
   const path = usePathname();
   if (/\/(new|edit)(\/|$)/.test(path)) return null;

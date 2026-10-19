@@ -1,6 +1,6 @@
-"""The Console's side of when messages go out: Rackline's times for every gym, and one gym's own.
+"""The Console's side of when messages go out: Dumbelo's times for every gym, and one gym's own.
 
-Rackline admins only (`RacklineViewMixin`), no X-Gym. Every change is audited, against its gym where it has one.
+Dumbelo admins only (`DumbeloViewMixin`), no X-Gym. Every change is audited, against its gym where it has one.
 The jobs read these on their next tick: nothing restarts.
 """
 from django.db import transaction
@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from apps.audit.models import record
 from apps.core.errors import RuleBroken
-from apps.core.rackline import RacklineViewMixin
+from apps.core.dumbelo import DumbeloViewMixin
 from apps.gyms.models import Gym
 
 from .. import automation
@@ -24,7 +24,7 @@ KIND = OpenApiParameter("kind", str, OpenApiParameter.PATH, enum=[k for k, _ in 
 
 
 @extend_schema(tags=["platform"])
-class AutomationView(RacklineViewMixin, APIView):
+class AutomationView(DumbeloViewMixin, APIView):
     """Console → Automation: the hour reminders go out on each gym's clock, how many days before a plan ends
     members are warned, and the hour on a billing day invoices are written. Whole hours only."""
 
@@ -43,15 +43,15 @@ class AutomationView(RacklineViewMixin, APIView):
         return Response(AutomationScheduleSerializer(schedule).data)
 
 
-class _GymMessages(RacklineViewMixin, APIView):
+class _GymMessages(DumbeloViewMixin, APIView):
     def gym(self) -> Gym:
         return get_object_or_404(Gym, pk=self.kwargs["gym_id"])
 
 
 @extend_schema(tags=["platform"], parameters=[GYM_ID])
 class GymMessageTimesView(_GymMessages):
-    """A gym's messages as Rackline sees them: on or paused, and when each goes out (Rackline's times, or the
-    gym's own where a Rackline admin set them)."""
+    """A gym's messages as Dumbelo sees them: on or paused, and when each goes out (Dumbelo's times, or the
+    gym's own where a Dumbelo admin set them)."""
 
     @extend_schema(responses=RuleSerializer(many=True))
     def get(self, request, gym_id):
@@ -63,8 +63,8 @@ class GymMessageTimesView(_GymMessages):
 class GymMessageTimeView(_GymMessages):
     @extend_schema(request=GymTimesSerializer, responses=RuleSerializer)
     def patch(self, request, gym_id, kind):
-        """Set this gym's hour (and, for a plan ending soon, its days) in place of Rackline's; both null is Use
-        Rackline's Times. Pause or Resume (`is_on`) only for the messages Rackline sends the gym's owner."""
+        """Set this gym's hour (and, for a plan ending soon, its days) in place of Dumbelo's; both null is Use
+        Dumbelo's Times. Pause or Resume (`is_on`) only for the messages Dumbelo sends the gym's owner."""
         gym = self.gym()
         if kind not in dict(WhatsAppTemplate.KINDS):
             raise Http404
@@ -77,7 +77,7 @@ class GymMessageTimeView(_GymMessages):
         with transaction.atomic():
             row = None
             if "is_on" in v:
-                row = automation.switch(gym, kind, v["is_on"], rackline=True)
+                row = automation.switch(gym, kind, v["is_on"], dumbelo=True)
             if times := {k: v[k] for k in ("hour", "days_ahead") if k in v}:
                 row = automation.set_times(gym, kind, **times)
         after = automation.rules_for(gym)[kind]

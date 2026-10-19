@@ -38,7 +38,7 @@ export function jobLine(j: JobStatus) {
 /** Run Now's words for each job it can start: what happens, and why running it again is safe. */
 const RUN_NOW: Record<string, string> = {
   reminders: "Lists and sends the reminders of every gym whose reminder hour it is now, and owners' invoice reminders. Nothing already sent goes again.",
-  invoices: "Writes the Rackline invoice of every gym whose billing day it is, from the invoice hour on. A month already written is skipped.",
+  invoices: "Writes the Dumbelo invoice of every gym whose billing day it is, from the invoice hour on. A month already written is skipped.",
   webhook_replay: "Handles Meta's calls of the last 7 days that couldn't be handled again. Statuses only move forward, so nothing is counted twice.",
 };
 

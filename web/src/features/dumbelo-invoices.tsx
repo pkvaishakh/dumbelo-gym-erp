@@ -1,5 +1,5 @@
 "use client";
-/* A gym's Rackline invoices, as its admins and the Console show them: a row for the lists, one invoice's lines and
+/* A gym's Dumbelo invoices, as its admins and the Console show them: a row for the lists, one invoice's lines and
  * payments, and the invoice and receipt to print. The Console's invoice carries more (who recorded what), so these
  * take the fields both have. */
 import { Banknote, FileText, Printer } from "lucide-react";
@@ -8,7 +8,7 @@ import Link from "next/link";
 import type { InvoiceDetail, InvoicePayment, InvoiceRow } from "@/api/gen/model";
 import { DetailBar } from "@/components/shell";
 import { Icon, SkeletonRows } from "@/components/ui";
-import { day, INVOICE_STATUS, invoiceState, RACKLINE_PAY_METHOD, rangeLabel, rupees } from "@/lib/format";
+import { day, INVOICE_STATUS, invoiceState, DUMBELO_PAY_METHOD, rangeLabel, rupees } from "@/lib/format";
 
 type Row = Pick<InvoiceRow, "number" | "period_from" | "period_to" | "status" | "overdue" | "total_paise" | "owed_paise" | "due_on">;
 type Invoice = Omit<InvoiceDetail, "payments"> & { payments: readonly InvoicePayment[] };
@@ -50,7 +50,7 @@ export function InvoiceCard({ inv }: { inv: Invoice }) {
   );
 }
 
-/** Every line on the invoice and its total. GST shows only once Rackline charges it. */
+/** Every line on the invoice and its total. GST shows only once Dumbelo charges it. */
 export function InvoiceLines({ inv }: { inv: Invoice }) {
   return (
     <section className="rl-section" aria-label="What it's for"><div className="rl-card rl-card--pad">
@@ -76,7 +76,7 @@ export function PaymentRows({ payments, href, onOpen }: { payments: readonly Inv
             <span className="rl-chipicon" aria-hidden="true"><Icon as={Banknote} size="sm" /></span>
             <span className="rl-row__title rl-mrow__name">{rupees(p.amount_paise)}</span>
             <span className="rl-row__meta rl-mrow__meta">
-              {p.voided ? `Void: ${p.void_reason}` : `${day(p.paid_on)} • ${RACKLINE_PAY_METHOD[p.method] ?? p.method}${p.reference ? ` • ${p.reference}` : ""}`}
+              {p.voided ? `Void: ${p.void_reason}` : `${day(p.paid_on)} • ${DUMBELO_PAY_METHOD[p.method] ?? p.method}${p.reference ? ` • ${p.reference}` : ""}`}
             </span>
             {p.voided && <span className="rl-status rl-status--off">Void</span>}
           </>
@@ -119,7 +119,7 @@ export function InvoicePaper({ inv }: { inv: Invoice }) {
     <>
       <section className="rl-section">
         <div className="rl-card rl-card--pad">
-          <p className="rl-row__meta" style={{ margin: 0 }}>Rackline</p>
+          <p className="rl-row__meta" style={{ margin: 0 }}>Dumbelo</p>
           <h2 className="rl-section__title" style={{ margin: "var(--space-1) 0 0" }}>Invoice {inv.number}</h2>
           <dl className="rl-facts">
             <dt>Billed to</dt><dd>{inv.gym_name}</dd>
@@ -154,12 +154,12 @@ export function ReceiptPaper({ inv, p }: { inv: Invoice; p: InvoicePayment }) {
   return (
     <section className="rl-section">
       <div className="rl-card rl-card--pad">
-        <p className="rl-row__meta" style={{ margin: 0 }}>Rackline</p>
+        <p className="rl-row__meta" style={{ margin: 0 }}>Dumbelo</p>
         <h2 className="rl-section__title" style={{ margin: "var(--space-1) 0 0" }}>{p.voided ? "Void receipt" : "Receipt"} {p.receipt_number}</h2>
         <dl className="rl-facts">
           <dt>Received from</dt><dd>{inv.gym_name}</dd>
           <dt>Date</dt><dd>{day(p.paid_on)}</dd>
-          <dt>Paid by</dt><dd>{RACKLINE_PAY_METHOD[p.method] ?? p.method}</dd>
+          <dt>Paid by</dt><dd>{DUMBELO_PAY_METHOD[p.method] ?? p.method}</dd>
           {p.reference && <><dt>Reference</dt><dd>{p.reference}</dd></>}
           <dt>For invoice</dt><dd>{inv.number}, {periodText(inv)}</dd>
           {p.voided && <><dt>Void</dt><dd>{p.void_reason}</dd></>}

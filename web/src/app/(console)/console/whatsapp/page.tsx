@@ -9,7 +9,7 @@ import { Badge } from "@/features/console/whatsapp";
 import { plural } from "@/lib/format";
 import { paged, pages } from "@/lib/hooks";
 
-/** The WhatsApp numbers Rackline sends from: its shared number first, then gyms' own. A gym's own number is added
+/** The WhatsApp numbers Dumbelo sends from: its shared number first, then gyms' own. A gym's own number is added
  *  from that gym's screen, so there's never a gym to pick here. */
 export default function WhatsAppAccounts() {
   const list = usePlatformWhatsappAccountsListInfinite(undefined, { query: paged });
@@ -40,12 +40,12 @@ export default function WhatsAppAccounts() {
               <LoadMore q={list} />
             </>
           ) : (
-            <Empty icon={MessageCircle} title="No numbers yet" text="Add Rackline's shared number first: gyms on Rackline's number send their reminders from it.">
+            <Empty icon={MessageCircle} title="No numbers yet" text="Add Dumbelo's shared number first: gyms on Dumbelo's number send their reminders from it.">
               <Link className="rl-button rl-button--block" href="/console/whatsapp/new">Add Shared Number</Link>
             </Empty>
           )}
         </Section>
-        <p className="rl-row__meta">To add a gym&apos;s own number, open the gym from Gyms. Which number a gym sends from is set on its Rackline plan.</p>
+        <p className="rl-row__meta">To add a gym&apos;s own number, open the gym from Gyms. Which number a gym sends from is set on its Dumbelo plan.</p>
       </main>
     </div>
   );

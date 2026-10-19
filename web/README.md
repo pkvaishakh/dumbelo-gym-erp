@@ -1,7 +1,7 @@
-# Rackline web app
+# Dumbelo web app
 
 The phone-first app every role uses (admin, receptionist, trainer, member), installable as a PWA.
-Next.js 15 (App Router) + TypeScript, styled with the Rackline design system's CSS (`src/styles/`),
+Next.js 15 (App Router) + TypeScript, styled with the Dumbelo design system's CSS (`src/styles/`),
 data through TanStack Query and a typed client generated from the API's OpenAPI schema.
 
 ## Run it
@@ -9,7 +9,7 @@ data through TanStack Query and a typed client generated from the API's OpenAPI 
 The API must be running first (see `../README.md`), with the demo gym seeded.
 
 ```powershell
-cd E:\freelance-projects\rackline\web
+cd E:\freelance-projects\dumbelo\web
 npm install
 copy .env.example .env.local      # NEXT_PUBLIC_API_URL=http://localhost:8000
 npm run dev                       # http://localhost:3000
@@ -36,7 +36,7 @@ src/
   components/          ui.tsx (design-system pieces), shell.tsx (headers, bottom nav, sheets)
   features/            screens' larger parts shared between routes
   lib/                 api.ts (fetch + token refresh + X-Gym), session.tsx (who, which gym/branch), format.ts
-  styles/              tokens.css and rackline.css from the design system
+  styles/              tokens.css and dumbelo.css from the design system
 ```
 
 - **Roles**: the bottom navigation and each screen follow the signed-in role. The API enforces the same

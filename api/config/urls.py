@@ -7,7 +7,7 @@ from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, Ref
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
 from apps.billing.views import (
     BranchRequestViewSet, ChargeViewSet, ConsoleBranchRequestViewSet, ConsoleInvoicePaymentViewSet, ConsoleInvoiceViewSet, GymPlanPricesView,
-    GymPlanView, InvoiceViewSet, PriceListViewSet, RacklinePlanView,
+    GymPlanView, InvoiceViewSet, PriceListViewSet, DumbeloPlanView,
 )
 from apps.core.views import HealthView
 from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpenseViewSet
@@ -46,8 +46,8 @@ router.register("money-moves", MoneyMoveViewSet, basename="money-move")
 router.register("drawer-closes", DrawerCloseViewSet, basename="drawer-close")
 router.register("messages", MessageViewSet, basename="message")
 router.register("billing/branch-requests", BranchRequestViewSet, basename="branch-request")
-router.register("billing/invoices", InvoiceViewSet, basename="rackline-invoice")
-# Rackline's own side (the Console): no X-Gym, Rackline admins only.
+router.register("billing/invoices", InvoiceViewSet, basename="dumbelo-invoice")
+# Dumbelo's own side (the Console): no X-Gym, Dumbelo admins only.
 router.register("platform/gyms", GymViewSet, basename="platform-gym")
 router.register(r"platform/gyms/(?P<gym_id>\d+)/admins", GymAdminViewSet, basename="platform-gym-admin")
 router.register("platform/prices", PriceListViewSet, basename="platform-price-list")
@@ -81,10 +81,10 @@ urlpatterns = [
     path("api/gym/whatsapp/", GymWhatsAppView.as_view(), name="gym-whatsapp"),
     path("api/gym/messages/", GymMessagesView.as_view(), name="gym-messages"),
     path("api/gym/messages/<slug:kind>/", GymMessageView.as_view(), name="gym-message"),
-    path("api/whatsapp/webhook/", WhatsAppWebhookView.as_view(), name="whatsapp-webhook"),  # Rackline's shared number
+    path("api/whatsapp/webhook/", WhatsAppWebhookView.as_view(), name="whatsapp-webhook"),  # Dumbelo's shared number
     path("api/whatsapp/webhook/<slug:slug>/", WhatsAppWebhookView.as_view(), name="whatsapp-webhook-own"),  # a gym's own
     path("api/cash/", CashView.as_view(), name="cash"),
-    path("api/billing/plan/", RacklinePlanView.as_view(), name="rackline-plan"),
+    path("api/billing/plan/", DumbeloPlanView.as_view(), name="dumbelo-plan"),
     path("api/platform/gyms/<int:gym_id>/plan/", GymPlanView.as_view(), name="platform-gym-plan"),
     path("api/platform/gyms/<int:gym_id>/plan/current-prices/", GymPlanPricesView.as_view(), name="platform-gym-plan-prices"),
     path("api/platform/gyms/<int:gym_id>/messages/", GymMessageTimesView.as_view(), name="platform-gym-messages"),

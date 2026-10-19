@@ -8,11 +8,11 @@ import { usePlatformChargesList, usePlatformGymsPlanRetrieve, usePlatformGymsRet
 import { DetailBar } from "@/components/shell";
 import { Empty, Icon, LoadMore, Section, SkeletonRows } from "@/components/ui";
 import { AddChargeSheet, ChargeSheet } from "@/features/console/invoice-sheets";
-import { InvoiceRowLink } from "@/features/rackline-invoices";
+import { InvoiceRowLink } from "@/features/dumbelo-invoices";
 import { day, ordinal, rupees } from "@/lib/format";
 import { paged, pages } from "@/lib/hooks";
 
-/** A gym's Rackline invoices in the Console: what it owes, every invoice, and the charges waiting for the next one. */
+/** A gym's Dumbelo invoices in the Console: what it owes, every invoice, and the charges waiting for the next one. */
 export default function GymInvoicesScreen() {
   const { id } = useParams<{ id: string }>();
   const gymId = Number(id);
@@ -30,7 +30,7 @@ export default function GymInvoicesScreen() {
       <main className="rl-app__main">
         {plan && (
           <section className="rl-section" aria-label="What it owes"><div className="rl-pass">
-            <div className="rl-pass__top"><span className="rl-pass__plan">Owed to Rackline</span></div>
+            <div className="rl-pass__top"><span className="rl-pass__plan">Owed to Dumbelo</span></div>
             <p className="rl-figure">{rupees(plan.owed_paise)}</p>
             <div className="rl-pass__dates">
               <span>Billed on the {ordinal(plan.billing_day)}</span>

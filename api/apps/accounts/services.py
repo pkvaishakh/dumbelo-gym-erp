@@ -27,7 +27,7 @@ def change_own_password(user, current, new):
 
 def check_login_is_this_gyms(role, what):
     """One login covers every gym the person works at, so only their own gym may change it on their behalf.
-    Refuses for Rackline's team and for anyone with an active role in another gym; they change it themselves."""
+    Refuses for Dumbelo's team and for anyone with an active role in another gym; they change it themselves."""
     user = role.user
     if user.is_staff or GymRole.objects.filter(user=user, is_active=True).exclude(gym=role.gym).exists():
         raise RuleBroken("shared_login", f"{user.name} also signs in to another gym, so only they can change their {what}")

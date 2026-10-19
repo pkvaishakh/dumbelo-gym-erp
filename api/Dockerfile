@@ -14,8 +14,8 @@ COPY . .
 RUN python manage.py collectstatic --noinput
 
 # Nothing here needs root.
-RUN useradd --create-home --uid 10001 rackline && chown -R rackline:rackline /app
-USER rackline
+RUN useradd --create-home --uid 10001 dumbelo && chown -R dumbelo:dumbelo /app
+USER dumbelo
 
 # What this image is, for the Console's Server screen: the deploy workflow passes the commit and the time it built
 # it. Last, so a new commit rebuilds only this layer. A service's own environment variables would win over these.

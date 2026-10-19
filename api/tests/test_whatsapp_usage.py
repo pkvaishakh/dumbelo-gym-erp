@@ -1,11 +1,11 @@
-"""Usage on Rackline's shared number: the gym's own billing month so far, and every gym's month in the Console."""
+"""Usage on Dumbelo's shared number: the gym's own billing month so far, and every gym's month in the Console."""
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from apps.billing.services import change_plan
 from apps.messages.models import Message
 from tests.test_gym_message_log import message
-from tests.test_platform import rackline, support
+from tests.test_platform import dumbelo, support
 
 USAGE = "/api/messages/usage/"
 CONSOLE = "/api/platform/whatsapp-usage/"
@@ -58,7 +58,7 @@ def test_the_console_lists_each_gyms_month_biggest_first_with_totals(w, other, d
         delivered(other, n, local(month + timedelta(days=10)), rate=90)
     delivered(w, 9, local(month - timedelta(days=1)))  # August
 
-    console = rackline()
+    console = dumbelo()
     with django_assert_max_num_queries(4):  # the time zones, the gyms' count and page, the month's totals
         r = console.get(CONSOLE, {"month": "2026-09"})
 
@@ -79,7 +79,7 @@ def test_a_month_is_each_gyms_own_as_its_invoice_counts_it(w, other):
     delivered(w, 1, at)
     delivered(other, 1, at)
 
-    console = rackline()
+    console = dumbelo()
     october = console.get(CONSOLE, {"month": "2026-10"}).json()
     september = console.get(CONSOLE, {"month": "2026-09"}).json()
     assert [row["gym"] for row in october["results"]] == [w.gym.pk]
@@ -89,19 +89,19 @@ def test_a_month_is_each_gyms_own_as_its_invoice_counts_it(w, other):
 def test_the_console_pages_the_gyms(w, other):
     for world in (w, other):
         delivered(world, 1, local(world.today))
-    first = rackline().get(CONSOLE, {"limit": 1}).json()
+    first = dumbelo().get(CONSOLE, {"limit": 1}).json()
     assert first["count"] == 2 and len(first["results"]) == 1 and first["next"]
     assert Message.objects.filter(billable=True).count() == 2
 
 
 def test_a_bad_month_says_how_to_write_it(w):
-    console = rackline()
+    console = dumbelo()
     for bad in ("2026-13", "Sept", "2026-9"):
         r = console.get(CONSOLE, {"month": bad})
         assert r.status_code == 400 and "month" in r.json()["error"]["fields"], bad
 
 
-def test_only_rackline_admins_see_every_gyms_usage(w):
+def test_only_dumbelo_admins_see_every_gyms_usage(w):
     for c in (support(), w.client(w.admin), w.client(w.desk)):
         assert c.get(CONSOLE).status_code == 403
 
@@ -112,8 +112,8 @@ def test_a_gyms_usage_opens_the_same_messages_in_the_log(w, other):
     other.gym.save()
     at = datetime(2026, 10, 1, 1, 0, tzinfo=INDIA)
     mine, theirs = delivered(w, 1, at), delivered(other, 1, at)
-    delivered(w, 2, at, billable=False)  # its own number: not billed by Rackline
-    console = rackline()
+    delivered(w, 2, at, billable=False)  # its own number: not billed by Dumbelo
+    console = dumbelo()
 
     def log(**params):
         r = console.get("/api/platform/messages/", params)

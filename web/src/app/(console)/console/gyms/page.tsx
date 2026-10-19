@@ -14,7 +14,7 @@ import { paged, pages, useSearch } from "@/lib/hooks";
 
 const FILTERS = [
   { value: "all", label: "All" }, { value: "active", label: "Active" }, { value: "trial", label: "Trial" }, { value: "suspended", label: "Suspended" },
-  { value: "owes", label: "Owe Rackline" }, { value: "overdue", label: "Overdue" },
+  { value: "owes", label: "Owe Dumbelo" }, { value: "overdue", label: "Overdue" },
 ];
 /** The money filters and what the API calls them; Home's figures open the list with them. */
 const OWES: Record<string, PlatformGymsListOwes> = { owes: "any", overdue: "overdue" };
@@ -27,7 +27,7 @@ function fromUrl(params: { get: (name: string) => string | null }) {
   return owes ?? params.get("status") ?? "all";
 }
 
-/** Every gym on Rackline: search, a status or money filter kept in the address, and Load More. */
+/** Every gym on Dumbelo: search, a status or money filter kept in the address, and Load More. */
 function GymsPage() {
   const params = useSearchParams();
   const router = useRouter();
@@ -43,7 +43,7 @@ function GymsPage() {
 
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Gyms" sub={list.data ? plural(count, "gym") : "Rackline Console"} action={<AddButton href="/console/gyms/new" label="New Gym" />} />
+      <PageBar title="Gyms" sub={list.data ? plural(count, "gym") : "Dumbelo Console"} action={<AddButton href="/console/gyms/new" label="New Gym" />} />
       <main className="rl-app__main">
         <div className="rl-searchbar rl-searchbar--filters">
           <SearchField value={text} onChange={setText} placeholder="Gym name or short name" label="Search gym name or short name" />
@@ -71,7 +71,7 @@ function GymsPage() {
               <LoadMore q={list} />
             </>
           ) : q || filter !== "all" ? (
-            <Empty icon={SearchX} title={q ? `No gym matches “${q}”` : "No gyms here"} text={q ? "Check the spelling, or try its short name." : OWES[filter] ? "No gym owes Rackline like this right now." : "No gym has this status right now."}>
+            <Empty icon={SearchX} title={q ? `No gym matches “${q}”` : "No gyms here"} text={q ? "Check the spelling, or try its short name." : OWES[filter] ? "No gym owes Dumbelo like this right now." : "No gym has this status right now."}>
               <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => { setText(""); pick("all"); }}>Show All Gyms</button>
             </Empty>
           ) : (

@@ -1,7 +1,7 @@
-# Rackline design system
+# Dumbelo design system
 
-The source of truth for how Rackline looks, reads and behaves. The CSS lives in `web/src/styles/`
-(`tokens.css`, `rackline.css`); this folder explains it. Each component in `components/` has its rules and the
+The source of truth for how Dumbelo looks, reads and behaves. The CSS lives in `web/src/styles/`
+(`tokens.css`, `dumbelo.css`); this folder explains it. Each component in `components/` has its rules and the
 exact markup the CSS expects. Icons in the markup are shown as `<Icon class="…"/>`: in the app use
 `<Icon as={LucideIcon} />` from `web/src/components/ui.tsx`.
 
@@ -123,7 +123,7 @@ admin-only.
 - [LoginScreen](components/LoginScreen.md): The sign-in screen shared by every role, at phone width; the reference for every auth screen.
 - [LoginScreenDesktop](components/LoginScreenDesktop.md): The sign-in screen on a desktop: the phone column on the right, an `ink` brand panel on the left.
 - [LoginScreenTablet](components/LoginScreenTablet.md): The sign-in screen on a tablet: the same phone column, centred at `column-max`.
-- [Logo](components/Logo.md): The Rackline lockup: the plate mark and the name.
+- [Logo](components/Logo.md): The Dumbelo lockup: the plate mark and the name.
 - [MealList](components/MealList.md): The day's meals, each with a tick to mark it eaten.
 - [MeasurementList](components/MeasurementList.md): Body measurements as a list: the part, the latest value and the change since the start.
 - [MemberCard](components/MemberCard.md): A compact card for one member: photo, name, status badge and their last check-in time.
@@ -268,7 +268,7 @@ admin-only.
 
 ---
 
-Rackline is a gym ERP app with one sign-in for every role: owners, managers, front desk, trainers and anyone else with an account. People use it on their phones, standing up, often one-handed. Build every screen as a phone app first. A tablet or desktop gets the same phone layout widened, never a desktop ERP with a sidebar.
+Dumbelo is a gym ERP app with one sign-in for every role: owners, managers, front desk, trainers and anyone else with an account. People use it on their phones, standing up, often one-handed. Build every screen as a phone app first. A tablet or desktop gets the same phone layout widened, never a desktop ERP with a sidebar.
 
 There are two kinds of screen. Auth screens (sign-in, and the Forgot password and Request access flows behind it) sit on `ground` with no cards. App screens sit on a `surface` canvas with `ground` cards, a header and a fixed bottom navigation. Admins also manage the gym itself: the staff under each branch and what each branch spends. Each role gets its own home: Admin Home for owners and managers, Receptionist Home for the front desk, Trainer Home for trainers, Member Home for the gym's members.
 
@@ -377,7 +377,7 @@ The member app is the same brand turned up, by four means only: larger numbers (
 
 - The barbell is the brand's one picture: plates stepping up to a `volt` inner plate, with the bar running off the right edge of the screen. Use it once on auth screens, above the heading. On app screens it appears in one place only, the member's workout card (on Member Home and the Workout tab), in its `on-ink` form; elsewhere the chart's one `volt` bar echoes it. No illustrations, no gradients. Member Home may carry at most one photo, on the workout card, in place of the barbell.
 - Icons are Lucide, inline SVG on a 24px grid at 1.75px stroke with round caps and joins, in `currentColor`. Sizes: 24px in tiles and navigation, 20px in chips and rows, 16px in trends. Use no other icon set and no filled icons.
-- The app mark is `assets/Logos/rackline-mark.svg`.
+- The app mark is `assets/Logos/dumbelo-mark.svg`.
 - A member's photo sits in a round `rl-photo`. When there is no photo, show their initials there; never a stock picture.
 
 ## Forms and keyboards

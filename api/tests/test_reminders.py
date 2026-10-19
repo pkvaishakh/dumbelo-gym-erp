@@ -37,7 +37,7 @@ def test_it_picks_plans_ending_in_seven_three_and_zero_days(w):
     assert ReminderDue.objects.get(member=today).days_left is None
 
 
-def test_the_days_ahead_are_whatever_rackline_set(w):
+def test_the_days_ahead_are_whatever_dumbelo_set(w):
     """Days ahead aren't fixed at 7 and 3: the list warns on the days it is given (AutomationSchedule's)."""
     five = ending_in(w, 5, "Five", "9811111115")
     seven = ending_in(w, 7, "Seven", "9811111117")

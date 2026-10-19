@@ -39,7 +39,7 @@ export function SelfCheckIn({ code }: { code?: string }) {
   if (code || a.busy) return <p className="rl-row__meta">Checking you in…</p>;
   return (
     <>
-      <p className="rl-lede" style={{ marginTop: 0 }}>Point your camera at the Rackline QR code by the entrance.</p>
+      <p className="rl-lede" style={{ marginTop: 0 }}>Point your camera at the Dumbelo QR code by the entrance.</p>
       <div style={{ marginTop: "var(--space-4)" }}><QrScanner onCode={send} /></div>
     </>
   );

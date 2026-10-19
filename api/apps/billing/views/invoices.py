@@ -1,6 +1,6 @@
-"""The Console's side of Rackline invoices: every gym's invoices, Record Payment, the voids and Add Charge.
+"""The Console's side of Dumbelo invoices: every gym's invoices, Record Payment, the voids and Add Charge.
 
-Rackline admins only (`RacklineViewMixin`), no X-Gym. Every change is audited against its gym.
+Dumbelo admins only (`DumbeloViewMixin`), no X-Gym. Every change is audited against its gym.
 """
 from django.db.models import Prefetch
 from drf_spectacular.utils import extend_schema
@@ -9,7 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.audit.models import record
-from apps.core.rackline import RacklineViewMixin
+from apps.core.dumbelo import DumbeloViewMixin
 
 from .. import invoicing
 from ..models import Invoice, InvoiceLine, InvoicePayment
@@ -24,8 +24,8 @@ def _payment_audit(p: InvoicePayment) -> dict:
 
 
 @extend_schema(tags=["platform"])
-class ConsoleInvoiceViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """Every gym's Rackline invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
+class ConsoleInvoiceViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """Every gym's Dumbelo invoices, newest first. Filter with `?gym=` or `?status=open`. Written by the billing-day
     job, never by hand; corrected by voiding."""
 
     filterset_fields = ["gym", "status"]
@@ -69,8 +69,8 @@ class ConsoleInvoiceViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.Ret
 
 
 @extend_schema(tags=["platform"])
-class ConsoleInvoicePaymentViewSet(RacklineViewMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """A payment to Rackline. Never deleted: Void Payment keeps it, with a reason, and the invoice owes it again."""
+class ConsoleInvoicePaymentViewSet(DumbeloViewMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """A payment to Dumbelo. Never deleted: Void Payment keeps it, with a reason, and the invoice owes it again."""
 
     serializer_class = ConsoleInvoicePaymentSerializer
 
@@ -89,7 +89,7 @@ class ConsoleInvoicePaymentViewSet(RacklineViewMixin, mixins.RetrieveModelMixin,
 
 
 @extend_schema(tags=["platform"])
-class ChargeViewSet(RacklineViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class ChargeViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     """Charges waiting for a gym's next invoice (`?gym=`): setup fees and other charges added here, and the branches
     approved during the month. Add Charge adds one; one added by hand can be taken back until it's billed."""
 

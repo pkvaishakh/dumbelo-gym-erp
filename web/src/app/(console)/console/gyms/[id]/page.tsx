@@ -12,7 +12,7 @@ import { GymMessages } from "@/features/console/messages";
 import { GymStatus } from "@/features/console/parts";
 import { branchesOf, day, GYM_STATUS, plural, rupees, WHATSAPP_STATUS } from "@/lib/format";
 
-/** One gym, as Rackline sees it: status, branches, its Rackline plan, when its messages go out and its admins. Never
+/** One gym, as Dumbelo sees it: status, branches, its Dumbelo plan, when its messages go out and its admins. Never
  *  what is inside it (members, money, visits). */
 export default function GymScreen() {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +47,7 @@ export default function GymScreen() {
             { icon: UserRound, label: "Owner", value: g.owner_name ?? "No owner" },
             { icon: Mail, label: "Billing email", value: g.billing_email },
             { icon: Clock, label: "Time zone", value: g.timezone.replace(/_/g, " ") },
-            { icon: CalendarDays, label: "On Rackline since", value: day(g.created_at) },
+            { icon: CalendarDays, label: "On Dumbelo since", value: day(g.created_at) },
             ...(g.status_changed_at ? [{
               icon: AlertCircle, label: `${GYM_STATUS[g.status]?.label ?? g.status} since ${day(g.status_changed_at)}`, value: g.status_reason || "No reason given",
             }] : []),
@@ -67,13 +67,13 @@ export default function GymScreen() {
             </ul>
           ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No branches yet.</p></div>}
         </Section>
-        <Section title="Rackline plan">
+        <Section title="Dumbelo plan">
           <ul className="rl-card rl-remind">
-            <MenuRow icon={BadgeIndianRupee} title={plan ? `${rupees(plan.monthly_paise)} a month` : "Rackline plan"} href={`/console/gyms/${g.id}/plan`}
+            <MenuRow icon={BadgeIndianRupee} title={plan ? `${rupees(plan.monthly_paise)} a month` : "Dumbelo plan"} href={`/console/gyms/${g.id}/plan`}
               value={plan ? branchesOf(plan.branches_in_use, plan.branch_quota) : undefined} />
             <MenuRow icon={FileText} title="Invoices and payments" href={`/console/gyms/${g.id}/invoices`}
               value={g.owed_paise ? `${rupees(g.owed_paise)} owed` : "Nothing owed"} />
-            {/* Its own number, or the way to add one. Which number it sends from is on its Rackline plan. */}
+            {/* Its own number, or the way to add one. Which number it sends from is on its Dumbelo plan. */}
             <MenuRow icon={MessageCircle} title="WhatsApp" href={whatsapp ? `/console/whatsapp/${whatsapp.id}` : `/console/whatsapp/new?gym=${g.id}`}
               value={whatsapp ? `${whatsapp.display_number} • ${WHATSAPP_STATUS[whatsapp.status]?.label ?? whatsapp.status}` : "Add Own Number"} />
             <MenuRow icon={ScrollText} title="WhatsApp log" value="What it sent" href={`/console/messages?gym=${g.id}`} />

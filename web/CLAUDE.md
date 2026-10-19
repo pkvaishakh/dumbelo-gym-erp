@@ -1,4 +1,4 @@
-# Rackline web (Next.js 15 App Router, TypeScript)
+# Dumbelo web (Next.js 15 App Router, TypeScript)
 
 Phone-first PWA for every role. Design at 390 px wide; everything must work from 360 to 430 px.
 A tablet or desktop gets the same layout widened (two columns inside 960 px), never a sidebar.
@@ -10,15 +10,15 @@ src/app/login                 shared sign-in
 src/app/(app)/layout.tsx      SessionProvider (who, which gym, which branch) + bottom TabBar
 src/app/(app)/<route>         one folder per screen; task screens are /…/new or /…/edit (no tab bar there).
                               A suspended gym shows features/paused everywhere but More (admins only)
-src/app/(console)/console     the Console for Rackline admins: ConsoleProvider + ConsoleTabBar (Home, Gyms, Server,
+src/app/(console)/console     the Console for Dumbelo admins: ConsoleProvider + ConsoleTabBar (Home, Gyms, Server,
                               More); Home (/console, where they land: /api/platform/summary/, its Needs attention rows from
                               lib/console-home.ts), gyms list (/console/gyms, ?status= or ?owes=any|overdue in the address),
-                              a gym, its Rackline plan (gyms/[id]/plan), New Gym, branch requests
+                              a gym, its Dumbelo plan (gyms/[id]/plan), New Gym, branch requests
                               (More → Branch requests), price lists and Add Price List (More → Prices), a gym's invoices (gyms/[id]/invoices: pending charges, Add
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
                               print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
                               `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
-                              Automation (More → Automation: Rackline's times; a gym's own are in Messages on its screen),
+                              Automation (More → Automation: Dumbelo's times; a gym's own are in Messages on its screen),
                               WhatsApp log (More → WhatsApp log, or from a gym or a number: /console/messages, filters
                               in the address), WhatsApp usage (More → WhatsApp usage: /console/usage?month=, each gym's
                               month on the shared number, opening its log with ?billed= those same messages), Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
@@ -30,8 +30,8 @@ src/app/(console)/console     the Console for Rackline admins: ConsoleProvider +
                               server: CHECK_ICON, StateBadge, RunBadge, jobLine, JobSheet with Run Now's confirm; message-log: LogFilterSheet,
                               MessageSheet, logUrl)
 src/app/(app)/messages        More → Messages (admins; the desk's own branches through the API): the log, filters in the
-                              address, a message's sheet with Retry, and this billing month on Rackline's number
-src/app/(app)/rackline-plan   the gym admin's Rackline plan, Add Branch to My Plan and its invoices (invoices/[id], print,
+                              address, a message's sheet with Retry, and this billing month on Dumbelo's number
+src/app/(app)/dumbelo-plan   the gym admin's Dumbelo plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
                               Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
@@ -41,10 +41,10 @@ src/features/                 bigger parts shared by routes: homes (Attention, G
                               (MemberPicker, PlanPicker, ActionBar, METHODS), staff-form, branch-form, members-ui,
                               money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, rateText),
                               recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), account-form, drawer (CountRow,
-                              CountSheet), refunds (RefundSheet, RefundRows), rackline-plan (PlanCard, BranchRoom,
-                              PlanPrices, AskStatus, proRataText: a gym's Rackline plan, for the gym and the Console),
+                              CountSheet), refunds (RefundSheet, RefundRows), dumbelo-plan (PlanCard, BranchRoom,
+                              PlanPrices, AskStatus, proRataText: a gym's Dumbelo plan, for the gym and the Console),
                               messages (MessageBadge: also the Console's log, GymLogFilterSheet,
-                              MessageSheet with Retry), rackline-invoices (InvoiceRowLink, InvoiceCard, InvoiceLines, PaymentRows, PrintFrame,
+                              MessageSheet with Retry), dumbelo-invoices (InvoiceRowLink, InvoiceCard, InvoiceLines, PaymentRows, PrintFrame,
                               InvoicePaper, ReceiptPaper: the same invoice and receipt for the gym and the Console)
                               reports/ (range: useReportRange + ReportControls, period and branch in the URL; screen:
                               ReportScreen, ReportPrint, Download; parts: Lead, Trend, SeriesChart, BarList; one file per
@@ -62,7 +62,7 @@ src/lib/reports.ts            report categories, periods, MAX_MONTHS (the API's)
 src/lib/report-rows.ts        each report as plain rows: its CSV (reportCsv) and its print page
 src/lib/csv.ts                toCsv, plainRupees, download, statementCsv
 src/api/gen/                  GENERATED by orval from openapi.yml. Never edit; run `npm run api`.
-src/styles/                   tokens.css + rackline.css: the design system CSS. Don't restyle components here.
+src/styles/                   tokens.css + dumbelo.css: the design system CSS. Don't restyle components here.
 ```
 
 ## Building screens

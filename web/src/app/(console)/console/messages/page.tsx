@@ -83,7 +83,7 @@ function MessageLog() {
             <Empty icon={MessageCircle} title="No messages yet" text="Reminders, receipts and task messages show up here once gyms start sending them." />
           )}
         </Section>
-        <p className="rl-row__meta">Names and what each message said stay with the gym. Rackline sees them only in a support window the gym&apos;s admin gives.</p>
+        <p className="rl-row__meta">Names and what each message said stay with the gym. Dumbelo sees them only in a support window the gym&apos;s admin gives.</p>
       </main>
       <LogFilterSheet open={sheet} onClose={() => setSheet(false)} f={f} go={go} gymName={gymName} count={list.data ? count : undefined} />
       <MessageSheet m={open} onClose={() => setOpen(null)} />

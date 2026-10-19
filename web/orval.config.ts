@@ -3,7 +3,7 @@ import { defineConfig } from "orval";
 // Regenerate the typed API client after the backend changes:
 //   cd ../api && python manage.py spectacular --file ../web/openapi.yml && cd ../web && npm run api
 export default defineConfig({
-  rackline: {
+  dumbelo: {
     input: "./openapi.yml",
     output: {
       mode: "tags-split",

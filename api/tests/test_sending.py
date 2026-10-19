@@ -74,7 +74,7 @@ def cloud(settings):
 
 
 def fresh(gym) -> Gym:
-    """The gym as the morning job loads it: its Rackline plan read anew."""
+    """The gym as the morning job loads it: its Dumbelo plan read anew."""
     return Gym.objects.get(pk=gym.pk)
 
 
@@ -121,7 +121,7 @@ def test_the_payload_is_metas_template_shape(w, cloud, shared_number):
 
 
 def test_a_template_without_details_has_no_components():
-    template = WhatsAppTemplate(name="hello", language="en_US", body="Hello from Rackline")
+    template = WhatsAppTemplate(name="hello", language="en_US", body="Hello from Dumbelo")
     assert template_payload("+919800000001", template, [])["template"] == {"name": "hello", "language": {"code": "en_US"}}
 
 

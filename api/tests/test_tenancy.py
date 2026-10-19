@@ -89,7 +89,7 @@ def test_only_admin_manages_staff(w):
 
 
 def test_support_needs_a_window_and_is_read_only(w):
-    sup = User.objects.create_user(email="help@rackline.in", password="x", name="Support", is_staff=True)
+    sup = User.objects.create_user(email="help@dumbelo.com", password="x", name="Support", is_staff=True)
     from rest_framework.test import APIClient
 
     c = APIClient()

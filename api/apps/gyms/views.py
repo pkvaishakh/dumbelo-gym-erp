@@ -69,7 +69,7 @@ class StaffViewSet(GymViewMixin, viewsets.ModelViewSet):
 
 
 class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    """An admin lets Rackline support look inside the gym for a few hours, and can take it back at any time.
+    """An admin lets Dumbelo support look inside the gym for a few hours, and can take it back at any time.
 
     A window is only ever read-only (see `InGym`), one gym at a time, and both the granting and the ending are
     written to the audit log. Windows are never deleted: ending one moves its end to now, so the history keeps
@@ -88,7 +88,7 @@ class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMod
     @extend_schema(request=None, responses=SupportAccessSerializer)
     @action(detail=True, methods=["post"])
     def end(self, request, pk=None):
-        """Take the access back now. Rackline loses the gym on its next call."""
+        """Take the access back now. Dumbelo loses the gym on its next call."""
         window = self.get_object()
         now = timezone.now()
         if window.ends <= now:
@@ -101,7 +101,7 @@ class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMod
 
 
 class GymSettingsView(GymViewMixin, APIView):
-    """The gym as Rackline set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
+    """The gym as Dumbelo set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
     changes: the gym's message switches are `/api/gym/messages/`."""
 
     roles = {"*": ADMIN}

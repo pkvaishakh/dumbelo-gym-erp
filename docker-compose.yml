@@ -5,9 +5,9 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: rackline
-      POSTGRES_PASSWORD: rackline
-      POSTGRES_DB: rackline
+      POSTGRES_USER: dumbelo
+      POSTGRES_PASSWORD: dumbelo
+      POSTGRES_DB: dumbelo
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
   redis:
@@ -20,7 +20,7 @@ services:
     build: ./api
     command: celery -A config worker --loglevel=info
     environment: &jobs
-      DATABASE_URL: postgres://rackline:rackline@db:5432/rackline
+      DATABASE_URL: postgres://dumbelo:dumbelo@db:5432/dumbelo
       CELERY_BROKER_URL: redis://redis:6379/0
       SECRET_KEY: dev-only-not-a-secret-change-me-in-production-0000
     depends_on: [db, redis]

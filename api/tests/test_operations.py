@@ -21,20 +21,20 @@ def verify(*args) -> str:
 
 def test_it_matches_the_seeded_demo_gym_and_counts_no_other(w):
     call_command("seed_demo", "--members", "12", stdout=io.StringIO())
-    demo = Gym.objects.get(slug="rackline-fitness")
+    demo = Gym.objects.get(slug="dumbelo-fitness")
     payments = Payment.objects.filter(gym=demo)
     paid = sum(p.amount_paise for p in payments if not p.voided)
 
-    lines = verify("--gym", "rackline-fitness").splitlines()
+    lines = verify("--gym", "dumbelo-fitness").splitlines()
 
-    assert lines[0] == "rackline-fitness  Rackline Fitness"
+    assert lines[0] == "dumbelo-fitness  Dumbelo Fitness"
     assert lines[1].split()[:2] == ["members", "12"]
     assert lines[2].split()[:3] == ["payments", str(payments.count()), str(payments.filter(voided=True).count())]
     assert lines[2].endswith(f"{rupees(paid).removeprefix('₹')} rupees recorded")
     assert lines[3].split() == ["check-ins", str(CheckIn.objects.filter(gym=demo).count())]
     assert Member.objects.filter(gym=demo).count() == 12 and payments.exists() and CheckIn.objects.filter(gym=demo).exists()
 
-    both = verify("--gym", "rackline-fitness", "--gym", w.gym.slug)
+    both = verify("--gym", "dumbelo-fitness", "--gym", w.gym.slug)
     assert f"{w.gym.slug}  {w.gym.name}\n  members           1   0 archived\n  payments          1   0 voided, 1,500 rupees recorded\n" in both
 
 

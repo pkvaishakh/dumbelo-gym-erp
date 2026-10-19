@@ -5,7 +5,7 @@ from celery import shared_task
 
 from apps.core.jobs import run_job
 from apps.core.models import JobRun
-from apps.messages.automation import reminder_runs  # the times are Rackline's, kept with the messages
+from apps.messages.automation import reminder_runs  # the times are Dumbelo's, kept with the messages
 
 from . import services
 

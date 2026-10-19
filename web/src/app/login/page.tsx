@@ -40,10 +40,10 @@ export default function LoginPage() {
       const me = await api<Me>("/api/me/");
       qc.setQueryData(["/api/me/"], me); // the app needs it next: no second trip
       setState("done");
-      router.replace(nextPath(me.is_rackline_admin ? "/console" : "/home")); // Rackline admins land on the Console
+      router.replace(nextPath(me.is_dumbelo_admin ? "/console" : "/home")); // Dumbelo admins land on the Console
     } catch (err) {
       setState("idle");
-      setErrors({ form: err instanceof ApiError ? err.message : "Can't reach Rackline. Check your connection and try again." });
+      setErrors({ form: err instanceof ApiError ? err.message : "Can't reach Dumbelo. Check your connection and try again." });
     }
   }
 
@@ -57,7 +57,7 @@ export default function LoginPage() {
         </div>
       </aside>
       <div className="rl-auth__app">
-        <header className="rl-auth__top"><span className="rl-logo"><Mark /><span className="rl-logo__name">Rackline</span></span></header>
+        <header className="rl-auth__top"><span className="rl-logo"><Mark /><span className="rl-logo__name">Dumbelo</span></span></header>
         <div className="rl-auth__art"><Barbell load /></div>
         <section className="rl-auth__body" aria-labelledby="rl-title">
           <h1 className="rl-display" id="rl-title">Let&apos;s get moving</h1>

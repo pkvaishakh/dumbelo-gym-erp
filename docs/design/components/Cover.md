@@ -10,7 +10,7 @@
 <Icon/>
 </div>
 <div class="words">
-<p class="name">Rackline</p>
+<p class="name">Dumbelo</p>
 <p class="tag">One app for the whole gym, from the front desk to the floor.</p>
 </div>
 </div>

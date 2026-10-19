@@ -168,7 +168,7 @@ class Period:
 
 
 class ReportView(APIView):
-    """One report over the range and branch asked for. Admins only, and Rackline support inside its window."""
+    """One report over the range and branch asked for. Admins only, and Dumbelo support inside its window."""
 
     permission_classes = [InGym]
     roles = {"*": ADMIN + ("support",)}

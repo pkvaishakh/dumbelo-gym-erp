@@ -1,7 +1,7 @@
-"""When messages go out and whether they go at all: Rackline's schedule, each gym's switches, and the times a
-Rackline admin set for one gym.
+"""When messages go out and whether they go at all: Dumbelo's schedule, each gym's switches, and the times a
+Dumbelo admin set for one gym.
 
-The times are Rackline's (`AutomationSchedule`): a gym's admins pause and resume their gym's messages, never
+The times are Dumbelo's (`AutomationSchedule`): a gym's admins pause and resume their gym's messages, never
 change when they go. Every job reads these on every tick, so a change applies on the next one.
 """
 from collections.abc import Iterable, Iterator
@@ -28,7 +28,7 @@ class Rule:
     is_on: bool
     hour: int | None = None  # in the gym's time zone; None for messages sent when something happens
     days_ahead: tuple[int, ...] | None = None  # a plan ending soon only
-    gyms_own_time: bool = False  # a Rackline admin set this gym's hour or days in place of Rackline's
+    gyms_own_time: bool = False  # a Dumbelo admin set this gym's hour or days in place of Dumbelo's
 
     @property
     def label(self) -> str:
@@ -107,7 +107,7 @@ def reminder_runs(now: datetime | None = None) -> Iterator[ReminderRun]:
 
 
 def is_invoice_hour(gym: Gym, now: datetime | None = None, schedule: AutomationSchedule | None = None) -> bool:
-    """Whether the gym's clock has reached the hour Rackline's invoices are written. Later ticks the same day are
+    """Whether the gym's clock has reached the hour Dumbelo's invoices are written. Later ticks the same day are
     in time too (the job skips a month already written), so a missed tick doesn't lose the day."""
     return clock.local(gym, now).hour >= (schedule or AutomationSchedule.current()).invoice_hour
 
@@ -123,7 +123,7 @@ def audit_schedule(schedule: AutomationSchedule) -> dict:
 
 @transaction.atomic
 def change_schedule(*, by, **fields) -> AutomationSchedule:
-    """Rackline's times for every gym. Applies on each job's next tick."""
+    """Dumbelo's times for every gym. Applies on each job's next tick."""
     schedule = AutomationSchedule.objects.select_for_update().filter(pk=1).first() or AutomationSchedule(pk=1)
     if "days_ahead" in fields:
         fields["days_ahead"] = clean_days(fields["days_ahead"])
@@ -147,12 +147,12 @@ def _row(gym: Gym, kind: str) -> NotificationRule:
 
 
 @transaction.atomic
-def switch(gym: Gym, kind: str, on: bool, *, rackline: bool) -> NotificationRule:
-    """Pause or Resume one message. A gym's admins switch the gym's own messages; Rackline admins (`rackline`) the
-    ones Rackline sends the owner."""
-    allowed = NotificationRule.RACKLINE_KINDS if rackline else NotificationRule.GYM_KINDS
+def switch(gym: Gym, kind: str, on: bool, *, dumbelo: bool) -> NotificationRule:
+    """Pause or Resume one message. A gym's admins switch the gym's own messages; Dumbelo admins (`dumbelo`) the
+    ones Dumbelo sends the owner."""
+    allowed = NotificationRule.DUMBELO_KINDS if dumbelo else NotificationRule.GYM_KINDS
     if kind not in allowed:
-        raise RuleBroken("not_yours", "Rackline switches its own messages to you" if not rackline
+        raise RuleBroken("not_yours", "Dumbelo switches its own messages to you" if not dumbelo
                          else "The gym's admins pause and resume the gym's own messages")
     row = _row(gym, kind)
     row.is_on = on
@@ -162,8 +162,8 @@ def switch(gym: Gym, kind: str, on: bool, *, rackline: bool) -> NotificationRule
 
 @transaction.atomic
 def set_times(gym: Gym, kind: str, **times) -> NotificationRule:
-    """A Rackline admin's `hour` and `days_ahead` for one of the gym's messages, in place of Rackline's; one left
-    out stays as it was. None is Rackline's again (both None: Use Rackline's Times)."""
+    """A Dumbelo admin's `hour` and `days_ahead` for one of the gym's messages, in place of Dumbelo's; one left
+    out stays as it was. None is Dumbelo's again (both None: Use Dumbelo's Times)."""
     if kind not in NotificationRule.SCHEDULED:
         raise RuleBroken("not_scheduled", "This message goes out when it happens, not at a set time")
     if times.get("days_ahead") is not None and kind != NotificationRule.PLAN_ENDING:

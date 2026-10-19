@@ -1,4 +1,4 @@
-"""How a message leaves Rackline.
+"""How a message leaves Dumbelo.
 
 `WHATSAPP_PROVIDER` picks the sender. The default, `fake`, keeps what it would have sent in memory, so a laptop and
 the tests can read the exact words without a WhatsApp account. `whatsapp_cloud` posts the message's template to

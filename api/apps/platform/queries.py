@@ -10,7 +10,7 @@ from apps.members.models import Member
 
 
 def gyms():
-    """Gyms with their counts, owner and what they owe Rackline, a fixed number of queries whatever the page size."""
+    """Gyms with their counts, owner and what they owe Dumbelo, a fixed number of queries whatever the page size."""
     owner = GymRole.objects.filter(gym=OuterRef("pk"), is_owner=True).select_related("user")
     return Gym.objects.annotate(
         branch_count=count_of(Branch.objects.filter(gym=OuterRef("pk"), is_active=True)),
@@ -31,7 +31,7 @@ class GymFilter(django_filters.FilterSet):
     """`?status=` and `?owes=`: Home's money figures open the list with the gyms they count."""
 
     ANY, OVERDUE = "any", "overdue"
-    owes = django_filters.ChoiceFilter(choices=[(ANY, "Owes Rackline anything"), (OVERDUE, "Has an invoice past its due day")],
+    owes = django_filters.ChoiceFilter(choices=[(ANY, "Owes Dumbelo anything"), (OVERDUE, "Has an invoice past its due day")],
                                        method="filter_owes")
 
     class Meta:
@@ -39,6 +39,6 @@ class GymFilter(django_filters.FilterSet):
         fields = ["status"]
 
     def filter_owes(self, qs, name, value):
-        if value == self.OVERDUE:  # Rackline's day, as on the invoices
+        if value == self.OVERDUE:  # Dumbelo's day, as on the invoices
             return qs.annotate(overdue_paise=overdue_by_gym(timezone.localdate())).filter(overdue_paise__gt=0)
         return qs.filter(owed_paise__gt=0)

@@ -6,17 +6,17 @@ import { useParams } from "next/navigation";
 import { useBillingInvoicesRetrieve } from "@/api/gen/billing/billing";
 import { DetailBar } from "@/components/shell";
 import { Empty, Icon, Section, SkeletonRows } from "@/components/ui";
-import { InvoiceCard, InvoiceLines, PaymentRows } from "@/features/rackline-invoices";
+import { InvoiceCard, InvoiceLines, PaymentRows } from "@/features/dumbelo-invoices";
 import { day } from "@/lib/format";
 
-/** One Rackline invoice, for the gym's admins: what it's for, what's paid, and each payment's receipt to print. */
-export default function RacklineInvoice() {
+/** One Dumbelo invoice, for the gym's admins: what it's for, what's paid, and each payment's receipt to print. */
+export default function DumbeloInvoice() {
   const { id } = useParams<{ id: string }>();
   const q = useBillingInvoicesRetrieve(Number(id));
   const inv = q.data?.data;
   const bar = (
-    <DetailBar title="Invoice" back="/rackline-plan"
-      action={inv && <Link className="rl-iconbtn rl-iconbtn--plain" href={`/rackline-plan/invoices/${id}/print`} aria-label="Print Invoice"><Icon as={Printer} /></Link>} />
+    <DetailBar title="Invoice" back="/dumbelo-plan"
+      action={inv && <Link className="rl-iconbtn rl-iconbtn--plain" href={`/dumbelo-plan/invoices/${id}/print`} aria-label="Print Invoice"><Icon as={Printer} /></Link>} />
   );
   if (q.isError) {
     return (
@@ -36,14 +36,14 @@ export default function RacklineInvoice() {
             <InvoiceCard inv={inv} />
             {inv.status === "void" && (
               <div className="rl-card rl-card--pad">
-                <p className="rl-row__title" style={{ margin: 0 }}>Rackline voided this invoice{inv.voided_at ? ` on ${day(inv.voided_at)}` : ""}</p>
+                <p className="rl-row__title" style={{ margin: 0 }}>Dumbelo voided this invoice{inv.voided_at ? ` on ${day(inv.voided_at)}` : ""}</p>
                 <p className="rl-row__meta" style={{ marginBottom: 0 }}>{inv.void_reason}. You don&apos;t owe anything on it.</p>
               </div>
             )}
             <InvoiceLines inv={inv} />
             <Section title="Payments">
-              <PaymentRows payments={inv.payments} href={(p) => `/rackline-plan/invoices/${inv.id}/receipts/${p.id}`} />
-              {inv.status === "open" && <p className="rl-field__hint">Pay by bank transfer or UPI. Rackline records the payment here and its receipt opens from it.</p>}
+              <PaymentRows payments={inv.payments} href={(p) => `/dumbelo-plan/invoices/${inv.id}/receipts/${p.id}`} />
+              {inv.status === "open" && <p className="rl-field__hint">Pay by bank transfer or UPI. Dumbelo records the payment here and its receipt opens from it.</p>}
             </Section>
           </>
         )}

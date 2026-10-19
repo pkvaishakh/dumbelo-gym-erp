@@ -36,7 +36,7 @@ export function useAction() {
         await invalidate(qc, ...(opts.refresh ?? ["/api/"]));
         return out;
       } catch (e) {
-        const err = e instanceof ApiError ? e : new ApiError(0, "network", "Can't reach Rackline. Check your connection and try again.");
+        const err = e instanceof ApiError ? e : new ApiError(0, "network", "Can't reach Dumbelo. Check your connection and try again.");
         setError(err);
         throw err;
       } finally {

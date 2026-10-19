@@ -27,7 +27,7 @@ class JobRun(models.Model):
     the row before the worker takes it (`started_at` empty until then), so the Console sees it waiting."""
 
     REMINDERS, INVOICES, RETRIES, WEBHOOK_REPLAY = "reminders", "invoices", "retries", "webhook_replay"
-    JOBS = [(REMINDERS, "Reminders"), (INVOICES, "Rackline invoices"), (RETRIES, "Message retries"), (WEBHOOK_REPLAY, "Webhook replay")]
+    JOBS = [(REMINDERS, "Reminders"), (INVOICES, "Dumbelo invoices"), (RETRIES, "Message retries"), (WEBHOOK_REPLAY, "Webhook replay")]
     BEAT, RUN_NOW, BY_HAND = "beat", "run_now", "by_hand"
     TRIGGERS = [(BEAT, "On schedule"), (RUN_NOW, "Run Now"), (BY_HAND, "By hand")]
 

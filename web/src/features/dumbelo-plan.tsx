@@ -1,6 +1,6 @@
 "use client";
-/* A gym's Rackline plan as both its admins and the Console show it: what it costs and how many branches it has room for.
- * "Rackline plan", never just "plan": a member's plan is what they buy from the gym. */
+/* A gym's Dumbelo plan as both its admins and the Console show it: what it costs and how many branches it has room for.
+ * "Dumbelo plan", never just "plan": a member's plan is what they buy from the gym. */
 import { Building2, CalendarDays, Cpu, MessageCircle, Receipt, Store } from "lucide-react";
 
 import type { GymPlan } from "@/api/gen/model";
@@ -12,8 +12,8 @@ type Plan = Omit<GymPlan, "last_request">;
 /** The monthly charge on the design's pass card, with the billing day and the branches in use under it. */
 export function PlanCard({ plan, aside }: { plan: Plan; aside?: React.ReactNode }) {
   return (
-    <section className="rl-section" aria-label="Rackline plan"><div className="rl-pass">
-      <div className="rl-pass__top"><span className="rl-pass__plan">Rackline plan</span>{aside}</div>
+    <section className="rl-section" aria-label="Dumbelo plan"><div className="rl-pass">
+      <div className="rl-pass__top"><span className="rl-pass__plan">Dumbelo plan</span>{aside}</div>
       <p className="rl-figure">{rupees(plan.monthly_paise)} <small>a month</small></p>
       <div className="rl-pass__dates">
         <span>Billed on the {ordinal(plan.billing_day)}</span>
@@ -45,7 +45,7 @@ export function PlanPrices({ plan }: { plan: Plan }) {
       { icon: MessageCircle, label: "WhatsApp setup", value: `${rupees(plan.whatsapp_setup_paise)} once` },
       { icon: Cpu, label: "Attendance machine setup", value: `${rupees(plan.machine_setup_paise)} once, for each machine` },
       {
-        icon: MessageCircle, label: "Each message delivered from Rackline's number",
+        icon: MessageCircle, label: "Each message delivered from Dumbelo's number",
         value: `${rupees(plan.utility_message_paise)} reminders and receipts • ${rupees(plan.marketing_message_paise)} offers • ${rupees(plan.authentication_message_paise)} sign-in codes`,
       },
       { icon: CalendarDays, label: "Prices from", value: day(plan.price_list.active_from) },

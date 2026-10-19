@@ -10,7 +10,7 @@ import { ACCOUNTS, SecretField, type Where, WhereFields, whereErrors } from "@/f
 import { ActionBar } from "@/features/sell";
 import { fieldError, useAction } from "@/lib/hooks";
 
-/** Add Account: Rackline's shared number, or with `?gym=` that gym's own. Nothing is asked of Meta until Test
+/** Add Account: Dumbelo's shared number, or with `?gym=` that gym's own. Nothing is asked of Meta until Test
  *  Connection, on the number's screen. */
 function AddAccount() {
   const router = useRouter();
@@ -43,12 +43,12 @@ function AddAccount() {
 
   return (
     <div className="rl-app rl-app--task rl-root">
-      <TaskBar title={gymId ? "Add WhatsApp Number" : "Add Shared Number"} aside={gymId ? gym?.name : "Rackline's own"} onClose={() => router.push(back)} />
+      <TaskBar title={gymId ? "Add WhatsApp Number" : "Add Shared Number"} aside={gymId ? gym?.name : "Dumbelo's own"} onClose={() => router.push(back)} />
       <main className="rl-app__main">
         <p className="rl-row__meta">
           {gymId
             ? `${gym?.name ?? "The gym"}'s own WhatsApp Business account, from its Meta Business settings. It pays Meta for its messages itself.`
-            : "The number gyms on Rackline's number send from. Their messages are billed on their Rackline plan."}
+            : "The number gyms on Dumbelo's number send from. Their messages are billed on their Dumbelo plan."}
         </p>
         <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
           <WhereFields f={f} set={setF} err={err} />

@@ -1,8 +1,8 @@
-"""Console → Home: Rackline at a glance. The gyms by status, what they owe Rackline, branch requests waiting,
+"""Console → Home: Dumbelo at a glance. The gyms by status, what they owe Dumbelo, branch requests waiting,
 today's WhatsApp messages and the shared number's month, and whatever on the server is down or failed.
 
-Counts and Rackline's own money only: never a member, a gym's payments or its check-ins. A fixed number of
-queries whatever the number of gyms (the gyms are one aggregate over `gyms()`). Days and months are Rackline's,
+Counts and Dumbelo's own money only: never a member, a gym's payments or its check-ins. A fixed number of
+queries whatever the number of gyms (the gyms are one aggregate over `gyms()`). Days and months are Dumbelo's,
 India time, as on the Server screen and the WhatsApp log.
 """
 from datetime import datetime
@@ -22,7 +22,7 @@ from .queries import gyms
 
 
 def _gyms(today, month_starts: datetime) -> dict:
-    """Gyms by status and new this month, and what they owe Rackline: one query."""
+    """Gyms by status and new this month, and what they owe Dumbelo: one query."""
     def status(s):
         return Count("pk", filter=Q(status=s))
 

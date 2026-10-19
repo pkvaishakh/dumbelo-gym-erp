@@ -1,4 +1,4 @@
-# Rackline
+# Dumbelo
 
 Gym management SaaS for Indian gyms: many gyms (tenants), each with branches, staff and members.
 Members, plans, offers and payments, check-ins (front desk, wall QR, turnstile), staff tasks, expenses.
@@ -22,8 +22,8 @@ cd api; .venv\Scripts\activate; python manage.py runserver      # http://localho
 cd web; npm run dev                                              # http://localhost:3000
 ```
 First time: see README.md (venv, `pip install -r requirements-dev.txt`, `migrate`, `seed_demo`, `npm install`).
-Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
-`@rackline.demo`, member `9800000001`, Rackline admin (the Console) rackline@. `python manage.py seed_demo --reset` rebuilds the demo gym.
+Demo logins, password `dumbelo-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
+`@dumbelo.demo`, member `9800000001`, Dumbelo admin (the Console) dumbelo@. `python manage.py seed_demo --reset` rebuilds the demo gym.
 
 ## The four roles (one role per person per gym; full rules in `docs/decisions.md`)
 
@@ -34,15 +34,15 @@ Demo logins, password `rackline-demo`: meera@ (admin), arjun@ / kavya@ (receptio
 | Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in | See any amount |
 | Member | Their own membership and visits, self check-in by wall QR | See anyone else |
 
-Rackline support: read-only, only while an admin-granted window is open, and logged.
-Rackline admins (`is_superuser`): the Console (`/console`, `/api/platform/`): gyms, their admins, prices, Rackline
+Dumbelo support: read-only, only while an admin-granted window is open, and logged.
+Dumbelo admins (`is_superuser`): the Console (`/console`, `/api/platform/`): gyms, their admins, prices, Dumbelo
 invoices, WhatsApp accounts, when automation runs (gym admins only pause and resume messages), server status.
 Never a gym's members or money without a support window.
 
 ## Don't touch
 
 - `web/src/api/gen/` and `web/openapi.yml`: generated. Regenerate (command below), never hand-edit.
-- `web/src/styles/` (tokens.css, rackline.css): the design system. No new colours, fonts, shadows or radii.
+- `web/src/styles/` (tokens.css, dumbelo.css): the design system. No new colours, fonts, shadows or radii.
 - Existing migrations: add a new one, never edit or delete an applied one.
 - `.env` files: never commit them; change `.env.example` instead.
 - `ROADMAP.md` scope: don't build what it marks "not in MVP" (payment gateway, check-out, native apps) unless asked.
@@ -69,7 +69,7 @@ The venv is already on `PATH`. To run the app: `cd api && python manage.py runse
   by the caller's branches where branches matter. A gym you have no role in answers 404, never 403.
 - **Roles are enforced by the API.** The web hides what a role can't use, but security lives in `roles = {...}`
   on each view. Trainers never see payment amounts; receptionists only their branches and fixed offers;
-  members only themselves; Rackline support is read-only and only inside a window an admin grants.
+  members only themselves; Dumbelo support is read-only and only inside a window an admin grants.
 - **Money is integer paise** (`150000` = ₹1,500), shown with Indian grouping (`₹1,50,000`). Never floats.
 - **Time**: stored UTC, worked out in the gym's time zone (`apps/core/clock.py`). One check-in per person per
   local day. **Check-in time only: no check-out anywhere.**

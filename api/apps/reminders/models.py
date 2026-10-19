@@ -13,7 +13,7 @@ class ReminderDue(GymScoped):
 
     PLAN_ENDING, PLAN_ENDS_TODAY, PAYMENT_DUE = "plan_ending", "plan_ends_today", "payment_due"
     KINDS = [(PLAN_ENDING, "Plan ending soon"), (PLAN_ENDS_TODAY, "Plan ends today"), (PAYMENT_DUE, "Payment due")]
-    #: How many days before a plan ends its members are warned, until Rackline sets other days (AutomationSchedule)
+    #: How many days before a plan ends its members are warned, until Dumbelo sets other days (AutomationSchedule)
     DAYS_AHEAD = (7, 3)
 
     member = models.ForeignKey("members.Member", on_delete=models.CASCADE, related_name="reminders")

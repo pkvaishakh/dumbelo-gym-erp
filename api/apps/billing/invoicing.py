@@ -1,4 +1,4 @@
-"""Rackline invoices: each gym's invoice on its billing day, the charges added by hand, and the payments against them.
+"""Dumbelo invoices: each gym's invoice on its billing day, the charges added by hand, and the payments against them.
 
 Everything that changes what a gym owes locks its `GymBilling` row first (then the invoice), so the invoice job, an
 approval, a charge and a payment can't cross each other. Numbers come from `NumberSeries` under its own lock.
@@ -17,7 +17,7 @@ from apps.gyms.models import Gym
 from apps.messages.automation import is_invoice_hour
 from apps.messages.models import AutomationSchedule, WhatsAppTemplate
 from apps.messages.notify import after_commit
-from apps.messages.tasks import send_rackline_receipt
+from apps.messages.tasks import send_dumbelo_receipt
 from apps.messages.usage import usage
 
 from .models import PAY_WITHIN_DAYS, GymBilling, Invoice, InvoiceLine, InvoicePayment, NumberSeries, financial_year
@@ -48,7 +48,7 @@ def next_number(series: tuple[str, str], on: date) -> str:
 
 
 def owed_by_gym():
-    """What each gym owes Rackline (its open invoices less what's paid on them), as an annotation on gyms."""
+    """What each gym owes Dumbelo (its open invoices less what's paid on them), as an annotation on gyms."""
     billed = sum_of(Invoice.objects.filter(gym=OuterRef("pk"), status=Invoice.OPEN), "total_paise")
     paid = sum_of(InvoicePayment.objects.filter(gym=OuterRef("pk"), invoice__status=Invoice.OPEN, voided=False), "amount_paise")
     return billed - paid
@@ -82,7 +82,7 @@ def _paid_until(plan: GymBilling) -> None:
 # Writing invoices
 
 def whatsapp_usage_lines(plan: GymBilling, starts: date) -> list[InvoiceLine]:
-    """The billing month before `starts`: delivered messages on Rackline's shared number, one line for each Meta
+    """The billing month before `starts`: delivered messages on Dumbelo's shared number, one line for each Meta
     category and rate kept on the messages (a rate that changed mid-month shows as two lines)."""
     first, last = clock.add_months(starts, -1), starts - timedelta(days=1)
     category = dict(WhatsAppTemplate.CATEGORIES)
@@ -109,7 +109,7 @@ def write_invoice(gym: Gym, starts: date) -> Invoice | None:
     added = sum(p.quantity for p in pending if p.kind == InvoiceLine.BRANCHES_PRO_RATA and p.starts >= starts)
     branches = max(plan.branch_quota - added, 0)
     month = {"gym": gym, "starts": starts, "ends": ends}
-    lines = [InvoiceLine(kind=InvoiceLine.BASE, description=f"Rackline plan, {_span(starts, ends)}", rate_paise=plan.base_paise,
+    lines = [InvoiceLine(kind=InvoiceLine.BASE, description=f"Dumbelo plan, {_span(starts, ends)}", rate_paise=plan.base_paise,
                          amount_paise=plan.base_paise, **month)]
     if branches:
         lines.append(InvoiceLine(kind=InvoiceLine.BRANCHES, description=f"{branches_label(branches)}, {_span(starts, ends)}",
@@ -133,7 +133,7 @@ def write_invoice(gym: Gym, starts: date) -> Invoice | None:
 
 def gyms_billed_on(day: date | None = None, now: datetime | None = None):
     """(gym, day) for every active gym whose billing day is today on its own clock and whose clock has reached
-    Rackline's invoice hour (AutomationSchedule), or every gym billed on `day` when given (a day the worker
+    Dumbelo's invoice hour (AutomationSchedule), or every gym billed on `day` when given (a day the worker
     missed, any hour). Trial and suspended gyms aren't billed."""
     schedule = AutomationSchedule.current()
     for plan in GymBilling.objects.filter(gym__status=Gym.ACTIVE).select_related("gym").iterator():
@@ -206,7 +206,7 @@ def record_payment(inv: Invoice, *, amount_paise: int, method: str, paid_on: dat
         inv.status = Invoice.PAID
         inv.save(update_fields=["status", "updated_at"])
         _paid_until(plan)
-    after_commit(send_rackline_receipt, pay.pk)  # the owner hears it arrived
+    after_commit(send_dumbelo_receipt, pay.pk)  # the owner hears it arrived
     return pay
 
 
