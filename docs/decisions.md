@@ -258,6 +258,15 @@ What was decided, so code and screens stay consistent. Change this file when a d
   ones Meta doesn't charge Rackline for (such as a utility message inside the member's 24-hour chat window).
   Every signed webhook call is kept, and `manage.py replay_webhook_events` runs kept calls again (a status that came
   before the send saved Meta's id, or a call that broke).
+- A gym's admins read every message the gym sent in More → Messages (the desk only its branches' members'), with
+  filters and search, and can Retry one that failed. Retry sends the same message again on the same row and key, with
+  the same words, to the person's number as it is now, so it still goes once at most: two taps or two admins send it
+  once. It is offered only for the gym's own messages that were written out in full and certainly never reached the
+  phone, never for one Meta may already have taken (it didn't answer, its answer made no sense, or the send was cut
+  off), and is refused while the gym is paused or off, the message is paused, they opted out, have no number, the gym
+  now sends from another number, or the template isn't approved. Every Retry is audited.
+- Shared-number usage is shown to a gym's admins for its billing month so far (what goes on the invoice written on its
+  next billing day), and to Rackline admins per gym per calendar month, each gym's days in its own time zone.
 - SMS and email are not in the MVP.
 
 ## Stack and hosting

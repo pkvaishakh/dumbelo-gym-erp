@@ -29,6 +29,7 @@ from apps.members.models import Member, Offer, Plan, Refund
 from apps.members.serializers import set_login
 from apps.members.services import sell, take_payment
 from apps.messages.models import Message, WhatsAppAccount, WhatsAppTemplate
+from apps.messages.meta import NO_ANSWER
 from apps.messages.services import send_due
 from apps.payroll import services as payroll
 from apps.payroll.models import Payslip, PayslipLine, SalaryItem, SalaryPayment, SalaryRule
@@ -210,12 +211,20 @@ class Command(BaseCommand):
         for day in (today - timedelta(days=1), today):
             queue_for(gym, day)
             send_due(gym, day)
+        self._failed_messages(gym, today)
 
         self.stdout.write(self.style.SUCCESS(
             f"Demo gym ready: {len(branches)} branches, {len(staff)} staff, {len(people)} members, "
             f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
             f"Sign in as meera@rackline.demo / {PASSWORD} (X-Gym: rackline-fitness)."
         ))
+
+    def _failed_messages(self, gym, day):
+        """Two of yesterday's reminders that didn't reach the phone, for More → Messages: one Meta turned away (an
+        admin can Retry it) and one Meta never answered about (it may have gone, so it isn't offered)."""
+        sent = list(Message.objects.filter(gym=gym, for_date=day - timedelta(days=1)).order_by("id").values_list("id", flat=True)[:2])
+        for pk, (code, error) in zip(sent, [("131026", "Message undeliverable (code 131026)"), ("no_answer", NO_ANSWER)]):
+            Message.objects.filter(pk=pk).update(status=Message.FAILED, error_code=code, error=error, provider_id="")
 
     def _rackline_admin(self):
         """Rackline's own login for the Console. Kept across --reset: it belongs to no gym."""

@@ -6,7 +6,7 @@ can't count one twice; a message that never reached the phone costs nothing.
 """
 from datetime import date
 
-from django.db.models import Count, F
+from django.db.models import Count, F, Q, Sum
 
 from apps.core import clock
 from apps.gyms.models import Gym
@@ -27,3 +27,20 @@ def usage(gym: Gym, first: date, last: date) -> list[dict]:
             .annotate(messages=Count("id")).order_by("rate", "category"))
     return [{"category": row["category"] or "", "rate_paise": row["rate"], "messages": row["messages"],
              "amount_paise": row["rate"] * row["messages"]} for row in rows]
+
+
+def delivered_anywhere(first: date, last: date):
+    """Every gym's billable messages delivered from local day `first` to `last`, each day read in the gym's own time
+    zone. One query for the time zones gyms are in."""
+    days = Q(pk__in=[])
+    for zone in Gym.objects.order_by().values_list("timezone", flat=True).distinct():
+        where = Gym(timezone=zone)
+        days |= Q(gym__timezone=zone, delivered_at__gte=clock.day_bounds(where, first)[0],
+                  delivered_at__lt=clock.day_bounds(where, last)[1])
+    return Message.objects.filter(days, billable=True)
+
+
+def by_gym(messages):
+    """Those messages per gym: `gym`, `gym_name`, `messages` and `amount_paise`, the biggest bill first."""
+    return (messages.values("gym", gym_name=F("gym__name")).annotate(messages=Count("id"), amount_paise=Sum("rate_paise"))
+            .order_by("-amount_paise", "gym_name", "gym"))

@@ -5,11 +5,13 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { RecipientEnum } from './recipientEnum';
 import type { MessageKindEnum } from './messageKindEnum';
 import type { MessageStatusEnum } from './messageStatusEnum';
 
 /**
- * A message as the desk sees it: when it went, what it said, and whether it arrived.
+ * A message as the gym sees it: who it went to, when, what it said, whether it arrived, and whether an admin may
+send it again (`can_retry`).
  */
 export interface Message {
   readonly id: number;
@@ -17,6 +19,13 @@ export interface Message {
   readonly member: number | null;
   /** @nullable */
   readonly member_name: string | null;
+  /**
+   * A staff member it went to; empty when it went to a member
+   * @nullable
+   */
+  readonly user: number | null;
+  readonly to_name: string;
+  readonly recipient: RecipientEnum;
   readonly kind: MessageKindEnum;
   readonly kind_label: string;
   /** The number it was sent to, as it was that day */
@@ -26,7 +35,22 @@ export interface Message {
   /** The day in the gym's time zone it was for */
   readonly for_date: string;
   readonly status: MessageStatusEnum;
+  readonly status_label: string;
   /** Why it failed, in the provider's words */
   readonly error: string;
+  /** Times it was handed to the provider */
+  readonly attempts: number;
+  readonly can_retry: boolean;
   readonly created_at: string;
+  readonly updated_at: string;
+  /**
+   * When Meta says it reached their phone
+   * @nullable
+   */
+  readonly delivered_at: string | null;
+  /**
+   * When Meta says they opened it
+   * @nullable
+   */
+  readonly read_at: string | null;
 }

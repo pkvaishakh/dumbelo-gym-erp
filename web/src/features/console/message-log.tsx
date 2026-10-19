@@ -6,7 +6,8 @@ import { useState } from "react";
 import type { ConsoleMessage } from "@/api/gen/model";
 import { usePlatformGymsList, usePlatformWhatsappAccountsList, usePlatformWhatsappTemplatesList } from "@/api/gen/platform/platform";
 import { Details, Field, Icon, SearchField, Sheet } from "@/components/ui";
-import { day, dayTime, lastDigits, MESSAGE_STATUS, rupees } from "@/lib/format";
+import { MessageBadge } from "@/features/messages";
+import { day, dayTime, lastDigits, rupees } from "@/lib/format";
 import { useSearch } from "@/lib/hooks";
 
 export type LogFilters = { status: string; gym: string; account: string; template: string; from: string; to: string };
@@ -16,11 +17,6 @@ export const NO_FILTERS: LogFilters = { status: "all", gym: "", account: "", tem
 export function logUrl(f: LogFilters) {
   const p = new URLSearchParams(Object.entries(f).filter(([k, v]) => v && !(k === "status" && v === "all")));
   return `/console/messages${p.size ? `?${p}` : ""}`;
-}
-
-export function MessageBadge({ status }: { status: string }) {
-  const s = MESSAGE_STATUS[status] ?? { label: status, badge: "frozen" };
-  return <span className={`rl-status rl-status--${s.badge}`}>{s.label}</span>;
 }
 
 const accountLabel = (a: { display_number: string; is_shared: boolean; gym_name?: string | null }) => `${a.display_number} • ${a.is_shared ? "Shared" : a.gym_name ?? "A gym's own"}`;

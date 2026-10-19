@@ -6,9 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MessagesListKind } from './messagesListKind';
+import type { MessagesListRecipient } from './messagesListRecipient';
 import type { MessagesListStatus } from './messagesListStatus';
 
 export type MessagesListParams = {
+/**
+ * For this day or later (the gym's days), YYYY-MM-DD
+ */
+from?: string;
 /**
  * * `plan_ending` - Plan ending soon
 * `plan_ends_today` - Plan ends today
@@ -29,6 +34,15 @@ member?: number;
  */
 offset?: number;
 /**
+ * Their name or number (4 digits or more), 2 characters or more
+ */
+q?: string;
+/**
+ * * `member` - A member
+* `staff` - A staff member
+ */
+recipient?: MessagesListRecipient;
+/**
  * * `queued` - Sending
 * `sent` - Sent
 * `delivered` - Delivered
@@ -36,4 +50,8 @@ offset?: number;
 * `failed` - Failed
  */
 status?: MessagesListStatus;
+/**
+ * For this day or earlier, YYYY-MM-DD
+ */
+to?: string;
 };

@@ -7,7 +7,8 @@ import type { ConsoleMessage, PlatformMessagesListParams, PlatformMessagesListSt
 import { usePlatformGymsRetrieve, usePlatformMessagesListInfinite } from "@/api/gen/platform/platform";
 import { PageBar } from "@/components/shell";
 import { Chips, Empty, Icon, LoadMore, SearchField, Section, SkeletonRows } from "@/components/ui";
-import { LogFilterSheet, logUrl, MessageBadge, MessageSheet, NO_FILTERS, type LogFilters } from "@/features/console/message-log";
+import { LogFilterSheet, logUrl, MessageSheet, NO_FILTERS, type LogFilters } from "@/features/console/message-log";
+import { MessageBadge } from "@/features/messages";
 import { ago, plural } from "@/lib/format";
 import { paged, pages, useSearch } from "@/lib/hooks";
 

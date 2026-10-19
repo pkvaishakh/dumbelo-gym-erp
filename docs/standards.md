@@ -78,8 +78,9 @@ Search before you write. If the thing exists, use it. If it nearly exists, exten
   page, a summary endpoint (`/api/checkins/summary/`, `/api/reports/summary/`) or a `counts` action
   (`/api/tasks/counts/`).
 - **Filters are declared, not hand-parsed.** Use `filterset_fields` or a `FilterSet` for exact matches, `int_param`
-  (`apps/core/params.py`) for ids read by hand, and `clock.parse_date` for dates. A bad value answers **400 with a
-  field error, never 500** (`?branch=abc`). Document every parameter with `@extend_schema` so the web client is typed.
+  (`apps/core/params.py`) for ids read by hand, `clock.parse_date` for dates, and `open_days` for a log's `?from=&to=`.
+  A bad value answers **400 with a field error, never 500** (`?branch=abc`). Document every parameter with
+  `@extend_schema` so the web client is typed.
 - **Search** is one `q` parameter with `icontains` over a few indexed columns (name, code, phone). Trim it, ignore
   anything shorter than 2 characters, and document it with `@extend_schema` `OpenApiParameter`.
 - The web asks for a page and shows the design's **Load More** (`useXxxListInfinite` + `paged`/`pages` from

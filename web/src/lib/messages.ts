@@ -1,6 +1,7 @@
 /* When each WhatsApp message goes out, in the words a gym's admin or a Rackline admin reads. The times themselves
    come from the API (Rackline's, or a gym's own); this only says them. */
-import type { Rule } from "@/api/gen/model";
+import { MessagesListKind, MessagesListRecipient, MessagesListStatus } from "@/api/gen/model";
+import type { MessageKindEnum, MessagesListParams, Rule } from "@/api/gen/model";
 
 /** Every whole hour of a day, for an hour picker. */
 export const HOURS = Array.from({ length: 24 }, (_, h) => h);
@@ -45,3 +46,51 @@ export const MESSAGE_TO: Record<string, string> = {
   plan_ending: "The member", plan_ends_today: "The member", payment_due: "The member", payment_received: "The member",
   task_assigned: "The trainer or receptionist", rackline_invoice_due: "The gym's owner", rackline_payment_received: "The gym's owner",
 };
+
+/** What each message is, as the log names it (the API's labels). */
+export const MESSAGE_LABEL: Record<MessageKindEnum, string> = {
+  plan_ending: "Plan ending soon", plan_ends_today: "Plan ends today", payment_due: "Payment due", payment_received: "Payment received",
+  task_assigned: "Task assigned", rackline_invoice_due: "Rackline invoice due", rackline_payment_received: "Rackline payment received",
+};
+
+/** The gym's message log filters, as they sit in the address ("" or "all" for none). */
+export type GymLogFilters = { status: string; kind: string; recipient: string; from: string; to: string };
+export const NO_GYM_FILTERS: GymLogFilters = { status: "all", kind: "", recipient: "", from: "", to: "" };
+
+const isStatus = (v: string): v is MessagesListStatus => v in MessagesListStatus;
+const isKind = (v: string): v is MessagesListKind => v in MessagesListKind;
+const isRecipient = (v: string): v is MessagesListRecipient => v in MessagesListRecipient;
+
+/** The filters from the address, keeping only the ones the log knows. */
+export function gymLogFilters(p: { get(name: string): string | null }): GymLogFilters {
+  return { status: p.get("status") || "all", kind: p.get("kind") ?? "", recipient: p.get("recipient") ?? "", from: p.get("from") ?? "", to: p.get("to") ?? "" };
+}
+
+/** More → Messages with these filters, so Back and a shared link keep the log as it was. */
+export function gymLogUrl(f: GymLogFilters) {
+  const p = new URLSearchParams(Object.entries(f).filter(([k, v]) => v && !(k === "status" && v === "all")));
+  return `/messages${p.size ? `?${p}` : ""}`;
+}
+
+/** The log's query: the search, and each filter the API would accept (a mistyped one in the address is ignored). */
+export function gymLogParams(f: GymLogFilters, q: string): MessagesListParams {
+  return {
+    ...(q ? { q } : {}), ...(isStatus(f.status) ? { status: f.status } : {}), ...(isKind(f.kind) ? { kind: f.kind } : {}),
+    ...(isRecipient(f.recipient) ? { recipient: f.recipient } : {}), ...(f.from ? { from: f.from } : {}), ...(f.to ? { to: f.to } : {}),
+  };
+}
+
+/** "Filtered by payment due, staff, some days": what narrows the list, for the page's subtitle. */
+export function narrowedBy(f: GymLogFilters) {
+  return [
+    isKind(f.kind) && MESSAGE_LABEL[f.kind].toLowerCase(), f.recipient === "member" && "members", f.recipient === "staff" && "staff",
+    (f.from || f.to) && "some days",
+  ].filter(Boolean).join(", ");
+}
+
+/** The first and last day of a month ("2026-10" → 1 to 31 Oct), for a log's from and to. */
+export function monthDays(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { from: `${month}-01`, to: `${month}-${String(last).padStart(2, "0")}` };
+}
