@@ -5,6 +5,12 @@ cd "$(dirname "$0")"
 
 git pull --ff-only
 
+# A copy of the database from just before this deploy's migrations, so a bad one can be undone (PRODUCTION.md).
+# Skipped on the very first start, when there is no database yet.
+if docker compose ps --status running --services | grep -qx db; then
+  bash backup.sh
+fi
+
 # Shown on the Console's Server screen.
 export APP_VERSION="$(git rev-parse --short HEAD)"
 export DEPLOYED_AT="$(date -u +%FT%TZ)"

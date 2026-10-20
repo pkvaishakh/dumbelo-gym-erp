@@ -18,6 +18,7 @@ phone / laptop ──HTTPS──► server (Ubuntu 24.04, Docker)
 
 Everything lives in [`deploy/server/`](../deploy/server/): `docker-compose.yml` (the containers), `Caddyfile`
 (the HTTPS front door), `.env.example` (the settings), `update.sh` (deploy) and `backup.sh` (the nightly backup).
+The short, command-only version of this page, with running and maintaining it, is `PRODUCTION.md`.
 
 Commands in `PS>` blocks run in PowerShell on your Windows machine. All the others run on the server, over SSH.
 
@@ -291,7 +292,8 @@ Merge to `main` on GitHub, then on the server:
 cd ~/dumbelo/deploy/server && bash update.sh
 ```
 
-It pulls, rebuilds, runs any new migrations, restarts what changed and checks the health page. There's a few
+It backs up the database, pulls, rebuilds, runs any new migrations, restarts what changed and checks the health
+page. There's a few
 seconds' gap while the API restarts. Fine for a gym: deploy in the afternoon, not at opening time or at 6 AM, when
 the reminders go out.
 

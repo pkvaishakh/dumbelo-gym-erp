@@ -7,6 +7,11 @@
 # api.<domain> to the API and app.<domain> to the web app. Postgres and Redis publish no ports at all.
 name: dumbelo
 
+# Docker keeps every log line forever unless told otherwise, until the disk is full: 5 files of 10 MB per service.
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 10m, max-file: "5"}
+
 # The API image runs four ways (docs/deploy.md): the migration, the web process, the worker and beat.
 x-api: &api
   build:
@@ -16,6 +21,7 @@ x-api: &api
       DEPLOYED_AT: ${DEPLOYED_AT:-}
   image: dumbelo-api
   restart: unless-stopped
+  logging: *logging
   environment:
     PRODUCTION: "true"
     SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
@@ -32,6 +38,7 @@ services:
   db:
     image: postgres:16
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: dumbelo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -46,6 +53,7 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
+    logging: *logging
     # Written to disk, so jobs waiting in the queue survive a restart.
     command: redis-server --appendonly yes
     volumes: [redisdata:/data]
@@ -87,10 +95,12 @@ services:
         NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
     image: dumbelo-web
     restart: unless-stopped
+    logging: *logging
 
   caddy:
     image: caddy:2
     restart: unless-stopped
+    logging: *logging
     ports: ["80:80", "443:443"]
     environment:
       API_DOMAIN: ${API_DOMAIN}
