@@ -1,0 +1,15 @@
+# Caddy gets and renews the HTTPS certificates by itself (Let's Encrypt), sends http:// to https://, and passes
+# each name to its container. It tells them the visitor came over HTTPS (X-Forwarded-Proto), which the API trusts.
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}
+
+{$APP_DOMAIN} {
+	encode gzip
+	reverse_proxy web:3000
+}

@@ -1,0 +1,11 @@
+# Keep the image to the code it builds: the server installs its own packages, and no local secrets go in.
+node_modules/
+.next/
+out/
+.env*.local
+test-results/
+playwright-report/
+*.tsbuildinfo
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js

@@ -7,7 +7,8 @@ Phone-first web app (PWA) used by four roles: admin, receptionist, trainer, memb
 ```
 api/    Django 5 + DRF + Postgres backend          → api/CLAUDE.md
 web/    Next.js 15 PWA, the app every role uses     → web/CLAUDE.md
-docs/   decisions.md (product and architecture decisions), deploy.md (AWS + Vercel), operations.md (backups, the
+docs/   decisions.md (product and architecture decisions), deploy.md (AWS + Vercel), deploy-server.md (one
+        server: DigitalOcean or Oracle, deploy/server/), operations.md (backups, the
         restore drill, opening a gym), design/ (design system)
 ```
 
