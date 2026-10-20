@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Writes a copy of the database to ~/backups and keeps the newest 14. Run nightly from cron (docs/deploy-oracle.md).
+# Writes a copy of the database to ~/backups and keeps the newest 14. Run nightly from cron (docs/deploy-server.md).
 # A copy on the same server is not a backup on its own: download them, or send them to Object Storage.
 set -euo pipefail
 cd "$(dirname "$0")"

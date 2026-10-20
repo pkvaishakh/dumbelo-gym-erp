@@ -1,4 +1,5 @@
-# Dumbelo on one server (an Oracle Cloud VM, or any Linux box with Docker). Guide: docs/deploy-oracle.md.
+# Dumbelo on one server (a DigitalOcean droplet, an Oracle Cloud VM, any Linux server with Docker).
+# Guide: docs/deploy-server.md.
 # Settings come from .env next to this file (copy .env.example). Start or update everything with:
 #   docker compose up -d --build
 #
