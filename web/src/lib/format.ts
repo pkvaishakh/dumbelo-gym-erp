@@ -172,6 +172,14 @@ export const WHATSAPP_MODE: Record<string, { label: string; note: string }> = {
 };
 
 /** Whether a WhatsApp number works, as a badge: an account's status, or a gym's ("not set up", "off"). */
+/** A demo request from the landing page, as the Console's Leads shows it. New ones wait for a call. */
+export const LEAD_STATUS: Record<string, { label: string; badge: string }> = {
+  new: { label: "New", badge: "due" },
+  contacted: { label: "Contacted", badge: "frozen" },
+  won: { label: "Signed up", badge: "active" },
+  lost: { label: "Not now", badge: "off" },
+};
+
 export const WHATSAPP_STATUS: Record<string, { label: string; badge: string }> = {
   new: { label: "Not checked yet", badge: "frozen" },
   working: { label: "Working", badge: "active" },

@@ -13,6 +13,7 @@ from apps.core.views import HealthView
 from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpenseViewSet
 from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, MoneyMoveViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
+from apps.leads.views import ConsoleLeadViewSet, LeadAskView
 from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import (
     AutomationView, ConsoleMessageViewSet, ConsoleUsageView, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
@@ -58,6 +59,7 @@ router.register("platform/charges", ChargeViewSet, basename="platform-charge")
 router.register("platform/whatsapp-accounts", WhatsAppAccountViewSet, basename="platform-whatsapp-account")
 router.register("platform/whatsapp-templates", WhatsAppTemplateViewSet, basename="platform-whatsapp-template")
 router.register("platform/messages", ConsoleMessageViewSet, basename="platform-message")
+router.register("platform/leads", ConsoleLeadViewSet, basename="platform-lead")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -67,6 +69,7 @@ urlpatterns = [
     path("api/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/me/", MeView.as_view(), name="me"),
     path("api/me/password/", PasswordView.as_view(), name="me-password"),
+    path("api/leads/", LeadAskView.as_view(), name="lead-ask"),  # the landing page's demo form: no sign-in
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
     path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/
     path("api/reports/summary/", SummaryView.as_view(), name="summary"),

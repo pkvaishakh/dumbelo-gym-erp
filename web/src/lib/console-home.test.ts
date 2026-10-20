@@ -9,6 +9,7 @@ const quiet: PlatformSummary = {
   gyms: { active: 12, trial: 3, suspended: 1, new_this_month: 2 },
   money: { owed_paise: 0, gyms_owing: 0, overdue_paise: 0, overdue_invoices: 0, gyms_overdue: 0 },
   branch_requests: { waiting: 0 },
+  leads: { new: 0 },
   whatsapp: { delivered_today: 140, failed_today: 0, waiting_retry: 0, shared_messages: 2300, shared_paise: 34500 },
   server: { down: [], failed_jobs: [] },
 };
@@ -24,7 +25,7 @@ describe("andList", () => {
 
 describe("consoleAttention", () => {
   it("is all zeros when nothing needs you, so the card shows its quiet line", () => {
-    expect(consoleAttention(quiet).map((r) => r.count)).toEqual([0, 0, 0, 0]);
+    expect(consoleAttention(quiet).map((r) => r.count)).toEqual([0, 0, 0, 0, 0]);
   });
 
   it("puts the server first and says what is down and what failed", () => {
@@ -32,6 +33,7 @@ describe("consoleAttention", () => {
       ...quiet,
       money: { owed_paise: 570000, gyms_owing: 2, overdue_paise: 390000, overdue_invoices: 3, gyms_overdue: 2 },
       branch_requests: { waiting: 1 },
+      leads: { new: 2 },
       whatsapp: { ...quiet.whatsapp, failed_today: 4 },
       server: {
         down: [
@@ -46,6 +48,7 @@ describe("consoleAttention", () => {
       [3, "Server problems", "Worker and Beat down • Reminders failed", "/console/server"],
       [3, "Overdue invoices", "₹3,900 from 2 gyms", "/console/gyms?owes=overdue"],
       [1, "Branch requests", "Gyms waiting for your answer", "/console/requests"],
+      [2, "New leads", "Gyms that asked for a demo, waiting for a call", "/console/leads"],
       [4, "WhatsApp messages failed", "Today, on every number", "/console/messages?status=failed"],
     ]);
     expect(serverMeta({ down: [], failed_jobs: s.server.failed_jobs })).toBe("Reminders failed");

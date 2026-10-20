@@ -93,6 +93,10 @@ services:
       context: ../../web
       args:
         NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+        # The landing page at https://APP_DOMAIN/ (built in: change them, then bash update.sh).
+        NEXT_PUBLIC_SITE_URL: https://${APP_DOMAIN}
+        NEXT_PUBLIC_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+        NEXT_PUBLIC_SALES_WHATSAPP: ${SALES_WHATSAPP:-}
     image: dumbelo-web
     restart: unless-stopped
     logging: *logging

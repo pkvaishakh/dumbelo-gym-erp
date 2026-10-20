@@ -1,0 +1,364 @@
+/* The landing page. Every colour, radius and shadow is a design-system token; depth comes from perspective, layers
+   stepped along Z, and motion that answers the pointer and the scroll. No gradients, no new colours. */
+
+.page { --wide: 1200px; min-height: 100vh; background: var(--ground); color: var(--ink); overflow-x: clip; }
+.wrap { width: 100%; max-width: var(--wide); margin: 0 auto; padding: 0 var(--space-4); }
+@media (min-width: 768px) { .wrap { padding: 0 var(--space-8); } }
+
+.skip { position: absolute; left: var(--space-4); top: -100px; z-index: 60; padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); background: var(--ink); color: var(--on-ink); font-weight: 600; text-decoration: none; }
+.skip:focus { top: var(--space-2); }
+.grow { flex: 1 1 auto; min-width: 0; }
+.page :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---------- Header ---------- */
+.header { position: sticky; top: 0; z-index: 50; padding-top: env(safe-area-inset-top); background: var(--ground); border-bottom: 1px solid transparent; transition: border-color 200ms ease; }
+.header[data-scrolled] { border-bottom-color: var(--line); }
+.headerIn { display: flex; align-items: center; gap: var(--space-4); height: 64px; }
+.nav { display: none; }
+.nav a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--ink-muted); font-size: 14px; line-height: 20px; font-weight: 600; text-decoration: none; transition: color 160ms ease; }
+.nav a:hover { color: var(--ink); }
+.headerActions { display: flex; gap: var(--space-2); margin-left: auto; }
+.headerDemo { display: none !important; }
+@media (min-width: 600px) { .headerDemo { display: inline-flex !important; } }
+@media (min-width: 1024px) {
+  .nav { display: flex; gap: var(--space-6); margin: 0 auto; }
+  .headerActions { margin-left: 0; }
+}
+
+/* ---------- Hero: an ink panel framed like the desktop sign-in's brand panel ---------- */
+.heroFrame { --away: 0; padding: 0 var(--space-2); }
+@media (min-width: 768px) { .heroFrame { padding: 0 var(--space-4); } }
+.hero {
+  position: relative; display: grid; gap: var(--space-6); overflow: hidden;
+  padding: var(--space-12) var(--space-4) 0; border-radius: var(--radius-lg); background: var(--ink); color: var(--on-ink);
+}
+@media (min-width: 768px) { .hero { padding: var(--space-12) var(--space-8) 0; } }
+@media (min-width: 1024px) {
+  .hero {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; min-height: min(860px, calc(100svh - 80px));
+    padding: var(--space-12) max(var(--space-8), calc((100% - var(--wide)) / 2 + var(--space-8)));
+  }
+}
+.heroCopy { position: relative; z-index: 2; max-width: 600px; }
+/* The h1 says what Dumbelo is (the eyebrow line, for people and for search), then the brand line, large. */
+.eyebrow {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; margin: 0 0 var(--space-6); padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px var(--field-line);
+  font-size: 13px; line-height: 18px; font-weight: 600; letter-spacing: 0; font-variation-settings: normal;
+}
+.eyebrowDot { flex: none; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--volt); }
+.heroTitle {
+  margin: 0; font-size: clamp(44px, 10.5vw, 92px); line-height: .96; font-weight: 700; letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 112;
+}
+.heroLine { display: block; }
+.heroLede { max-width: 46ch; margin: var(--space-6) 0 0; font-size: 17px; line-height: 26px; color: var(--on-ink); opacity: .78; }
+.heroActions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
+.heroActions > * { flex: 1 1 auto; }
+@media (min-width: 480px) { .heroActions > * { flex: none; } }
+.heroNote { margin: var(--space-3) 0 0; font-size: 14px; line-height: 20px; color: var(--on-ink); opacity: .78; }
+.heroFacts { display: grid; gap: var(--space-3); margin: var(--space-8) 0 0; padding: 0; list-style: none; font-size: 14px; line-height: 20px; }
+.heroFacts li { display: flex; align-items: center; gap: var(--space-3); }
+.heroFacts :global(.rl-icon) { color: var(--volt); }
+
+/* The stage: three phones and three notes, each at its own depth, the whole scene turning with the pointer. */
+.stage { position: relative; height: 520px; margin: 0 calc(var(--space-4) * -1); perspective: 1500px; perspective-origin: 50% 30%; }
+@media (min-width: 768px) { .stage { height: 640px; } }
+@media (min-width: 1024px) { .stage { height: 760px; margin: 0; } }
+.scene {
+  --rx: 0; --ry: 0; position: absolute; inset: 0; transform-style: preserve-3d;
+  transform: translateY(calc(var(--away) * -80px)) rotateX(calc(10deg + var(--rx) * 1deg + var(--away) * 16deg)) rotateY(calc(-16deg + var(--ry) * 1deg));
+  transition: transform 600ms cubic-bezier(.2, .8, .2, 1);
+}
+.scene > .phone, .scene > .float { position: absolute; animation: rise 1100ms cubic-bezier(.2, .8, .2, 1) backwards; }
+.scene > .phone { left: 50%; top: 52%; margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2); }
+.phoneCenter { transform: translateZ(40px); animation-delay: 80ms !important; }
+.phoneLeft { transform: translateX(-62%) translateZ(-140px) rotateY(16deg); animation-delay: 220ms !important; }
+.phoneRight { transform: translateX(62%) translateZ(-140px) rotateY(-16deg); animation-delay: 300ms !important; }
+@media (min-width: 1024px) {
+  .scene > .phone { --k: .66; }
+  .phoneLeft { transform: translateX(-74%) translateZ(-160px) rotateY(18deg); }
+  .phoneRight { transform: translateX(74%) translateZ(-160px) rotateY(-18deg); }
+}
+@keyframes rise { from { opacity: 0; translate: 0 140px; } }
+
+.float {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  border-radius: var(--radius-md); background: var(--ground); color: var(--ink); box-shadow: var(--shadow-button); white-space: nowrap;
+}
+.float > span:last-child { display: grid; }
+.floatTick { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--volt); color: var(--ink); }
+.floatA { left: 2%; top: 14%; transform: translateZ(180px); animation-delay: 650ms !important; }
+.floatB { right: 0; top: 50%; transform: translateZ(230px); animation-delay: 800ms !important; }
+.floatC { left: 6%; bottom: 10%; transform: translateZ(130px); animation-delay: 950ms !important; }
+@media (max-width: 599px) {
+  .floatA { left: 16%; top: 4%; }
+  .floatB { right: var(--space-2); top: auto; bottom: 16%; }
+  .floatC { display: none; }
+}
+
+/* ---------- A phone: a face, and edge layers stepped back so its side shows as it turns ---------- */
+.phone { --k: .62; --pw: calc(390px * var(--k) + 16px); --ph: calc(844px * var(--k) + 16px); position: relative; width: var(--pw); height: var(--ph); transform-style: preserve-3d; }
+.phoneEdge { position: absolute; inset: 0; border-radius: var(--radius-lg); background: var(--line); transform: translateZ(calc(var(--z) * -3px)); }
+.phoneEdge:nth-child(4) { background: var(--field-line); }
+.phoneFace { position: absolute; inset: 0; padding: 8px; border-radius: var(--radius-lg); background: var(--ground); box-shadow: inset 0 0 0 1px var(--line); }
+.screen { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: var(--radius-md); background: var(--surface); }
+.screenIn { position: absolute; top: 0; left: 0; width: 390px; height: 844px; overflow: hidden; background: var(--surface); transform: scale(var(--k)); transform-origin: 0 0; }
+
+/* What runs inside a phone, at the app's own 390px. The app's 768px rules follow the window, not the phone, so the
+   phone keeps its own small layout here. */
+.mockBar { position: relative; }
+.mockMain { display: grid; gap: var(--space-4); padding: var(--space-2) var(--space-4) 0; }
+.mockPair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.mockTriple { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.mockTitle { margin: 0 0 var(--space-2); }
+.mockRow { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+.mockRow + .mockRow { border-top: 1px solid var(--line); }
+.mockRowText { flex: 1 1 auto; min-width: 0; }
+.mockRowText > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mockTime { flex: none; font-size: 13px; line-height: 18px; font-weight: 600; }
+.mockChart { display: flex; align-items: flex-end; justify-content: space-between; height: 96px; margin-top: var(--space-3); border-bottom: 1px solid var(--line); }
+.mockChart span { width: 24px; height: calc(var(--v) * 100%); border-radius: 4px 4px 0 0; background: var(--ink); }
+.mockChart .mockBarNow { background: var(--volt); }
+.mockTabs { position: absolute; padding-bottom: 0; }
+.screenIn :global(.rl-stat) { padding: var(--space-3); }
+.screenIn :global(.rl-figure) { margin: 0; }
+.screenIn :global(.rl-streak) { display: grid; gap: var(--space-1); }
+.screenIn :global(.rl-streak .rl-row__meta) { color: var(--ink); }
+
+/* ---------- Sections ---------- */
+.band { padding: var(--space-12) 0; }
+@media (min-width: 768px) { .band { padding: calc(var(--space-12) * 2) 0; } }
+.bandSurface { background: var(--surface); }
+/* Links to a section (#demo, #pricing) land it below the sticky header, not under it. */
+.band, .inkFrame, .ctaBand { scroll-margin-top: 64px; }
+.head { max-width: 760px; margin-bottom: var(--space-8); }
+.kicker {
+  display: inline-flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3);
+  font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted);
+}
+.kicker::before { content: ""; width: 20px; height: 8px; border-radius: var(--radius-pill); background: var(--volt); }
+.kickerOnInk { color: var(--on-ink); }
+.title { margin: 0; font-size: clamp(30px, 5.2vw, 52px); line-height: 1.04; font-weight: 700; letter-spacing: -0.02em; font-variation-settings: "wdth" 112; }
+.lede { max-width: 62ch; margin: var(--space-4) 0 0; font-size: 17px; line-height: 26px; color: var(--ink-muted); }
+.cardTitle { margin: 0; font-size: 20px; line-height: 24px; font-weight: 700; letter-spacing: -0.01em; font-variation-settings: "wdth" 112; }
+.cardText { margin: var(--space-2) 0 0; font-size: 15px; line-height: 22px; color: var(--ink-muted); }
+
+/* Settling in: each block rises out of a slight tilt as it scrolls into view. Only once motion is known to be fine. */
+.page[data-motion] [data-reveal] {
+  opacity: 0; transform: perspective(1200px) translateY(40px) rotateX(16deg); transform-origin: 50% 100%;
+  transition: opacity 700ms ease, transform 1000ms cubic-bezier(.2, .8, .2, 1); transition-delay: calc(var(--i, 0) * 90ms);
+}
+.page[data-motion] [data-reveal][data-in] { opacity: 1; transform: none; }
+
+/* A card that turns toward the pointer; what's inside sits forward of it. */
+.tilt {
+  --rx: 0; --ry: 0; height: 100%; transform-style: preserve-3d;
+  transform: perspective(1000px) rotateX(calc(var(--rx) * 1deg)) rotateY(calc(var(--ry) * 1deg));
+  transition: transform 450ms cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ---------- Check-in: three doors ---------- */
+.doors { display: grid; gap: var(--space-4); }
+@media (min-width: 900px) { .doors { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.door { padding: var(--space-4) var(--space-4) var(--space-6); border-radius: var(--radius-lg); background: var(--surface); }
+.door > .cardTitle, .door > .cardText { padding: 0 var(--space-2); transform: translateZ(20px); }
+.doorArt {
+  display: grid; place-items: center; align-content: center; gap: var(--space-2); height: 208px; margin-bottom: var(--space-6); padding: var(--space-4);
+  border-radius: var(--radius-md); background: var(--ground); box-shadow: inset 0 0 0 1px var(--line); transform-style: preserve-3d;
+}
+.doorResult { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); transform: translateZ(48px); }
+.doorBack { transform: translateZ(20px) scale(.96); box-shadow: inset 0 0 0 1px var(--line); }
+.doorBack :global(.rl-row__meta) { color: var(--danger); }
+.poster {
+  display: grid; justify-items: center; gap: var(--space-1); padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-md); background: var(--ground); box-shadow: var(--shadow-card); transform: translateZ(56px) rotateX(-4deg);
+}
+.posterCode { display: grid; place-items: center; width: 96px; height: 96px; margin-bottom: var(--space-2); border-radius: var(--radius-sm); background: var(--ink); color: var(--volt); }
+.posterCode :global(.rl-icon) { width: 64px; height: 64px; }
+.device {
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-6) var(--space-4) var(--space-4);
+  border-radius: var(--radius-md); background: var(--ink); color: var(--on-ink); box-shadow: var(--shadow-button); transform: translateZ(56px);
+}
+.deviceIcon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--volt); color: var(--ink); }
+.deviceLine { display: grid; }
+.device :global(.rl-row__title) { color: var(--on-ink); font-size: 20px; line-height: 24px; }
+.device :global(.rl-row__meta) { color: var(--on-ink); opacity: .78; }
+
+/* ---------- Your team: one phone that turns to each role ---------- */
+.roles { display: grid; gap: var(--space-8); align-items: center; }
+@media (min-width: 900px) { .roles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.rolesCopy { display: grid; gap: var(--space-6); align-content: start; max-width: 520px; }
+.rolesCopy :global(.rl-seg__btn) { padding: 0 var(--space-2); white-space: nowrap; }
+.roleText { animation: settle 420ms cubic-bezier(.2, .8, .2, 1) both; }
+.roleTitle { margin: 0; font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; font-variation-settings: "wdth" 112; }
+.checksHead { margin: var(--space-6) 0 0; font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
+.checks { display: grid; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.checks li { display: flex; align-items: flex-start; gap: var(--space-3); font-size: 15px; line-height: 22px; }
+.checkYes, .checkNoMark { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: var(--radius-pill); }
+.checkYes { background: var(--volt); color: var(--ink); }
+.checkNo { color: var(--ink-muted); }
+.checkNoMark { background: var(--ground); color: var(--ink-muted); box-shadow: inset 0 0 0 1px var(--field-line); }
+.roleStage { display: grid; place-items: center; padding: var(--space-6) 0; perspective: 1400px; }
+.roleTurn {
+  --rx: 0; --ry: 0; transform-style: preserve-3d;
+  transform: rotateX(calc(4deg + var(--rx) * 1deg)) rotateY(calc(-14deg + var(--ry) * 1deg));
+  transition: transform 500ms cubic-bezier(.2, .8, .2, 1);
+}
+.roleFlip { transform-style: preserve-3d; animation: flip 760ms cubic-bezier(.2, .8, .2, 1) both; }
+.roleFlip .phone { --k: .64; }
+@keyframes flip { from { opacity: 0; transform: rotateY(-110deg) translateZ(-60px); } 35% { opacity: 1; } }
+@keyframes settle { from { opacity: 0; transform: translateY(12px); } }
+
+/* ---------- Features: a bento of cards, the two widest on ink ---------- */
+.bento { display: grid; gap: var(--space-4); }
+@media (min-width: 640px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .bento { grid-template-columns: repeat(3, minmax(0, 1fr)); } .featureWide { grid-column: span 2; } }
+.feature { padding: var(--space-6); border-radius: var(--radius-lg); background: var(--surface); }
+.feature > * { transform: translateZ(28px); }
+.feature > .featureIcon { transform: translateZ(48px); }
+/* On a phone each card is a row: the icon beside its title and text, so ten of them don't run on for ever. */
+@media (max-width: 639px) {
+  .feature { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-4); padding: var(--space-4); }
+  .feature > .featureIcon { grid-row: span 2; margin-bottom: 0; }
+}
+.featureIcon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: var(--space-6); border-radius: var(--radius-sm); background: var(--ground); color: var(--ink); box-shadow: var(--shadow-card); }
+.featureWide .feature { background: var(--ink); color: var(--on-ink); }
+.featureWide .featureIcon { background: var(--volt); box-shadow: none; }
+.featureWide .cardText { max-width: 52ch; color: var(--on-ink); opacity: .78; }
+
+/* ---------- Your records: on ink ---------- */
+.inkFrame { padding: 0 var(--space-2); }
+@media (min-width: 768px) { .inkFrame { padding: 0 var(--space-4); } }
+.ink { position: relative; overflow: hidden; padding: var(--space-12) 0; border-radius: var(--radius-lg); background: var(--ink); color: var(--on-ink); }
+@media (min-width: 768px) { .ink { padding: calc(var(--space-12) * 2) 0; } }
+.trust { display: grid; gap: var(--space-8) var(--space-6); }
+@media (min-width: 640px) { .trust { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .trust { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.trustItem { padding-top: var(--space-6); border-top: 1px solid var(--field-line); }
+.trustIcon { display: block; margin-bottom: var(--space-4); color: var(--volt); }
+.trustText { margin: var(--space-2) 0 0; font-size: 15px; line-height: 22px; opacity: .78; }
+
+/* ---------- Pricing ---------- */
+.pricing { display: grid; gap: var(--space-8); align-items: center; }
+.pricing .head { margin-bottom: 0; }
+@media (min-width: 960px) { .pricing { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12); } }
+.priceCard { padding: var(--space-6); }
+.priceRows { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.priceRows li { display: flex; align-items: flex-start; gap: var(--space-3); }
+.priceRows li + li { padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.priceActions { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
+.priceActions p { margin: 0; text-align: center; }
+
+/* ---------- Questions ---------- */
+.faqWrap { display: grid; gap: var(--space-2); }
+@media (min-width: 960px) { .faqWrap { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-12); align-items: start; } }
+.faq { padding: 0 var(--space-4); }
+@media (min-width: 768px) { .faq { padding: 0 var(--space-6); } }
+.faqItem + .faqItem { border-top: 1px solid var(--line); }
+.faqItem summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 64px; padding: var(--space-3) 0;
+  font-size: 16px; line-height: 22px; font-weight: 600; list-style: none; cursor: pointer;
+}
+.faqItem summary::-webkit-details-marker { display: none; }
+.faqQ { margin: 0; font: inherit; }
+.faqMark { position: relative; flex: none; width: 32px; height: 32px; border-radius: var(--radius-pill); background: var(--surface); transition: transform 220ms ease; }
+.faqMark::before, .faqMark::after { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 2px; margin: -1px 0 0 -6px; border-radius: 2px; background: var(--ink); transition: transform 220ms ease; }
+.faqMark::after { transform: rotate(90deg); }
+.faqItem[open] .faqMark::after { transform: rotate(0deg); }
+.faqItem p { max-width: 62ch; margin: 0 0 var(--space-4); font-size: 15px; line-height: 22px; color: var(--ink-muted); }
+
+/* ---------- A band between sections: the demo, asked for again ---------- */
+.ctaBand { padding: var(--space-8) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); }
+.ctaBandIn { display: grid; gap: var(--space-6); align-items: center; }
+@media (min-width: 900px) { .ctaBandIn { grid-template-columns: minmax(0, 1fr) auto; } }
+.ctaTitle { margin: 0; font-size: clamp(24px, 3.4vw, 32px); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; font-variation-settings: "wdth" 112; }
+.ctaActions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.ctaActions > * { flex: 1 1 auto; }
+@media (min-width: 480px) { .ctaActions > * { flex: none; } }
+
+/* ---------- Book a demo: the barbell, once, running off the right edge, then the form ---------- */
+.demo { padding-top: var(--space-12); }
+.demoArt { margin: 0 0 var(--space-8) var(--space-4); }
+.demoArt :global(.rl-barbell) { --rl-u: 1.1; }
+@media (min-width: 768px) { .demoArt { margin-left: var(--space-8); } .demoArt :global(.rl-barbell) { --rl-u: 1.6; } }
+@media (min-width: 1024px) { .demoArt { margin-left: max(var(--space-8), calc((100% - var(--wide)) / 2 + var(--space-8))); } }
+/* The plates slide on when the barbell comes into view, not while it's still off screen. */
+.page[data-motion] .demoArt:not([data-in]) :global(.rl-plate) { animation-play-state: paused; }
+.demoGrid { display: grid; gap: var(--space-8); align-items: start; }
+@media (min-width: 960px) { .demoGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: var(--space-12); } }
+.closingTitle { max-width: 15ch; margin: 0; font-size: clamp(34px, 6.4vw, 64px); line-height: 1.02; font-weight: 700; letter-spacing: -0.025em; font-variation-settings: "wdth" 112; }
+.demoKicker { margin-top: var(--space-8); }
+.demoSteps { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 22px; }
+.demoSteps li { display: flex; align-items: flex-start; gap: var(--space-3); }
+.demoAlt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-6); margin-top: var(--space-8); }
+.demoMail { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); color: var(--on-ink); font-weight: 600; text-underline-offset: 4px; }
+.demo .demoMail:focus-visible, .demo :global(.rl-button--on-ink):focus-visible { outline-color: var(--on-ink); }
+
+.formCard { padding: var(--space-6) var(--space-4); color: var(--ink); }
+@media (min-width: 480px) { .formCard { padding: var(--space-8) var(--space-6); } }
+.form { display: grid; gap: var(--space-4); }
+.formTitle { margin: 0; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; font-variation-settings: "wdth" 112; }
+.formTitle:focus { outline: none; }
+.formLede { margin: calc(var(--space-3) * -1) 0 0; font-size: 15px; line-height: 22px; color: var(--ink-muted); }
+.formPair { display: grid; gap: var(--space-4); }
+@media (min-width: 480px) { .formPair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.formChoice { display: grid; gap: var(--space-2); min-width: 0; margin: 0; padding: 0; border: 0; }
+.formChoice legend { padding: 0; margin-bottom: var(--space-2); }
+.formNote { margin: 0; font-size: 13px; line-height: 18px; color: var(--ink-muted); text-align: center; }
+/* The field only bots see: off screen, out of the tab order, and hidden from screen readers. */
+.trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.formDone { display: grid; gap: var(--space-4); justify-items: start; }
+.formDoneTick { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-pill); background: var(--volt); color: var(--ink); }
+
+/* ---------- On a phone: the demo button, kept in reach once the hero has gone ---------- */
+.sticky {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: flex; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--ground); box-shadow: var(--shadow-raised);
+  transform: translateY(110%); visibility: hidden; transition: transform 260ms cubic-bezier(.2, .8, .2, 1), visibility 0s 260ms;
+}
+.sticky[data-show] { transform: none; visibility: visible; transition: transform 260ms cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+
+/* ---------- Chat on WhatsApp: a pill in the corner, at every size ---------- */
+/* Ink with a volt icon, so it never competes with the page's one volt action; the ground ring (as on the app's create
+   button) keeps it clear over the ink hero. On a phone it lifts above the demo bar instead of sitting on it. */
+.chat {
+  --bar: calc(var(--control-height) + var(--space-3) * 2);
+  position: fixed; right: var(--space-4); bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); z-index: 46;
+  display: inline-flex; align-items: center; gap: var(--space-2); height: var(--control-height); padding: 0 var(--space-6) 0 var(--space-4);
+  border-radius: var(--radius-pill); background: var(--ink); color: var(--on-ink); box-shadow: 0 0 0 4px var(--ground), var(--shadow-button);
+  font-size: 16px; line-height: 24px; font-weight: 700; text-decoration: none; white-space: nowrap;
+  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), opacity 200ms ease, visibility 0s;
+}
+.chat :global(.rl-icon) { color: var(--volt); }
+.chat:active { transform: scale(.97); }
+.chat:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
+.chat[data-lifted] { transform: translateY(calc((var(--bar) - var(--space-1)) * -1)); }
+.chat[data-away] { opacity: 0; visibility: hidden; transform: translateY(var(--space-4)); transition: transform 260ms ease, opacity 200ms ease, visibility 0s 260ms; }
+.chatLong { display: none; }
+@media (min-width: 768px) {
+  .chat { right: var(--space-6); bottom: calc(var(--space-6) + env(safe-area-inset-bottom)); }
+  .chat[data-lifted] { transform: none; }
+  .chatShort { display: none; }
+  .chatLong { display: inline; }
+}
+@media (min-width: 768px) { .sticky { display: none; } }
+
+/* ---------- Footer ---------- */
+/* On a phone the footer leaves room under it for the sticky demo bar. */
+.footer { padding: var(--space-8) 0 calc(var(--space-8) + var(--control-height) + var(--space-6) + env(safe-area-inset-bottom)); }
+@media (min-width: 768px) { .footer { padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom)); } }
+.footerIn { display: grid; gap: var(--space-4); }
+.footerBrand { display: grid; gap: var(--space-2); }
+.footerBrand p, .footerCopy { margin: 0; }
+@media (min-width: 900px) { .footerIn { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4) var(--space-8); } }
+.footerNav { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-6); }
+.footerNav a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene, .tilt, .roleTurn { transition: none; transform: none; }
+  .scene { transform: rotateX(8deg) rotateY(-14deg); }
+  .scene > .phone, .scene > .float, .roleFlip, .roleText { animation: none; }
+  .sticky, .chat, .chat[data-away] { transition: none; }
+}

@@ -132,11 +132,11 @@ def test_home_with_nothing_yet(db):
 
 def test_home_is_counts_and_dumbelo_money_only_within_a_query_budget(w, other, busy, django_assert_max_num_queries):
     c = dumbelo()
-    with django_assert_max_num_queries(11):
+    with django_assert_max_num_queries(12):
         r = c.get(HOME)
     assert r.status_code == 200, r.content
     body = r.json()
-    assert set(body) == {"checked_at", "gyms", "money", "branch_requests", "whatsapp", "server"}
+    assert set(body) == {"checked_at", "gyms", "money", "branch_requests", "leads", "whatsapp", "server"}
     assert body["server"]["failed_jobs"][0] == {"job": "reminders", "label": "Reminders", "error": "ConnectionError: Meta didn't answer",
                                                 "finished_at": body["server"]["failed_jobs"][0]["finished_at"]}
     text = r.content.decode()

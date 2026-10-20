@@ -1,5 +1,5 @@
 "use client";
-import { BadgeIndianRupee, BarChart3, Building2, Clock, Inbox, KeyRound, LogOut, Mail, MessageCircle, Pencil, ScrollText, UserRound } from "lucide-react";
+import { BadgeIndianRupee, BarChart3, Building2, Clock, Inbox, KeyRound, LogOut, Mail, Megaphone, MessageCircle, Pencil, ScrollText, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { PageBar } from "@/components/shell";
@@ -9,7 +9,7 @@ import { gymSlug } from "@/lib/api";
 import { phone } from "@/lib/format";
 import { useWho } from "@/lib/session";
 
-/** Prices, branch requests, Dumbelo's WhatsApp numbers, log, usage and automation times, the Dumbelo admin's own account, and the gyms
+/** Leads from the website, prices, branch requests, Dumbelo's WhatsApp numbers, log, usage and automation times, the Dumbelo admin's own account, and the gyms
  *  they also work at (opening one leaves the Console). */
 export default function ConsoleMore() {
   const { me, signOut } = useWho();
@@ -28,6 +28,7 @@ export default function ConsoleMore() {
         )}
         <Section title="Dumbelo">
           <ul className="rl-card rl-remind">
+            <MenuRow icon={Megaphone} title="Leads" value="Gyms that asked for a demo" href="/console/leads" />
             <MenuRow icon={BadgeIndianRupee} title="Prices" value="What gyms pay Dumbelo" href="/console/prices" />
             <MenuRow icon={Inbox} title="Branch requests" value="Gyms asking for more" href="/console/requests" />
             <MenuRow icon={MessageCircle} title="WhatsApp" value="Numbers and templates" href="/console/whatsapp" />

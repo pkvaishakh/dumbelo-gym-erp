@@ -86,6 +86,10 @@ apps/billing/        A gym's Dumbelo plan: PriceList (never edited), GymBilling 
                      (write_invoices: beat, hourly; `manage.py write_invoices --day` for a missed day); views/gym.py
                      (/api/billing/invoices/, open when suspended) and views/invoices.py (/api/platform/invoices/,
                      /api/platform/invoice-payments/, /api/platform/charges/)
+apps/leads/          Lead: a gym owner's demo request from the landing page (new | contacted | won | lost, utm_ tags);
+                     services.py (take_lead: the same number again within a day updates the first; set_status);
+                     views.py (POST /api/leads/: no sign-in read, throttle scope "lead", a hidden `website` field drops bots;
+                     /api/platform/leads/: the Console's list, ?status=, ?q=, POST <id>/status/, audited). Console Home counts new ones
 apps/audit/          AuditLog + record(request, action, obj, before, after, gym=None): pass `gym` from the Console
 tests/               pytest; conftest.World builds a small gym (two branches, admin, desks, trainer, member)
 ```
