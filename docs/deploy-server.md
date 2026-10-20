@@ -146,6 +146,23 @@ docker compose version             # v2.something
 free -h                            # Swap: 2.0Gi
 ```
 
+Then **fail2ban**, which bans an address for an hour after 5 failed SSH sign-ins in 10 minutes. The key already
+keeps strangers out; this stops them trying thousands of times a day:
+
+```bash
+sudo apt install -y fail2ban
+printf '[sshd]
+enabled = true
+maxretry = 5
+findtime = 10m
+bantime = 1h
+' | sudo tee /etc/fail2ban/jail.d/dumbelo.local
+sudo systemctl enable fail2ban && sudo systemctl restart fail2ban
+sudo fail2ban-client status sshd            # "Status for the jail: sshd"
+```
+
+If the last line errors, add `backend = systemd` to `/etc/fail2ban/jail.d/dumbelo.local` and run the `restart` again.
+
 Ubuntu installs security updates by itself (`unattended-upgrades`). Reboot now and then, at a quiet hour:
 `sudo reboot`. Everything comes back on its own, because every container is `restart: unless-stopped`.
 

@@ -1,15 +1,43 @@
 # Caddy gets and renews the HTTPS certificates by itself (Let's Encrypt), sends http:// to https://, and passes
 # each name to its container. It tells them the visitor came over HTTPS (X-Forwarded-Proto), which the API trusts.
+#
+# It also throws away any X-Forwarded-For a visitor sends and writes the real address, which the sign-in limits
+# count by (apps/accounts/views.AddressThrottle). Don't add `trusted_proxies` unless something sits in front of Caddy.
 {
 	email {$ACME_EMAIL}
 }
 
-{$API_DOMAIN} {
+# Both names: no server software or version in the answer, and no request over 10 MB, so nobody can tie up the
+# API with a huge one. Dumbelo has no file uploads; its biggest requests are a few kilobytes of JSON.
+(common) {
 	encode gzip
+	request_body {
+		max_size 10MB
+	}
+	header -Server
+}
+
+# The API sets its own security headers (Django: HSTS, nosniff, referrer policy, X-Frame-Options), so Caddy adds none.
+{$API_DOMAIN} {
+	import common
 	reverse_proxy api:8000
 }
 
+# The web app's pages get the browser protections Next.js doesn't send by itself.
 {$APP_DOMAIN} {
-	encode gzip
+	import common
+	header {
+		# HTTPS only, for a year, here and on every name under it.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# No other site may show the app inside a frame, so it can't be dressed up to trick a click (clickjacking).
+		X-Frame-Options "DENY"
+		Content-Security-Policy "frame-ancestors 'none'"
+		# Files are what they say they are.
+		X-Content-Type-Options "nosniff"
+		# Other sites see only that a visitor came from the app, never which page (a member's, a payment).
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# The camera is for scanning the wall QR (features/qr-scan.tsx); nothing else on the device is used.
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+	}
 	reverse_proxy web:3000
 }

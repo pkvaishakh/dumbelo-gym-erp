@@ -1,6 +1,7 @@
 # Every push to main and every pull request runs the checks a developer runs before saying something is done
 # (see the root CLAUDE.md): the API tests, the web checks and the Playwright flows — plus the image a server
-# runs, so a deploy can never be the first time anyone builds it (docs/deploy.md).
+# runs, and the whole one-server stack behind Caddy, so a deploy can never be the first time anyone builds it
+# (docs/deploy.md, PRODUCTION.md).
 name: CI
 
 on:
@@ -97,6 +98,81 @@ jobs:
       - name: Stop it
         if: always()
         run: docker rm -f dumbelo-api || true
+
+  server:
+    name: Server stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: deploy/server
+    env:
+      # Caddy gives *.localhost names certificates from its own authority, so the whole stack runs here exactly as on a
+      # server, HTTPS included, with no domain. curl is told the names are this machine, and -k accepts that authority.
+      DOMAIN: localhost
+      EMAIL: ci@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make the settings with PRODUCTION.md's own commands
+        run: |
+          cp .env.example .env
+          sed -i "s|^API_DOMAIN=.*|API_DOMAIN=api.$DOMAIN|; s|^APP_DOMAIN=.*|APP_DOMAIN=app.$DOMAIN|; s|^ACME_EMAIL=.*|ACME_EMAIL=$EMAIL|" .env
+          sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" .env
+          sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$(openssl rand -hex 50)|" .env
+          sed -i "s|^FIELD_ENCRYPTION_KEY=.*|FIELD_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_')|" .env
+          if grep -E '^[A-Z_]+=$' .env; then echo "Those settings are empty"; exit 1; fi
+      - name: Start everything
+        run: docker compose up -d --build
+      - name: Ask the API, through Caddy, whether it is well
+        run: |
+          for _ in $(seq 1 60); do
+            body=$(curl -sk --resolve api.localhost:443:127.0.0.1 https://api.localhost/api/health/ || true)
+            case "$body" in *'"status":"ok"'*) echo "$body"; exit 0 ;; esac
+            sleep 3
+          done
+          echo "The API never answered through Caddy"
+          exit 1
+      - name: Check the protections
+        run: |
+          fail=0
+          check() { if grep -qiE "$2" <<<"$1"; then echo "ok    $3"; else echo "FAIL  $3"; fail=1; fi; }
+          absent() { if grep -qiE "$2" <<<"$1"; then echo "FAIL  $3"; fail=1; else echo "ok    $3"; fi; }
+
+          app=$(curl -sk -D - -o /dev/null --resolve app.localhost:443:127.0.0.1 https://app.localhost/)
+          check "$app" '^HTTP/[0-9.]+ (200|307|308)' "the web app answers"
+          check "$app" '^strict-transport-security: max-age=31536000; includeSubDomains' "web: HSTS"
+          check "$app" '^x-frame-options: DENY' "web: X-Frame-Options"
+          check "$app" "^content-security-policy: frame-ancestors 'none'" "web: frame-ancestors"
+          check "$app" '^x-content-type-options: nosniff' "web: nosniff"
+          check "$app" '^referrer-policy: strict-origin-when-cross-origin' "web: referrer policy"
+          check "$app" '^permissions-policy: camera=\(self\)' "web: permissions policy"
+          absent "$app" '^(server|x-powered-by):' "web: no server name"
+
+          api=$(curl -sk -D - -o /dev/null --resolve api.localhost:443:127.0.0.1 https://api.localhost/api/health/)
+          check "$api" '^strict-transport-security: max-age=31536000' "api: HSTS"
+          check "$api" '^x-frame-options: DENY' "api: X-Frame-Options"
+          check "$api" '^x-content-type-options: nosniff' "api: nosniff"
+          absent "$api" '^server:' "api: no server name"
+
+          redirect=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --resolve app.localhost:80:127.0.0.1 http://app.localhost/)
+          check "$redirect" '^30[18] https://app.localhost/' "http:// goes to https://"
+
+          big=$(head -c 11000000 /dev/zero | curl -sk -o /dev/null -w '%{http_code}' --resolve api.localhost:443:127.0.0.1 \
+            -H 'Content-Type: application/json' --data-binary @- https://api.localhost/api/auth/login/ || true)
+          check "$big" '^413$' "a request over 10 MB is refused"
+
+          for port in 5432 6379 8000 3000; do
+            if (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; then echo "FAIL  port $port is open"; fail=1; else echo "ok    port $port is closed"; fi
+          done
+          exit $fail
+      - name: Show what went wrong
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail 80
+      - name: Stop it
+        if: always()
+        run: docker compose down -v || true
 
   e2e:
     name: Flows
