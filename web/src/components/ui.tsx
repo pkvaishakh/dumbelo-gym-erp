@@ -8,9 +8,9 @@ import { parseISO, subDays } from "date-fns";
 
 import { initials, isoDate, STATUS_LABEL } from "@/lib/format";
 
-export function Icon({ as: C, size }: { as: LucideIcon; size?: "sm" | "xs" }) {
-  return <C className={`rl-icon${size ? ` rl-icon--${size}` : ""}`} strokeWidth={1.75} aria-hidden="true" />;
-}
+import { Icon } from "./brand";
+
+export { Barbell, Icon, Mark } from "./brand";
 
 /** The round ink "+" at the end of an app bar that opens a create screen: `href` for a page, `onClick` for a sheet.
  * `label` is what a screen reader hears ("Add Member"). */
@@ -19,27 +19,6 @@ export function AddButton({ label, ...to }: { label: string } & ({ href: string 
   return "href" in to
     ? <Link className="rl-iconbtn rl-iconbtn--primary" href={to.href} aria-label={label}>{icon}</Link>
     : <button className="rl-iconbtn rl-iconbtn--primary" type="button" aria-label={label} aria-haspopup="dialog" onClick={to.onClick}>{icon}</button>;
-}
-
-export function Mark({ className = "rl-logo__mark" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 40 40" aria-hidden="true">
-      <rect className="rl-logo__tile" width="40" height="40" rx="12" />
-      <rect className="rl-logo__plate" x="9.5" y="15" width="5" height="10" rx="2.5" />
-      <rect className="rl-logo__plate" x="17.5" y="12" width="5" height="16" rx="2.5" />
-      <rect className="rl-logo__plate" x="25.5" y="9" width="5" height="22" rx="2.5" />
-    </svg>
-  );
-}
-
-export function Barbell({ onInk, load }: { onInk?: boolean; load?: boolean }) {
-  return (
-    <div className={`rl-barbell rl-barbell--bleed${onInk ? " rl-barbell--on-ink" : ""}${load ? " rl-barbell--load" : ""}`} aria-hidden="true">
-      <span className="rl-barbell__tip" /><span className="rl-plate rl-plate--sm" /><span className="rl-plate rl-plate--md" />
-      <span className="rl-plate rl-plate--lg" /><span className="rl-plate" /><span className="rl-plate rl-plate--volt" />
-      <span className="rl-barbell__collar" /><span className="rl-barbell__shaft" />
-    </div>
-  );
 }
 
 export function Photo({ name, size }: { name: string; size?: "lg" | "xl" }) {

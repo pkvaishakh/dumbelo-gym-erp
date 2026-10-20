@@ -14,7 +14,8 @@ src/app/(console)/console     the Console for Dumbelo admins: ConsoleProvider + 
                               More); Home (/console, where they land: /api/platform/summary/, its Needs attention rows from
                               lib/console-home.ts), gyms list (/console/gyms, ?status= or ?owes=any|overdue in the address),
                               a gym, its Dumbelo plan (gyms/[id]/plan), New Gym, branch requests
-                              (More → Branch requests), price lists and Add Price List (More → Prices), a gym's invoices (gyms/[id]/invoices: pending charges, Add
+                              (More → Branch requests), Leads (More → Leads: demo requests from the landing page, Call,
+                              WhatsApp and their status; Home's Needs attention counts new ones), price lists and Add Price List (More → Prices), a gym's invoices (gyms/[id]/invoices: pending charges, Add
                               Charge), an invoice (invoices/[id]: Record Payment, Void Payment, Void Invoice) and its
                               print pages, WhatsApp (More → WhatsApp: the numbers, whatsapp/new for the shared one or
                               `?gym=` for a gym's own, whatsapp/[id]: Test Connection, webhook, credentials, templates),
@@ -23,7 +24,7 @@ src/app/(console)/console     the Console for Dumbelo admins: ConsoleProvider + 
                               in the address), WhatsApp usage (More → WhatsApp usage: /console/usage?month=, each gym's
                               month on the shared number, opening its log with ?billed= those same messages), Server (its own tab: health, the jobs and Run Now, messages and webhook; checks again
                               every 30 s, every 3 s while a run waits or runs).
-                              Its parts are in src/features/console/ (requests: RequestRow, RequestSheet; plan-sheets:
+                              Its parts are in src/features/console/ (leads: LeadRow, LeadSheet, LeadStatus; requests: RequestRow, RequestSheet; plan-sheets:
                               EditPlanSheet, MovePricesSheet; invoice-sheets: RecordPaymentSheet, VoidSheet,
                               AddChargeSheet, ChargeSheet; whatsapp: WhereFields, SecretField, EditAccountSheet,
                               CredentialsSheet, TemplateSheet; messages: HourField, DaysField, AutomationSheet, GymMessages;
@@ -33,6 +34,15 @@ src/app/(app)/messages        More → Messages (admins; the desk's own branches
                               address, a message's sheet with Retry, and this billing month on Dumbelo's number
 src/app/(app)/dumbelo-plan   the gym admin's Dumbelo plan, Add Branch to My Plan and its invoices (invoices/[id], print,
                               receipts/[pid]); open with More while the gym is paused, invoices and receipts too
+src/app/page.tsx              the public landing page (the one page search indexes; root layout says noindex for the rest),
+                              with robots.ts, sitemap.ts and opengraph-image.tsx beside it. Its parts are in
+                              src/features/landing/: Landing (server-rendered sections and JSON-LD), content.ts (its words),
+                              phones.tsx (each role's home drawn with rl- markup, server only), motion.tsx (the only client
+                              parts: tilt, reveal, header, role switcher, ReachUs: the chat on WhatsApp button and the phone demo bar), LeadForm (Book a Free Demo ->
+                              POST /api/leads/; rules in lib/leads.ts). Settings: lib/site.ts (NEXT_PUBLIC_SITE_URL,
+                              NEXT_PUBLIC_CONTACT_EMAIL, NEXT_PUBLIC_SALES_WHATSAPP)
+src/components/brand.tsx      Icon, Mark, Barbell: markup only, no "use client", so server components can use them
+                              (ui.tsx re-exports them for the app)
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
                               Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
