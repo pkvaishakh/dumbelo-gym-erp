@@ -100,6 +100,24 @@ Sign in again after a minute, then:
 docker run --rm hello-world && docker compose version && free -h      # "Hello from Docker!", v2.x, Swap 2.0Gi
 ```
 
+**fail2ban** bans an address for an hour after 5 failed SSH sign-ins in 10 minutes. Keys already keep strangers
+out; this stops them hammering at the door:
+
+```bash
+sudo apt install -y fail2ban
+printf '[sshd]
+enabled = true
+maxretry = 5
+findtime = 10m
+bantime = 1h
+' | sudo tee /etc/fail2ban/jail.d/dumbelo.local
+sudo systemctl enable fail2ban && sudo systemctl restart fail2ban
+sudo fail2ban-client status sshd            # "Status for the jail: sshd"
+```
+
+If `status sshd` errors, add `backend = systemd` to `/etc/fail2ban/jail.d/dumbelo.local` and restart it. Banned
+yourself? From the provider's web console: `sudo fail2ban-client set sshd unbanip <your IP>`.
+
 Save your names for later commands, and add a `manage` shortcut for Django's commands. Change the first two lines:
 
 ```bash
@@ -401,6 +419,8 @@ provider account, and their Console admin. Rotate whatever they could read.
 
 - [ ] Only ports 22, 80 and 443 are open (provider firewall). Postgres and Redis publish no ports.
 - [ ] SSH by key only, root sign-in off (step 3): `sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication'` says `no` twice.
+- [ ] fail2ban is watching SSH (step 4): `sudo fail2ban-client status sshd`.
+- [ ] The web app sends its security headers: `curl -sI https://app.$DOMAIN | grep -iE 'strict-transport|x-frame|content-security'` shows all three.
 - [ ] Two-factor sign-in on the provider, GitHub, the domain registrar and the bucket provider.
 - [ ] `.env` is `chmod 600` and in the password manager, and in no chat, email or commit.
 - [ ] Security updates install themselves: `systemctl is-active unattended-upgrades` says `active`.
