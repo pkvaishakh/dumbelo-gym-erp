@@ -7,6 +7,8 @@ Vercel. Follow this page top to bottom once; after that, deploying again is one 
 Everything here is done with the gym owner's own AWS and Vercel accounts. Nothing in this repository holds a
 real secret, and nothing in it has to.
 
+Everything on one server instead (an Oracle Cloud VM, Always Free): `docs/deploy-oracle.md`.
+
 ```
 app.dumbelo.com   Vercel ──────────► api.dumbelo.com   App Runner (gunicorn, 2 instances)
                                             │
