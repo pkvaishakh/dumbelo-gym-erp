@@ -216,7 +216,9 @@ nano .env
 ```
 
 The three `sed` lines make the secrets for you. In `nano`, set `API_DOMAIN`, `APP_DOMAIN` (just the name, without
-`https://`) and `ACME_EMAIL`. Save with `Ctrl+O`, `Enter`, and quit with `Ctrl+X`. Check that no value is empty:
+`https://`), `ACME_EMAIL`, and `CONTACT_EMAIL` (sales' address, which the landing page shows gym owners). If sales
+has a WhatsApp number, remove the `#` in front of `SALES_WHATSAPP` and put it there: the Chat on WhatsApp buttons
+appear once it's set. Save with `Ctrl+O`, `Enter`, and quit with `Ctrl+X`. Check that no value is empty:
 
 ```bash
 grep -E '^[A-Z_]+=$' .env || echo "all set"
@@ -255,7 +257,8 @@ docker compose exec api python manage.py createsuperuser
 ```
 
 Open `https://app.<your domain>/console` on your phone, sign in, and follow `docs/operations.md` ("Opening a
-gym"). In short: **Prices → Add Price List** first (no gym opens without one), then **New Gym**, which makes the
+gym"). (`https://app.<your domain>` itself is the public landing page: gym owners who book a demo there show up in
+Console → Leads.) In short: **Prices → Add Price List** first (no gym opens without one), then **New Gym**, which makes the
 gym, its first branch and its owner's sign-in.
 
 **Never run `seed_demo` on this server.** It builds the demo gym, with demo logins anyone can read in the README.
@@ -329,6 +332,9 @@ by this. If the bad commit changed data, restore a backup instead (`docs/operati
 - [ ] **Uptime check:** Monitoring → **Uptime** → check `https://api.<domain>/api/health/`, so you hear about it
   if the site goes down before the gym does.
 - [ ] **Billing alert:** Billing → **Billing alerts**, at about $35.
+- [ ] **The landing page:** `CONTACT_EMAIL` (and `SALES_WHATSAPP`, if any) set in `.env`; a test demo request from
+  `https://app.<domain>` shows in Console → Leads; the sitemap submitted in Google Search Console (`PRODUCTION.md`,
+  step 11). New leads are worth a call the same day.
 - [ ] WhatsApp, when you're ready: add the account in the Console, set `WHATSAPP_PROVIDER=whatsapp_cloud` in `.env`,
   then run `bash update.sh`. Meta's webhook is `https://api.<domain>/api/whatsapp/webhook/` (`docs/deploy.md`, step 3).
 
@@ -368,6 +374,7 @@ Boot volumes → assign the *Bronze* policy.
 | `permission denied ... docker.sock` | The Docker group hasn't applied yet | Sign out and in again |
 | `Permission denied (publickey)` when signing in | Wrong key or wrong user | `-i $HOME\.ssh\dumbelo` and user `dumbelo` (`root` is off after step 4) |
 | `migrate` shows `Exited (1)` | A migration failed | `docker compose logs migrate`. Nothing else starts until it's fixed, which is on purpose |
+| The landing page shows `hello@dumbelo.com`, or no WhatsApp button | `CONTACT_EMAIL` or `SALES_WHATSAPP` isn't set (or still has its `#`) | Fix `.env`, then `bash update.sh`: they're built into the web app, so a restart isn't enough |
 
 Locked out completely? DigitalOcean → the droplet → **Access → Recovery Console** signs you in from the browser,
 without SSH (reset the root password there first if it asks for one).

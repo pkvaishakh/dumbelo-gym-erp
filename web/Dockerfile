@@ -1,4 +1,4 @@
-# The web app as a container, for a server that runs everything itself (deploy/oracle). Vercel doesn't use this.
+# The web app as a container, for a server that runs everything itself (deploy/server). Vercel doesn't use this.
 FROM node:20-slim
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
@@ -14,6 +14,14 @@ COPY --chown=node:node . .
 # Baked into the build, like on Vercel: a new API address means building the image again.
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# The landing page: its own address (canonical links, sitemap, share previews), sales' email and WhatsApp number.
+# Also baked in. Empty ones fall back to the defaults in src/lib/site.ts (no WhatsApp number: no WhatsApp buttons).
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_CONTACT_EMAIL
+ARG NEXT_PUBLIC_SALES_WHATSAPP
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL \
+    NEXT_PUBLIC_SALES_WHATSAPP=$NEXT_PUBLIC_SALES_WHATSAPP
 RUN npm run build
 
 ENV NODE_ENV=production

@@ -156,6 +156,7 @@ sed -i "s|^API_DOMAIN=.*|API_DOMAIN=api.$DOMAIN|; s|^APP_DOMAIN=.*|APP_DOMAIN=ap
 sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" .env
 sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$(openssl rand -hex 50)|" .env
 sed -i "s|^FIELD_ENCRYPTION_KEY=.*|FIELD_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_')|" .env
+nano .env        # CONTACT_EMAIL (sales' address, shown on the landing page); SALES_WHATSAPP if you have one (remove the #)
 grep -E '^[A-Z_]+=$' .env || echo "all set"
 cat .env
 ```
@@ -177,7 +178,10 @@ curl -s https://api.$DOMAIN/api/health/                                    # {"s
 curl -s -o /dev/null -w '%{http_code}\n' https://api.$DOMAIN/api/me/       # 401
 curl -sI https://api.$DOMAIN/api/docs/ | grep -i strict-transport          # the HSTS header
 manage check --deploy                                                       # no errors
+curl -s https://app.$DOMAIN/robots.txt                                     # ends "Sitemap: https://app.<domain>/sitemap.xml"
 ```
+
+`https://app.<domain>` itself is the public landing page; the app signs in at `/login`.
 
 ## 9. Dumbelo admin and the first gym
 
@@ -185,7 +189,7 @@ manage check --deploy                                                       # no
 manage createsuperuser            # your email, name and a long password from the password manager
 ```
 
-1. Open `https://app.<domain>`, sign in, and you land on the Console.
+1. Open `https://app.<domain>/login`, sign in, and you land on the Console.
 2. Console → More → Prices → **Add Price List**. No gym opens without one.
 3. Console → Gyms → **New Gym** (name, short name, time zone, first branch, owner's email).
    From the command line instead:
@@ -222,6 +226,19 @@ private and its keys only on this server.
 - An uptime monitor on `https://api.<domain>/api/health/`: the provider's own, or UptimeRobot (free).
 - The provider's alerts for CPU above 80%, memory above 90% and disk above 80%.
 - A billing alert on the provider account.
+
+## 11. The landing page and Google (before you tell gym owners about it)
+
+1. Open `https://app.<domain>` on a phone: **Book a Demo** shows `CONTACT_EMAIL` in the demo section, and **Chat on
+   WhatsApp** opens a chat with `SALES_WHATSAPP` (no button means it isn't set; step 6, then `bash update.sh`).
+2. Book a demo there yourself. It shows in Console → **Leads**, and Console → Home counts it. Mark it **Not now**.
+3. [Google Search Console](https://search.google.com/search-console) → **Add property** → URL prefix
+   `https://app.<domain>/` → verify with the DNS TXT record it gives you (your DNS provider, as in step 5) →
+   **Sitemaps** → submit `sitemap.xml`. Only the landing page is indexed: the app's screens say `noindex`.
+4. Paste the link into a WhatsApp chat: the preview shows the ink "Open up. Check in. Close out." card.
+5. Before you run ads, add a privacy policy: the form collects names and phone numbers, and there's no page for one yet.
+
+New leads come in every day: see [The schedule](#the-schedule).
 
 # Part 2: Run it
 
@@ -292,6 +309,7 @@ Console → Server → **Run Now** starts the jobs from the browser.
 ```bash
 nano .env && docker compose up -d                  # an API setting (e.g. WHATSAPP_PROVIDER=whatsapp_cloud)
 nano .env && bash update.sh                        # API_DOMAIN or APP_DOMAIN: the web app is built again
+nano .env && bash update.sh                        # CONTACT_EMAIL or SALES_WHATSAPP: built into the landing page too
 ```
 
 # Part 3: Maintain it
@@ -301,6 +319,7 @@ nano .env && bash update.sh                        # API_DOMAIN or APP_DOMAIN: t
 | When | What | Time |
 |---|---|---|
 | Every night, by itself | Database backup + off-site copy, security updates, HTTPS renewal, log rotation | 0 |
+| Every working day | Console → **Leads**: call the new demo requests, then mark them Contacted, Signed up or Not now | 5 min |
 | Weekly | [Weekly check](#weekly-check) | 5 min |
 | Monthly | [Updates](#monthly-updates), then the [restore drill](#restore-drill) | 45 min |
 | Before each release | On your laptop: `cd api; pip-audit` and `cd web; npm audit` | 5 min |
@@ -441,6 +460,8 @@ provider account, and their Console admin. Rotate whatever they could read.
 | Build `Killed` | `free -h` | Not enough memory: check the swap, or a bigger server |
 | Disk full | `df -h /`, `docker system df` | `docker image prune -f && docker builder prune -f`, and check `~/backups` |
 | `migrate` `Exited (1)` | `docker compose logs migrate` | A migration failed. Nothing else starts until it's fixed |
+| Landing page shows `hello@dumbelo.com`, or no WhatsApp button | `.env` `CONTACT_EMAIL`, `SALES_WHATSAPP` | Unset, or still `#`. Fix it and `bash update.sh` (a restart isn't enough: they're built in) |
+| Book a Demo says it can't reach Dumbelo | `.env` `APP_DOMAIN`, `logs api` | Same as sign-in failing: the API's CORS must allow the app's address |
 
 Locked out of SSH? Use the provider's web console (DigitalOcean: Access → Recovery Console; most providers have
 one), and add your key to `~/.ssh/authorized_keys` again.

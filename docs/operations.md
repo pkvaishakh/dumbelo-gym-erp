@@ -175,7 +175,9 @@ went wrong.
 
 ## Opening a real gym
 
-The Console does it (session 9). For each new gym:
+The Console does it (session 9). Most gyms start as a lead: an owner books a demo on the landing page, it shows in
+Console → Leads (Home counts the new ones), you call them, and you mark it Contacted, then Signed up once the gym is
+open (or Not now). For each new gym:
 
 1. **Prices exist** (Console → Prices). No gym opens without a price list.
 2. **Console → New Gym**: its name, short name, time zone, first branch, and the owner's email. A new owner gets a

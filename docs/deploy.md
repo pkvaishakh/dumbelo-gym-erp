@@ -111,7 +111,8 @@ built it, UTC), which the Console's Server screen shows. The workflow passes bot
 by hand says `dev` unless you pass `--build-arg APP_VERSION=… --build-arg DEPLOYED_AT=…` too.
 
 Optional, with sensible defaults in `api/config/settings.py`: `WHATSAPP_API_VERSION` (Meta's Graph API version,
-`v23.0`), `JWT_ACCESS_MINUTES` (30), `JWT_REFRESH_DAYS` (30), `THROTTLE_LOGIN`, `THROTTLE_LOGIN_IP`, `THROTTLE_REFRESH`, `THROTTLE_QR`, `THROTTLE_DEVICE`.
+`v23.0`), `JWT_ACCESS_MINUTES` (30), `JWT_REFRESH_DAYS` (30), `THROTTLE_LOGIN`, `THROTTLE_LOGIN_IP`, `THROTTLE_REFRESH`, `THROTTLE_QR`, `THROTTLE_DEVICE`,
+`THROTTLE_LEAD` (`10/hour`: the landing page's demo form, per address).
 
 Keep the secret ones — `SECRET_KEY`, `DATABASE_URL`, `FIELD_ENCRYPTION_KEY`, and the Redis URLs if they carry
 a password — in Secrets Manager, one secret per value, and point the services at them. The rest are plain
@@ -253,8 +254,10 @@ Vercel builds from GitHub, so it needs no workflow of ours.
 
 1. Import the repository and set **Root Directory** to `web`. The framework (Next.js) is detected; `npm ci`
    and `npm run build` are the defaults.
-2. Environment variable, for Production and Preview: `NEXT_PUBLIC_API_URL=https://api.dumbelo.com`.
-   It is baked into the build, so changing it needs a redeploy.
+2. Environment variables, for Production and Preview: `NEXT_PUBLIC_API_URL=https://api.dumbelo.com`, and for the
+   landing page `NEXT_PUBLIC_SITE_URL=https://app.dumbelo.com` (canonical links, sitemap, share previews),
+   `NEXT_PUBLIC_CONTACT_EMAIL` (sales' address, shown to gym owners) and `NEXT_PUBLIC_SALES_WHATSAPP` (sales' number;
+   leave it out and the WhatsApp buttons stay hidden). All are baked into the build, so changing one needs a redeploy.
 3. Production branch `main`. Every pull request gets its own preview URL; the API's CORS list doesn't include
    those, so a preview can't call the production API — point a preview at a staging API or test on `main`.
 4. Add the `app.dumbelo.com` domain.
@@ -271,7 +274,9 @@ The service's own health check should read **Healthy** in the App Runner console
 `/api/health/` answers a check made to the container's address; if it reads unhealthy while the `curl` above
 works, the health check is pointed at the wrong path or port.
 
-Then in a browser, on a phone: open `https://app.dumbelo.com`, sign in as the gym's admin, add a member, sell a
+Then in a browser, on a phone: open `https://app.dumbelo.com` (the landing page: book a test demo and find it in
+Console → Leads, then submit `sitemap.xml` in Google Search Console as in `PRODUCTION.md`, step 11), then
+`https://app.dumbelo.com/login`, sign in as the gym's admin, add a member, sell a
 plan, collect a payment, check someone in. Finally confirm the jobs are alive — the worker's log shows
 `celery@... ready` and beat's shows it sending `apps.messages.tasks.send_reminders` every quarter hour.
 
