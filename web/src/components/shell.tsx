@@ -202,7 +202,7 @@ const CONSOLE_TABS: Tab[] = [
 /** Screens reached from a tab that aren't under its address: a gym's invoices from Gyms, the rest from More. */
 const CONSOLE_UNDER: Record<string, RegExp> = {
   "/console/gyms": /^\/console\/invoices(\/|$)/,
-  "/console/more": /^\/console\/(prices|requests|whatsapp|messages|automation)(\/|$)/,
+  "/console/more": /^\/console\/(leads|prices|requests|whatsapp|messages|automation)(\/|$)/,
 };
 
 /** The Console's bottom navigation, for Dumbelo admins. */

@@ -8,6 +8,7 @@
 import type { GymCounts } from './gymCounts';
 import type { Owed } from './owed';
 import type { Waiting } from './waiting';
+import type { NewLeads } from './newLeads';
 import type { WhatsAppDay } from './whatsAppDay';
 import type { ServerAttention } from './serverAttention';
 
@@ -19,6 +20,7 @@ export interface PlatformSummary {
   gyms: GymCounts;
   money: Owed;
   branch_requests: Waiting;
+  leads: NewLeads;
   whatsapp: WhatsAppDay;
   server: ServerAttention;
 }

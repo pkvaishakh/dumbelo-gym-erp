@@ -1,4 +1,4 @@
-"""Console → Home: Dumbelo at a glance. The gyms by status, what they owe Dumbelo, branch requests waiting,
+"""Console → Home: Dumbelo at a glance. The gyms by status, what they owe Dumbelo, branch requests waiting, demo requests not yet answered,
 today's WhatsApp messages and the shared number's month, and whatever on the server is down or failed.
 
 Counts and Dumbelo's own money only: never a member, a gym's payments or its check-ins. A fixed number of
@@ -15,6 +15,7 @@ from apps.billing.invoicing import overdue_by_gym, overdue_invoices
 from apps.billing.models import BranchRequest
 from apps.core import clock
 from apps.gyms.models import Gym
+from apps.leads.models import Lead
 from apps.messages.models import Message
 
 from . import server
@@ -60,6 +61,7 @@ def summary(now: datetime | None = None) -> dict:
         "checked_at": now,
         **_gyms(today, month_starts),
         "branch_requests": {"waiting": BranchRequest.objects.filter(status=BranchRequest.ASKED).count()},
+        "leads": {"new": Lead.objects.filter(status=Lead.NEW).count()},
         "whatsapp": _whatsapp(now, today, month_starts),
         "server": {
             "down": [c for c in checks if c.state == server.DOWN],

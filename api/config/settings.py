@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.messages",
     "apps.platform",
     "apps.billing",
+    "apps.leads",
 ]
 
 MIDDLEWARE = [
@@ -123,7 +124,7 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_PAGINATION_CLASS": "apps.core.params.Pages",
     "PAGE_SIZE": 50,
-    # Only views that name a throttle_scope (or their own throttles) are limited: sign-in, refresh, QR, turnstile.
+    # Only views that name a throttle_scope (or their own throttles) are limited: sign-in, refresh, QR, turnstile, demo form.
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
     "DEFAULT_THROTTLE_RATES": {
         "login": env("THROTTLE_LOGIN", default="10/min"),  # per account
@@ -131,6 +132,7 @@ REST_FRAMEWORK = {
         "refresh": env("THROTTLE_REFRESH", default="30/min"),
         "qr": env("THROTTLE_QR", default="20/min"),
         "device": env("THROTTLE_DEVICE", default="600/min"),
+        "lead": env("THROTTLE_LEAD", default="10/hour"),  # the landing page's demo form, per address
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.errors.exception_handler",
@@ -151,6 +153,8 @@ SPECTACULAR_SETTINGS = {
     # Several models have a `kind` or `status`; name the payroll and dues ones so the web's types read clearly.
     "ENUM_NAME_OVERRIDES": {
         "MessageStatusEnum": "apps.messages.models.Message.STATUSES",
+        "LeadStatusEnum": "apps.leads.models.Lead.STATUSES",
+        "LeadBranchesEnum": "apps.leads.models.Lead.BRANCHES",
         "StateEnum": "apps.expenses.serializers.ExpenseDueSerializer.STATES",  # its name before other states came
         "ServerCheckEnum": "apps.platform.server.CHECKS",
         "ServerStateEnum": "apps.platform.server.STATES",

@@ -18,7 +18,7 @@ export function serverMeta(s: PlatformSummary["server"]) {
   return parts.join(" • ");
 }
 
-/** Needs attention, most urgent first: the server, overdue invoices, branch requests and today's failed messages.
+/** Needs attention, most urgent first: the server, overdue invoices, branch requests, new leads and today's failed messages.
  *  Rows at zero are left in: the card hides them, and shows its quiet line when every one is. The dots follow the
  *  design: filled for now and today, a ring for what waits, ink for money. */
 export function consoleAttention(s: PlatformSummary): ConsoleAttentionRow[] {
@@ -29,6 +29,7 @@ export function consoleAttention(s: PlatformSummary): ConsoleAttentionRow[] {
       meta: `${rupees(s.money.overdue_paise)} from ${plural(s.money.gyms_overdue, "gym")}`,
     },
     { count: s.branch_requests.waiting, title: "Branch requests", meta: "Gyms waiting for your answer", href: "/console/requests", dot: "ring" },
+    { count: s.leads.new, title: "New leads", meta: "Gyms that asked for a demo, waiting for a call", href: "/console/leads", dot: "ring" },
     { count: s.whatsapp.failed_today, title: "WhatsApp messages failed", meta: "Today, on every number", href: "/console/messages?status=failed", dot: "" },
   ];
 }

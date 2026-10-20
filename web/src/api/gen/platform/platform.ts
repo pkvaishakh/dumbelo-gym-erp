@@ -36,6 +36,7 @@ import type {
   ConsoleBranchAsk,
   ConsoleInvoice,
   ConsoleInvoicePayment,
+  ConsoleLead,
   ConsolePlan,
   ConsoleUsage,
   CredentialsRequest,
@@ -46,11 +47,13 @@ import type {
   GymDetail,
   InvoiceVoidRequest,
   JobRun,
+  LeadStatusRequest,
   MessageKind,
   NewGym,
   PaginatedChargeList,
   PaginatedConsoleBranchAskList,
   PaginatedConsoleInvoiceRowList,
+  PaginatedConsoleLeadList,
   PaginatedConsoleMessageList,
   PaginatedGymRowList,
   PaginatedPriceListList,
@@ -66,6 +69,7 @@ import type {
   PlatformChargesListParams,
   PlatformGymsListParams,
   PlatformInvoicesListParams,
+  PlatformLeadsListParams,
   PlatformMessagesListParams,
   PlatformPricesListParams,
   PlatformSummary,
@@ -3341,6 +3345,382 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getPlatformJobsRunCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Gyms that asked for a demo, newest first. Filter with `?status=new`; search with `?q=`.
+ */
+export type platformLeadsListResponse200 = {
+  data: PaginatedConsoleLeadList
+  status: 200
+}
+    
+export type platformLeadsListResponseSuccess = (platformLeadsListResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformLeadsListResponse = (platformLeadsListResponseSuccess)
+
+export const getPlatformLeadsListUrl = (params?: PlatformLeadsListParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/platform/leads/?${stringifiedParams}` : `/api/platform/leads/`
+}
+
+export const platformLeadsList = async (params?: PlatformLeadsListParams, options?: RequestInit): Promise<platformLeadsListResponse> => {
+  
+  return apiFetch<platformLeadsListResponse>(getPlatformLeadsListUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformLeadsListInfiniteQueryKey = (params?: PlatformLeadsListParams,) => {
+    return [
+    'infinite', `/api/platform/leads/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getPlatformLeadsListQueryKey = (params?: PlatformLeadsListParams,) => {
+    return [
+    `/api/platform/leads/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getPlatformLeadsListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof platformLeadsList>>, PlatformLeadsListParams['offset']>, TError = unknown>(params?: PlatformLeadsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData, QueryKey, PlatformLeadsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformLeadsListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformLeadsList>>, QueryKey, PlatformLeadsListParams['offset']> = ({ signal, pageParam }) => platformLeadsList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData, QueryKey, PlatformLeadsListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformLeadsListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof platformLeadsList>>>
+export type PlatformLeadsListInfiniteQueryError = unknown
+
+
+export function usePlatformLeadsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformLeadsList>>, PlatformLeadsListParams['offset']>, TError = unknown>(
+ params: undefined |  PlatformLeadsListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData, QueryKey, PlatformLeadsListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformLeadsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformLeadsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformLeadsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformLeadsList>>, PlatformLeadsListParams['offset']>, TError = unknown>(
+ params?: PlatformLeadsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData, QueryKey, PlatformLeadsListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformLeadsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformLeadsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformLeadsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformLeadsList>>, PlatformLeadsListParams['offset']>, TError = unknown>(
+ params?: PlatformLeadsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData, QueryKey, PlatformLeadsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformLeadsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof platformLeadsList>>, PlatformLeadsListParams['offset']>, TError = unknown>(
+ params?: PlatformLeadsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData, QueryKey, PlatformLeadsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformLeadsListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPlatformLeadsListQueryOptions = <TData = Awaited<ReturnType<typeof platformLeadsList>>, TError = unknown>(params?: PlatformLeadsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformLeadsListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformLeadsList>>> = ({ signal }) => platformLeadsList(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformLeadsListQueryResult = NonNullable<Awaited<ReturnType<typeof platformLeadsList>>>
+export type PlatformLeadsListQueryError = unknown
+
+
+export function usePlatformLeadsList<TData = Awaited<ReturnType<typeof platformLeadsList>>, TError = unknown>(
+ params: undefined |  PlatformLeadsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformLeadsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformLeadsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformLeadsList<TData = Awaited<ReturnType<typeof platformLeadsList>>, TError = unknown>(
+ params?: PlatformLeadsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformLeadsList>>,
+          TError,
+          Awaited<ReturnType<typeof platformLeadsList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformLeadsList<TData = Awaited<ReturnType<typeof platformLeadsList>>, TError = unknown>(
+ params?: PlatformLeadsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformLeadsList<TData = Awaited<ReturnType<typeof platformLeadsList>>, TError = unknown>(
+ params?: PlatformLeadsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformLeadsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Gyms that asked for a demo, newest first. Filter with `?status=new`; search with `?q=`.
+ */
+export type platformLeadsRetrieveResponse200 = {
+  data: ConsoleLead
+  status: 200
+}
+    
+export type platformLeadsRetrieveResponseSuccess = (platformLeadsRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformLeadsRetrieveResponse = (platformLeadsRetrieveResponseSuccess)
+
+export const getPlatformLeadsRetrieveUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/leads/${id}/`
+}
+
+export const platformLeadsRetrieve = async (id: number, options?: RequestInit): Promise<platformLeadsRetrieveResponse> => {
+  
+  return apiFetch<platformLeadsRetrieveResponse>(getPlatformLeadsRetrieveUrl(id),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getPlatformLeadsRetrieveQueryKey = (id?: number,) => {
+    return [
+    `/api/platform/leads/${id}/`
+    ] as const;
+    }
+
+    
+export const getPlatformLeadsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError = unknown>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPlatformLeadsRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof platformLeadsRetrieve>>> = ({ signal }) => platformLeadsRetrieve(id, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PlatformLeadsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof platformLeadsRetrieve>>>
+export type PlatformLeadsRetrieveQueryError = unknown
+
+
+export function usePlatformLeadsRetrieve<TData = Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError = unknown>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformLeadsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformLeadsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformLeadsRetrieve<TData = Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof platformLeadsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof platformLeadsRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePlatformLeadsRetrieve<TData = Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePlatformLeadsRetrieve<TData = Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError = unknown>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof platformLeadsRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPlatformLeadsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Gyms that asked for a demo, newest first. Filter with `?status=new`; search with `?q=`.
+ */
+export type platformLeadsStatusCreateResponse200 = {
+  data: ConsoleLead
+  status: 200
+}
+    
+export type platformLeadsStatusCreateResponseSuccess = (platformLeadsStatusCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type platformLeadsStatusCreateResponse = (platformLeadsStatusCreateResponseSuccess)
+
+export const getPlatformLeadsStatusCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/platform/leads/${id}/status/`
+}
+
+export const platformLeadsStatusCreate = async (id: number,
+    leadStatusRequest: LeadStatusRequest, options?: RequestInit): Promise<platformLeadsStatusCreateResponse> => {
+  
+  return apiFetch<platformLeadsStatusCreateResponse>(getPlatformLeadsStatusCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      leadStatusRequest,)
+  }
+);}
+
+
+
+
+export const getPlatformLeadsStatusCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformLeadsStatusCreate>>, TError,{id: number;data: LeadStatusRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof platformLeadsStatusCreate>>, TError,{id: number;data: LeadStatusRequest}, TContext> => {
+
+const mutationKey = ['platformLeadsStatusCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof platformLeadsStatusCreate>>, {id: number;data: LeadStatusRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  platformLeadsStatusCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PlatformLeadsStatusCreateMutationResult = NonNullable<Awaited<ReturnType<typeof platformLeadsStatusCreate>>>
+    export type PlatformLeadsStatusCreateMutationBody = LeadStatusRequest
+    export type PlatformLeadsStatusCreateMutationError = unknown
+
+    export const usePlatformLeadsStatusCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof platformLeadsStatusCreate>>, TError,{id: number;data: LeadStatusRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof platformLeadsStatusCreate>>,
+        TError,
+        {id: number;data: LeadStatusRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getPlatformLeadsStatusCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

@@ -308,6 +308,10 @@ class ServerAttentionSerializer(serializers.Serializer):
     failed_jobs = FailedJobSerializer(many=True, help_text="Jobs whose last run failed")
 
 
+class NewLeadsSerializer(serializers.Serializer):
+    new = serializers.IntegerField(help_text="Demo requests from the landing page no one has answered yet")
+
+
 class PlatformSummarySerializer(serializers.Serializer):
     """Console → Home. Counts and Dumbelo's own money only: nothing from inside a gym."""
 
@@ -315,5 +319,6 @@ class PlatformSummarySerializer(serializers.Serializer):
     gyms = GymCountsSerializer()
     money = OwedSerializer()
     branch_requests = WaitingSerializer()
+    leads = NewLeadsSerializer()
     whatsapp = WhatsAppDaySerializer()
     server = ServerAttentionSerializer()

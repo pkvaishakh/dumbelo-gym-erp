@@ -1922,6 +1922,34 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/leads/:
+    post:
+      operationId: leads_create
+      description: A gym owner asking for a demo from the landing page. Open to anyone,
+        so limited per address.
+      tags:
+      - leads
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadAskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeadAskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeadAskRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadReceived'
+          description: ''
   /api/me/:
     get:
       operationId: me_retrieve
@@ -4642,6 +4670,112 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobRun'
+          description: ''
+  /api/platform/leads/:
+    get:
+      operationId: platform_leads_list
+      description: Gyms that asked for a demo, newest first. Filter with `?status=new`;
+        search with `?q=`.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Part of a name, gym, city or phone number (2 or more characters)
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - contacted
+          - lost
+          - new
+          - won
+        description: |-
+          * `new` - New
+          * `contacted` - Contacted
+          * `won` - Signed up
+          * `lost` - Not now
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedConsoleLeadList'
+          description: ''
+  /api/platform/leads/{id}/:
+    get:
+      operationId: platform_leads_retrieve
+      description: Gyms that asked for a demo, newest first. Filter with `?status=new`;
+        search with `?q=`.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this lead.
+        required: true
+      tags:
+      - platform
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleLead'
+          description: ''
+  /api/platform/leads/{id}/status/:
+    post:
+      operationId: platform_leads_status_create
+      description: Gyms that asked for a demo, newest first. Filter with `?status=new`;
+        search with `?q=`.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this lead.
+        required: true
+      tags:
+      - platform
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadStatusRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeadStatusRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeadStatusRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsoleLead'
           description: ''
   /api/platform/messages/:
     get:
@@ -8020,6 +8154,66 @@ components:
       - subtotal_paise
       - tax_paise
       - total_paise
+    ConsoleLead:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          description: +91XXXXXXXXXX
+          maxLength: 13
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        gym_name:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 80
+        branches:
+          $ref: '#/components/schemas/LeadBranchesEnum'
+        branches_label:
+          type: string
+        note:
+          type: string
+        utm_source:
+          type: string
+          maxLength: 100
+        utm_medium:
+          type: string
+          maxLength: 100
+        utm_campaign:
+          type: string
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/LeadStatusEnum'
+        status_by_name:
+          type: string
+          nullable: true
+        status_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - branches
+      - branches_label
+      - city
+      - created_at
+      - gym_name
+      - id
+      - name
+      - phone
     ConsoleMessage:
       type: object
       description: |-
@@ -9955,6 +10149,91 @@ components:
         * `beat` - On schedule
         * `run_now` - Run Now
         * `by_hand` - By hand
+    LeadAskRequest:
+      type: object
+      description: |-
+        What the landing page's form sends. `website` is a field people never see: a bot that fills it in is
+        thanked and dropped.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 20
+        email:
+          type: string
+          format: email
+        gym_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        city:
+          type: string
+          minLength: 1
+          maxLength: 80
+        branches:
+          $ref: '#/components/schemas/LeadBranchesEnum'
+        note:
+          type: string
+          maxLength: 500
+        utm_source:
+          type: string
+          maxLength: 100
+        utm_medium:
+          type: string
+          maxLength: 100
+        utm_campaign:
+          type: string
+          maxLength: 100
+        website:
+          type: string
+          writeOnly: true
+          maxLength: 200
+      required:
+      - branches
+      - city
+      - gym_name
+      - name
+      - phone
+    LeadBranchesEnum:
+      enum:
+      - '1'
+      - 2-3
+      - 4+
+      type: string
+      description: |-
+        * `1` - 1 branch
+        * `2-3` - 2 to 3 branches
+        * `4+` - 4 or more branches
+    LeadReceived:
+      type: object
+      properties:
+        received:
+          type: boolean
+      required:
+      - received
+    LeadStatusEnum:
+      enum:
+      - new
+      - contacted
+      - won
+      - lost
+      type: string
+      description: |-
+        * `new` - New
+        * `contacted` - Contacted
+        * `won` - Signed up
+        * `lost` - Not now
+    LeadStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/LeadStatusEnum'
+      required:
+      - status
     LineRequest:
       type: object
       properties:
@@ -10754,6 +11033,14 @@ components:
       - status_changed_at
       - status_reason
       - timezone
+    NewLeads:
+      type: object
+      properties:
+        new:
+          type: integer
+          description: Demo requests from the landing page no one has answered yet
+      required:
+      - new
     Note:
       type: object
       properties:
@@ -11116,6 +11403,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ConsoleInvoiceRow'
+    PaginatedConsoleLeadList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsoleLead'
     PaginatedConsoleMessageList:
       type: object
       required:
@@ -12755,6 +13065,8 @@ components:
           $ref: '#/components/schemas/Owed'
         branch_requests:
           $ref: '#/components/schemas/Waiting'
+        leads:
+          $ref: '#/components/schemas/NewLeads'
         whatsapp:
           $ref: '#/components/schemas/WhatsAppDay'
         server:
@@ -12763,6 +13075,7 @@ components:
       - branch_requests
       - checked_at
       - gyms
+      - leads
       - money
       - server
       - whatsapp

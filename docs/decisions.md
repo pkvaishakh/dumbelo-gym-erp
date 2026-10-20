@@ -149,6 +149,15 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Admins assign tasks to trainers and receptionists with a due date (and optional time); staff start them,
   post updates and mark them done; admins see each step and can reopen or delete.
 
+## The website and leads (Dumbelo admins)
+- The landing page at `/` is the one public, indexed page. Gyms don't sign themselves up: an owner books a demo with a short
+  form (name, mobile, gym, city, how many branches, email optional), Dumbelo calls them, and a Dumbelo admin opens the gym.
+- The form needs no sign-in and is limited per address (`THROTTLE_LEAD`, 10 an hour). The same number again within a
+  day updates the first request rather than adding another. A hidden field drops bots without telling them.
+- Leads live in the Console (More → Leads; Home counts the new ones): New, Contacted, Signed up, Not now. Changing one is
+  audited. A lead is never deleted. It keeps the campaign (utm_ tags) it came from.
+- No prices on the page: it explains the plan (a base fee, a fee per branch, WhatsApp by use) and asks the owner to book a demo.
+
 ## Dumbelo billing (Dumbelo admins set it; a gym's admins see it)
 - One price list, kept by Dumbelo admins: a monthly base fee, a monthly fee per branch, a one-time WhatsApp setup
   fee, a one-time attendance machine setup fee (per device), and the rate per delivered message on Dumbelo's
