@@ -27,6 +27,7 @@ import type {
 import type {
   GymSettings,
   GymWhatsApp,
+  PatchedGymSettingsRequest,
   PatchedSwitchRequest,
   Rule
 } from '.././model';
@@ -231,8 +232,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * The gym as Dumbelo set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
-changes: the gym's message switches are `/api/gym/messages/`.
+ * The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
+run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
+switches are `/api/gym/messages/`.
  */
 export type gymSettingsRetrieveResponse200 = {
   data: GymSettings
@@ -341,6 +343,88 @@ export function useGymSettingsRetrieve<TData = Awaited<ReturnType<typeof gymSett
 
 
 /**
+ * The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
+run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
+switches are `/api/gym/messages/`.
+ */
+export type gymSettingsPartialUpdateResponse200 = {
+  data: GymSettings
+  status: 200
+}
+    
+export type gymSettingsPartialUpdateResponseSuccess = (gymSettingsPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type gymSettingsPartialUpdateResponse = (gymSettingsPartialUpdateResponseSuccess)
+
+export const getGymSettingsPartialUpdateUrl = () => {
+
+
+  
+
+  return `/api/gym/settings/`
+}
+
+export const gymSettingsPartialUpdate = async (patchedGymSettingsRequest: PatchedGymSettingsRequest, options?: RequestInit): Promise<gymSettingsPartialUpdateResponse> => {
+  
+  return apiFetch<gymSettingsPartialUpdateResponse>(getGymSettingsPartialUpdateUrl(),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedGymSettingsRequest,)
+  }
+);}
+
+
+
+
+export const getGymSettingsPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, TError,{data: PatchedGymSettingsRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, TError,{data: PatchedGymSettingsRequest}, TContext> => {
+
+const mutationKey = ['gymSettingsPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, {data: PatchedGymSettingsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  gymSettingsPartialUpdate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GymSettingsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>>
+    export type GymSettingsPartialUpdateMutationBody = PatchedGymSettingsRequest
+    export type GymSettingsPartialUpdateMutationError = unknown
+
+    export const useGymSettingsPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gymSettingsPartialUpdate>>, TError,{data: PatchedGymSettingsRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof gymSettingsPartialUpdate>>,
+        TError,
+        {data: PatchedGymSettingsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getGymSettingsPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * More → Settings → WhatsApp: whether messages go from Dumbelo's number, the gym's own or not at all, the
 number, and whether it works. Admins only; set up by Dumbelo, so there is nothing here to change.
  */

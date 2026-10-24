@@ -808,6 +808,11 @@ paths:
           type: string
         description: YYYY-MM-DD, today by default
       - in: query
+        name: from
+        schema:
+          type: string
+        description: 'With member or staff: YYYY-MM-DD, the first day'
+      - in: query
         name: kind
         schema:
           type: string
@@ -851,6 +856,11 @@ paths:
         name: staff
         schema:
           type: integer
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: 'With member or staff: YYYY-MM-DD, the last day'
       tags:
       - checkins
       security:
@@ -1876,10 +1886,39 @@ paths:
     get:
       operationId: gym_settings_retrieve
       description: |-
-        The gym as Dumbelo set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
-        changes: the gym's message switches are `/api/gym/messages/`.
+        The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
+        run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
+        switches are `/api/gym/messages/`.
       tags:
       - gym
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GymSettings'
+          description: ''
+    patch:
+      operationId: gym_settings_partial_update
+      description: |-
+        The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
+        run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
+        switches are `/api/gym/messages/`.
+      tags:
+      - gym
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGymSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGymSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGymSettingsRequest'
       security:
       - jwtAuth: []
       responses:
@@ -3103,6 +3142,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/payments/split/:
+    post:
+      operationId: payments_split_create
+      description: 'One amount paid more than one way (part cash, part UPI): a payment
+        for each part, saved together.'
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - bank
+          - card
+          - cash
+          - upi
+        description: |-
+          * `cash` - Cash
+          * `upi` - UPI
+          * `card` - Card
+          * `bank` - Bank transfer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: voided
+        schema:
+          type: boolean
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentSplitRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PaymentSplitRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentSplitRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentList'
           description: ''
   /api/payslips/:
     get:
@@ -6339,8 +6445,8 @@ paths:
     get:
       operationId: subscriptions_list
       description: |-
-        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-        `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
       parameters:
       - name: limit
         required: false
@@ -6376,8 +6482,8 @@ paths:
     post:
       operationId: subscriptions_create
       description: |-
-        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-        `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
       tags:
       - subscriptions
       requestBody:
@@ -6405,8 +6511,8 @@ paths:
     get:
       operationId: subscriptions_retrieve
       description: |-
-        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-        `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
       parameters:
       - in: path
         name: id
@@ -6429,8 +6535,8 @@ paths:
     post:
       operationId: subscriptions_cancel_create
       description: |-
-        Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-        `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
       parameters:
       - in: path
         name: id
@@ -6451,6 +6557,41 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/subscriptions/{id}/correct/:
+    post:
+      operationId: subscriptions_correct_create
+      description: 'Change a plan already sold: another plan, offer, price or dates.
+        Admins only, with a reason; audited.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this subscription.
+        required: true
+      tags:
+      - subscriptions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCorrectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCorrectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCorrectRequest'
         required: true
       security:
       - jwtAuth: []
@@ -9578,8 +9719,9 @@ components:
       - timezone
     GymSettings:
       type: object
-      description: 'The gym as Dumbelo set it up: its name, slug and time zone. Its
-        message switches are /api/gym/messages/.'
+      description: |-
+        The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
+        set. Its message switches are /api/gym/messages/.
       properties:
         name:
           type: string
@@ -9592,6 +9734,12 @@ components:
         timezone:
           type: string
           readOnly: true
+        month_days:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'How long a plan''s month runs: 0 for calendar months, else
+            that many days (28, 30)'
       required:
       - name
       - slug
@@ -11955,6 +12103,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WhatsAppTemplate'
+    PaidBy:
+      type: object
+      properties:
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        amount_paise:
+          type: integer
+      required:
+      - amount_paise
+      - method
     PasswordChangeRequest:
       type: object
       properties:
@@ -12102,6 +12260,18 @@ components:
           type: string
           format: email
           maxLength: 254
+    PatchedGymSettingsRequest:
+      type: object
+      description: |-
+        The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
+        set. Its message switches are /api/gym/messages/.
+      properties:
+        month_days:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          description: 'How long a plan''s month runs: 0 for calendar months, else
+            that many days (28, 30)'
     PatchedGymTimesRequest:
       type: object
       description: |-
@@ -12631,6 +12801,17 @@ components:
       - amount_paise
       - method
       - reason
+    PaymentPartRequest:
+      type: object
+      properties:
+        method:
+          $ref: '#/components/schemas/MethodEnum'
+        amount_paise:
+          type: integer
+          minimum: 1
+      required:
+      - amount_paise
+      - method
     PaymentRequest:
       type: object
       properties:
@@ -12654,6 +12835,25 @@ components:
       - amount_paise
       - member
       - method
+    PaymentSplitRequest:
+      type: object
+      description: 'One amount paid more than one way: a payment is recorded for each
+        part, together, with one receipt.'
+      properties:
+        member:
+          type: integer
+        branch:
+          type: integer
+        note:
+          type: string
+          maxLength: 200
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentPartRequest'
+      required:
+      - member
+      - parts
     PaymentStatusEnum:
       enum:
       - unpaid
@@ -14029,6 +14229,11 @@ components:
           readOnly: true
           description: 'The gym''s time zone, like Asia/Kolkata: its days start and
             end there'
+        month_days:
+          type: integer
+          readOnly: true
+          description: 'How long a plan''s month runs: 0 for calendar months, else
+            that many days'
         role:
           $ref: '#/components/schemas/RoleEnum'
         is_owner:
@@ -14045,6 +14250,7 @@ components:
       - gym
       - gym_name
       - gym_status
+      - month_days
       - role
       - timezone
     RoleEnum:
@@ -14575,10 +14781,12 @@ components:
         starts:
           type: string
           format: date
+          description: 'Leave out: the day after the member''s last plan ends, or
+            today'
         ends:
           type: string
           format: date
-          readOnly: true
+          description: 'Leave out: from the plan''s length. Admins only'
         list_price_paise:
           type: integer
           readOnly: true
@@ -14595,6 +14803,12 @@ components:
           readOnly: true
           description: 'Given back: the price and what was paid are both that much
             lower'
+        paid_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaidBy'
+          readOnly: true
+          description: What was paid, by method, voided payments left out
         frozen_from:
           type: string
           format: date
@@ -14610,18 +14824,47 @@ components:
           readOnly: true
       required:
       - cancelled
-      - ends
       - frozen_from
       - frozen_until
       - id
       - list_price_paise
       - member
       - offer_name
+      - paid_by
       - paid_paise
       - plan
       - plan_name
       - price_paise
       - refunded_paise
+    SubscriptionCorrectRequest:
+      type: object
+      description: An admin's correction of a plan already sold. Send only what changes,
+        and why.
+      properties:
+        plan:
+          type: integer
+          description: 'Another plan: its price, and its length from the start date,
+            unless given'
+        offer:
+          type: integer
+          nullable: true
+          description: 'Another offer, or null for none: the price is worked out again'
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+        price_paise:
+          type: integer
+          minimum: 0
+          description: What the member owes for it, set by hand
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - reason
     SubscriptionRequest:
       type: object
       properties:
@@ -14635,6 +14878,12 @@ components:
         starts:
           type: string
           format: date
+          description: 'Leave out: the day after the member''s last plan ends, or
+            today'
+        ends:
+          type: string
+          format: date
+          description: 'Leave out: from the plan''s length. Admins only'
       required:
       - member
       - plan

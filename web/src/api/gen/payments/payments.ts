@@ -36,8 +36,10 @@ import type {
   PaymentCorrect,
   PaymentCorrectRequest,
   PaymentRequest,
+  PaymentSplitRequest,
   PaymentsCollectionRetrieveParams,
   PaymentsListParams,
+  PaymentsSplitCreateParams,
   VoidRequest
 } from '.././model';
 
@@ -783,3 +785,92 @@ export function usePaymentsCollectionRetrieve<TData = Awaited<ReturnType<typeof 
 
 
 
+/**
+ * One amount paid more than one way (part cash, part UPI): a payment for each part, saved together.
+ */
+export type paymentsSplitCreateResponse201 = {
+  data: PaginatedPaymentList
+  status: 201
+}
+    
+export type paymentsSplitCreateResponseSuccess = (paymentsSplitCreateResponse201) & {
+  headers: Headers;
+};
+;
+
+export type paymentsSplitCreateResponse = (paymentsSplitCreateResponseSuccess)
+
+export const getPaymentsSplitCreateUrl = (params?: PaymentsSplitCreateParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/payments/split/?${stringifiedParams}` : `/api/payments/split/`
+}
+
+export const paymentsSplitCreate = async (paymentSplitRequest: PaymentSplitRequest,
+    params?: PaymentsSplitCreateParams, options?: RequestInit): Promise<paymentsSplitCreateResponse> => {
+  
+  return apiFetch<paymentsSplitCreateResponse>(getPaymentsSplitCreateUrl(params),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      paymentSplitRequest,)
+  }
+);}
+
+
+
+
+export const getPaymentsSplitCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentsSplitCreate>>, TError,{data: PaymentSplitRequest;params?: PaymentsSplitCreateParams}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof paymentsSplitCreate>>, TError,{data: PaymentSplitRequest;params?: PaymentsSplitCreateParams}, TContext> => {
+
+const mutationKey = ['paymentsSplitCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymentsSplitCreate>>, {data: PaymentSplitRequest;params?: PaymentsSplitCreateParams}> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  paymentsSplitCreate(data,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymentsSplitCreateMutationResult = NonNullable<Awaited<ReturnType<typeof paymentsSplitCreate>>>
+    export type PaymentsSplitCreateMutationBody = PaymentSplitRequest
+    export type PaymentsSplitCreateMutationError = unknown
+
+    export const usePaymentsSplitCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymentsSplitCreate>>, TError,{data: PaymentSplitRequest;params?: PaymentsSplitCreateParams}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof paymentsSplitCreate>>,
+        TError,
+        {data: PaymentSplitRequest;params?: PaymentsSplitCreateParams},
+        TContext
+      > => {
+
+      const mutationOptions = getPaymentsSplitCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    

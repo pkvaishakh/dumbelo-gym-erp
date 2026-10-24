@@ -235,7 +235,7 @@ test("trainer: no cash and bank in More", async ({ page }) => {
   await expect(page.getByRole("link", { name: /Cash and bank/ })).toHaveCount(0);
 });
 
-test("admin: reports by category, 30 days, a custom range over 3 months, and downloads", async ({ page }) => {
+test("admin: reports by category, yesterday, a custom range over 3 months, and downloads", async ({ page }) => {
   await signIn(page, "meera@dumbelo.demo");
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" }).click();
   await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
@@ -244,8 +244,8 @@ test("admin: reports by category, 30 days, a custom range over 3 months, and dow
   await page.getByRole("main").getByRole("link", { name: /^Cash and bank/ }).click();
   await expect(page).toHaveURL(/\/reports\/money/);
   await expect(page.getByRole("heading", { name: "Total funds" })).toBeVisible();
-  await page.getByRole("button", { name: "30 days", exact: true }).click();
-  await expect(page).toHaveURL(/period=30d/);
+  await page.getByRole("button", { name: "Yesterday", exact: true }).click();
+  await expect(page).toHaveURL(/period=yesterday/);
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
 
   // Four months back is more than 3: the API's words, under From, before anything is asked for.
@@ -256,7 +256,7 @@ test("admin: reports by category, 30 days, a custom range over 3 months, and dow
   await page.getByRole("button", { name: "Show Report" }).click();
   await expect(page.getByText("Pick a range of 3 months or less")).toBeVisible();
 
-  await page.getByRole("button", { name: "30 days", exact: true }).click();
+  await page.getByRole("button", { name: "This month", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Accounts" })).toBeVisible();
   await page.getByRole("button", { name: "Download", exact: true }).click();
   const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download CSV" }).click()]);

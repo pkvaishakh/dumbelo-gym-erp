@@ -41,6 +41,22 @@ def test_trainer_cannot_check_in_at_branch_they_dont_work(w):
     assert r.status_code == 409 and r.json()["error"]["code"] == "wrong_branch"
 
 
+def test_one_members_visits_between_two_days(w):
+    from apps.attendance.services import check_in
+
+    tz = clock.tz(w.gym)
+    days = [w.today - timedelta(days=n) for n in (0, 10, 40)]
+    for d in days:
+        check_in(w.a, member=w.member, source="desk", at=datetime.combine(d, time(7, 0), tzinfo=tz))
+    c = w.client(w.trainer)
+    dates = lambda **p: [r["local_date"] for r in c.get("/api/checkins/", {"member": w.member.id, **p}).json()["results"]]
+    assert dates() == [str(d) for d in days]
+    assert dates(**{"from": str(w.today - timedelta(days=30)), "to": str(w.today)}) == [str(days[0]), str(days[1])]
+    assert dates(**{"to": str(w.today - timedelta(days=5))}) == [str(days[1]), str(days[2])]
+    backwards = c.get("/api/checkins/", {"member": w.member.id, "from": str(w.today), "to": str(days[2])})
+    assert backwards.status_code == 400
+
+
 def test_session_is_the_one_the_time_falls_in_or_the_next(w):
     from apps.attendance.services import check_in, session_name
 

@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
+from apps.audit.models import AuditLog
 from apps.members.models import Offer, Plan
 
 
@@ -18,6 +19,37 @@ def test_admin_gives_a_plan_to_branches(w):
     assert r.json()["branches"] == [w.a.id]
     r = w.client(w.admin).patch(f"/api/plans/{r.json()['id']}/", {"branches": [w.a.id, w.b.id]}, format="json")
     assert sorted(r.json()["branches"]) == sorted([w.a.id, w.b.id])
+
+
+SETTINGS = "/api/gym/settings/"
+
+
+def test_a_gym_sets_how_long_its_month_runs_and_new_sales_follow_it(w):
+    quarterly = Plan.objects.create(gym=w.gym, name="Quarterly", months=3, price_paise=400000)
+    r = w.client(w.admin).patch(SETTINGS, {"month_days": 28}, format="json")
+    assert r.status_code == 200 and r.json()["month_days"] == 28
+    r = w.client(w.desk).post("/api/subscriptions/", {"member": w.member.id, "plan": quarterly.id}, format="json")
+    assert r.status_code == 201, r.content
+    sub = w.member.subscriptions.get(pk=r.json()["id"])
+    assert sub.ends == sub.starts + timedelta(days=3 * 28 - 1)  # 84 days, the first one included
+    assert w.client(w.admin).get("/api/me/").json()["roles"][0]["month_days"] == 28
+    log = AuditLog.objects.get(action="gym.settings_changed")
+    assert (log.before, log.after) == ({"month_days": 0}, {"month_days": 28})
+    # Back to calendar months: 0.
+    assert w.client(w.admin).patch(SETTINGS, {"month_days": 0}, format="json").json()["month_days"] == 0
+
+
+def test_only_admins_set_the_month_and_within_reason(w):
+    assert w.client(w.desk).patch(SETTINGS, {"month_days": 30}, format="json").status_code == 403
+    r = w.client(w.admin).patch(SETTINGS, {"month_days": 61}, format="json")
+    assert r.status_code == 400 and "month_days" in r.json()["error"]["fields"]
+    r = w.client(w.admin).patch(SETTINGS, {"name": "Renamed", "month_days": 30}, format="json")
+    assert r.json()["name"] == w.gym.name and r.json()["month_days"] == 30  # the name stays Dumbelo's to set
+
+
+def test_a_membership_plan_needs_months(w):
+    r = w.client(w.admin).post("/api/plans/", {"name": "Odd", "price_paise": 90000}, format="json")
+    assert r.status_code == 400 and "months" in r.json()["error"]["fields"]
 
 
 def test_no_branch_means_every_branch(w):

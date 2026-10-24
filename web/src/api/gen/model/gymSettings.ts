@@ -7,7 +7,8 @@
  */
 
 /**
- * The gym as Dumbelo set it up: its name, slug and time zone. Its message switches are /api/gym/messages/.
+ * The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
+set. Its message switches are /api/gym/messages/.
  */
 export interface GymSettings {
   readonly name: string;
@@ -17,4 +18,10 @@ export interface GymSettings {
    */
   readonly slug: string;
   readonly timezone: string;
+  /**
+   * How long a plan's month runs: 0 for calendar months, else that many days (28, 30)
+   * @minimum 0
+   * @maximum 32767
+   */
+  month_days?: number;
 }

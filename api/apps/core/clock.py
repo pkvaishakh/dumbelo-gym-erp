@@ -52,8 +52,11 @@ def add_months(d: date, months: int) -> date:
     return date(y, m, min(d.day, calendar.monthrange(y, m)[1]))
 
 
-def plan_end(starts: date, months: int) -> date:
-    """A 1-month plan from 14 Oct runs to 13 Nov."""
+def plan_end(starts: date, months: int, month_days: int = 0) -> date:
+    """A 1-month plan from 14 Oct runs to 13 Nov in calendar months; at a gym whose month is 28 days
+    (`Gym.month_days`), to 10 Nov, and a 3-month plan for 84 days."""
+    if month_days:
+        return starts + timedelta(days=(months or 3) * month_days - 1)
     return add_months(starts, months or 3) - timedelta(days=1)
 
 

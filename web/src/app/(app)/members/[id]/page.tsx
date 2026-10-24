@@ -1,6 +1,7 @@
 "use client";
 import {
-  BellRing, CalendarCheck, CircleCheck, Dumbbell, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, Pause, Pencil, Phone, Play, StickyNote, Target, Trash2, Undo2, UserRound,
+  BellRing, CalendarCheck, CalendarClock, CalendarCog, ChevronRight, CircleCheck, Dumbbell, HandHeart, IdCard, IndianRupee, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, PartyPopper, Pause, Pencil,
+  PenLine, Phone, Play, ReceiptText, Snowflake, StickyNote, Target, Trash2, Undo2, UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -9,16 +10,19 @@ import { useState } from "react";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useMembersRetrieve } from "@/api/gen/members/members";
 import { useMessagesList } from "@/api/gen/messages/messages";
-import type { CurrentPlan, Member, Note, Payment } from "@/api/gen/model";
-import { usePaymentsListInfinite } from "@/api/gen/payments/payments";
+import type { CurrentPlan, Member, Note, Payment, Subscription } from "@/api/gen/model";
+import { usePaymentsList } from "@/api/gen/payments/payments";
 import { useStaffList } from "@/api/gen/staff/staff";
-import { useSubscriptionsRetrieve } from "@/api/gen/subscriptions/subscriptions";
+import { useSubscriptionsList, useSubscriptionsRetrieve } from "@/api/gen/subscriptions/subscriptions";
 import { DetailBar } from "@/components/shell";
-import { Details, ErrorText, Field, Icon, LoadMore, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
+import { Details, ErrorText, Field, Icon, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { CheckInResult, useCheckIn } from "@/features/checkin";
+import { EditMembershipSheet } from "@/features/plan-correct";
+import { METHODS } from "@/features/sell";
 import { RefundRows, RefundSheet } from "@/features/refunds";
-import { day, daysLeft, isoDate, phone, rupees } from "@/lib/format";
-import { paged, pages, useAction, useGet } from "@/lib/hooks";
+import { day, daysLeft, gymToday, isoDate, phone, rupees } from "@/lib/format";
+import { useAction, useGet } from "@/lib/hooks";
+import { type Chat, type ChatFacts, type ChatKind, memberChats, membershipChat, nextPlanChat, receiptChat, whatsappLink } from "@/lib/member-chat";
 import { useSession } from "@/lib/session";
 import type { TrainerMember } from "@/lib/types";
 
@@ -29,16 +33,21 @@ export default function MemberProfile() {
   const desk = role.role === "admin" || role.role === "receptionist";
   const q = useMembersRetrieve(mid);
   const m = q.data?.data as (Member & Partial<TrainerMember>) | undefined;
-  // Payments come a few at a time, newest first: a long-time member's history never loads all at once.
-  const paysQ = usePaymentsListInfinite({ member: mid, limit: 5 }, { query: { ...paged, enabled: desk } });
-  const pays = pages(paysQ).rows;
+  // The latest few payments, newest first; See All opens the rest on Payments, filtered to this member.
+  const paysQ = usePaymentsList({ member: mid, limit: RECENT }, { query: { enabled: desk } });
+  const pays = paysQ.data?.data.results ?? [];
+  const payCount = paysQ.data?.data.count ?? 0;
   // The current plan's price, offer and what's been paid toward it, for the membership card (desk only: amounts).
   const planId = (q.data?.data as Member | undefined)?.plan?.id;
   const subQ = useSubscriptionsRetrieve(planId ?? 0, { query: { enabled: desk && !!planId } });
-  const visits = useCheckinsList({ member: mid, limit: 10 });
+  // Renewals already sold, waiting for the current plan to end: the newest plans come first, so a few cover them.
+  const subsQ = useSubscriptionsList({ member: mid, limit: 5 }, { query: { enabled: desk } });
+  const gymDay = gymToday(role.timezone);
+  const queued = (subsQ.data?.data.results ?? []).filter((s) => !s.cancelled && s.id !== planId && (s.starts ?? "") > gymDay).reverse();
+  const visits = useCheckinsList({ member: mid, limit: RECENT });
   const notes = useGet<Note[]>(`/api/members/${mid}/notes/`, undefined, role.role !== "member");
   const { checkIn, outcome, busy, close } = useCheckIn();
-  const [sheet, setSheet] = useState<null | "more" | "note" | "freeze" | "login" | "edit" | "archive" | "refund" | { void: Payment }>(null);
+  const [sheet, setSheet] = useState<null | "more" | "whatsapp" | { chat: Chat } | "note" | "freeze" | "login" | "edit" | "archive" | "refund" | { void: Payment } | { plan: Subscription }>(null);
   const today = isoDate(new Date());
   const inToday = visits.data?.data.results.find((c) => c.local_date === today);
 
@@ -51,6 +60,25 @@ export default function MemberProfile() {
   const balance = m.balance_paise ?? 0;
   const sub = subQ.data?.data;
   const digits = m.phone.replace(/\D/g, "").slice(-10);
+  // What the WhatsApp messages are filled in from: a payment as a receipt reads it, a queued plan as booked.
+  const paid = (p: Payment) => ({
+    amount_paise: p.amount_paise, method: METHODS.find((x) => x.value === p.method)?.title ?? p.method, on: p.taken_at,
+    plan: plan && p.subscription === plan.id ? plan.name : queued.find((s) => s.id === p.subscription)?.plan_name,
+  });
+  const booked = (s: Subscription) => ({ name: s.plan_name, starts: s.starts!, ends: s.ends!, price_paise: s.price_paise, paid_paise: s.paid_paise });
+  const lastPay = pays.find((p) => !p.voided);
+  const facts: ChatFacts = {
+    name: m.name, code: m.code, gym: role.gym_name, today: gymDay,
+    plan: plan ? { name: plan.name, starts: plan.starts, ends: plan.ends, frozen_from: plan.frozen_from, frozen_until: plan.frozen_until } : null,
+    due: desk ? balance : null, paymentDue: !!m.payment_due, sub: desk ? sub : null, hasLogin: m.has_login,
+    lastPayment: desk && lastPay ? paid(lastPay) : null, upcoming: queued.map(booked),
+    lastVisit: visits.data?.data.results[0]?.local_date ?? null,
+  };
+  const chats = memberChats(facts);
+  const cardChat = membershipChat(chats);
+  const startChat = typeof sheet === "object" && sheet && "chat" in sheet ? sheet.chat : null;
+  // The balance covers every plan: what's left once the current and booked plans' own dues are taken out is from before.
+  const earlier = Math.max(0, balance - (sub ? owedOn(sub) : 0) - queued.reduce((t, s) => t + owedOn(s), 0));
 
   return (
     <div className="rl-app rl-root">
@@ -75,11 +103,11 @@ export default function MemberProfile() {
               <button className="rl-button rl-button--accent" type="button" disabled={busy === m.id} onClick={() => checkIn(m as Member)}>{busy === m.id ? "Checking in…" : "Check In"}</button>
             ))}
             {desk && (balance > 0
-              ? <Link className="rl-button rl-button--secondary" href={`/payments/new?member=${m.id}`}>Collect {rupees(balance)}</Link>
-              : <Link className="rl-button rl-button--secondary" href={`/subscriptions/new?member=${m.id}`}>{m.status === "expired" || m.status === "expiring" || m.status === "none" ? "Renew Membership" : "New Subscription"}</Link>)}
+              ? <Link className="rl-button rl-button--secondary" href={`/payments/new?member=${m.id}&back=member`}>Collect {rupees(balance)}</Link>
+              : <Link className="rl-button rl-button--secondary" href={`/subscriptions/new?member=${m.id}&back=member`}>{m.status === "expired" || m.status === "expiring" || m.status === "none" ? "Renew Membership" : "New Subscription"}</Link>)}
             <div className="rl-actions__contact">
               <a className="rl-button rl-button--secondary rl-button--sm" href={`tel:+91${digits}`}><Icon as={Phone} size="sm" />Call</a>
-              <a className="rl-button rl-button--secondary rl-button--sm" href={`https://wa.me/91${digits}`} target="_blank" rel="noreferrer"><Icon as={MessageCircle} size="sm" />WhatsApp</a>
+              <button className="rl-button rl-button--secondary rl-button--sm" type="button" aria-haspopup="dialog" onClick={() => setSheet("whatsapp")}><Icon as={MessageCircle} size="sm" />WhatsApp</button>
             </div>
           </div>
         </Section>
@@ -92,19 +120,53 @@ export default function MemberProfile() {
                   <div className="rl-pass__top"><Status status={m.status} /><span className="rl-pass__plan">{plan?.name ?? "Membership"}</span></div>
                   {ends && <p className="rl-figure">{Math.max(0, daysLeft(ends) + 1)} <small>{m.status === "expired" ? "days left" : "days remaining"}</small></p>}
                   <div className="rl-pass__dates"><span>{plan?.starts ? day(plan.starts) : ""}</span><span>{m.status === "expired" ? "Expired" : "Expires"} {ends ? day(ends) : ""}</span></div>
-                  {desk && (sub || balance > 0) && (
+                  {desk && (sub || earlier > 0) && (
                     <div className="rl-sub">
-                      {sub && <span><strong>Price:</strong> {rupees(sub.price_paise)}{sub.offer_name ? ` with ${sub.offer_name} (was ${rupees(sub.list_price_paise)})` : ""}</span>}
-                      {sub && <span><strong>Paid:</strong> {rupees(sub.paid_paise)}{sub.paid_paise < sub.price_paise ? ` of ${rupees(sub.price_paise)}` : " in full"}</span>}
-                      {sub && sub.refunded_paise > 0 && <span><strong>Refunded:</strong> {rupees(sub.refunded_paise)}</span>}
-                      {balance > 0 && <span><strong>Payment due:</strong> {rupees(balance)}</span>}
+                      {sub && <PlanMoney sub={sub} />}
+                      {earlier > 0 && <span><strong>{sub ? "Owed from earlier plans:" : "Payment due:"}</strong> {rupees(earlier)}</span>}
                     </div>
                   )}
                   {!desk && m.payment_due && <div className="rl-sub"><span><strong>Payment due.</strong> The front desk will collect it.</span></div>}
                   {current?.frozen_from && <div className="rl-sub"><span><strong>Frozen</strong> {day(current.frozen_from)} to {current.frozen_until ? day(current.frozen_until) : "further notice"}</span></div>}
+                  {cardChat && (
+                    <div style={{ marginTop: "var(--space-3)" }}>
+                      <button className="rl-button rl-button--secondary rl-button--sm" type="button" aria-haspopup="dialog" onClick={() => setSheet({ chat: cardChat })}>
+                        <Icon as={MessageCircle} size="sm" />Send {cardChat.title}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No plan yet.</p></div>}
             </Section>
+            {queued.length > 0 && (
+              <Section title="Up next">
+                <div style={{ display: "grid", gap: "var(--space-3)" }}>
+                  {queued.map((s) => {
+                    const inDays = daysLeft(s.starts!);
+                    return (
+                      <div key={s.id} className="rl-pass">
+                        <div className="rl-pass__top">
+                          <span className="rl-tag rl-tag--next">{inDays <= 0 ? "Starts today" : inDays === 1 ? "Starts tomorrow" : `Starts in ${inDays} days`}</span>
+                          <span className="rl-pass__plan">{s.plan_name}</span>
+                          {role.role === "admin" && (
+                            <button className="rl-pass__link" type="button" aria-haspopup="dialog" aria-label={`Manage ${s.plan_name}`} style={LINK_RESET} onClick={() => setSheet({ plan: s })}>
+                              Manage<ChevronRight className="rl-icon rl-icon--xs" strokeWidth={1.75} aria-hidden />
+                            </button>
+                          )}
+                        </div>
+                        <div className="rl-pass__dates"><span>{day(s.starts!)}</span><span>Ends {day(s.ends!)}</span></div>
+                        <div className="rl-sub"><PlanMoney sub={s} /></div>
+                        <div style={{ marginTop: "var(--space-3)" }}>
+                          <button className="rl-button rl-button--secondary rl-button--sm" type="button" aria-haspopup="dialog" onClick={() => setSheet({ chat: nextPlanChat(facts, [booked(s)]) })}>
+                            <Icon as={MessageCircle} size="sm" />Send on WhatsApp
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
             <Section title="Details">
               <Details rows={[
                 { icon: Phone, label: "Mobile number", value: phone(m.phone) },
@@ -118,22 +180,29 @@ export default function MemberProfile() {
           </div>
           <div className="rl-app__col">
             {desk && (
-              <Section title="Payments">
+              <Section title="Payments" aside={payCount > 0 ? (
+                <Link className="rl-link rl-link--plain" href={`/collection?member=${mid}`}><span>See All</span></Link>
+              ) : undefined}>
                 {paysQ.isLoading ? <SkeletonRows n={2} /> : pays.length ? (
                   <><ul className="rl-card rl-mlist rl-mlist--compact">
-                    {pays.map((p) => (
-                      <li key={p.id}><button className="rl-mrow" type="button" disabled={role.role !== "admin" || p.voided} onClick={() => setSheet({ void: p })}>
-                        <span className="rl-chipicon" aria-hidden="true"><Icon as={UserRound} size="sm" /></span>
-                        <span className="rl-row__title rl-mrow__name" style={p.voided ? { textDecoration: "line-through" } : undefined}>{rupees(p.amount_paise)} by {p.method.toUpperCase()}</span>
-                        <span className="rl-row__meta rl-mrow__meta">{day(p.taken_at)} • {p.taken_by_name}{p.voided ? ` • Voided: ${p.void_reason}` : ""}</span>
-                      </button></li>
+                    {pays.map((p, i) => (
+                      <WhatsAppRow key={p.id} first={i === 0} label={`WhatsApp ${m.name} a receipt for ${rupees(p.amount_paise)}`}
+                        onSend={p.voided ? undefined : () => setSheet({ chat: receiptChat(facts, paid(p)) })}>
+                        <button className="rl-mrow" type="button" style={{ borderTop: 0 }} disabled={role.role !== "admin" || p.voided} onClick={() => setSheet({ void: p })}>
+                          <span className="rl-chipicon" aria-hidden="true"><Icon as={UserRound} size="sm" /></span>
+                          <span className="rl-row__title rl-mrow__name" style={p.voided ? { textDecoration: "line-through" } : undefined}>{rupees(p.amount_paise)} by {p.method.toUpperCase()}</span>
+                          <span className="rl-row__meta rl-mrow__meta">{day(p.taken_at)} • {p.taken_by_name}{p.voided ? ` • Voided: ${p.void_reason}` : ""}</span>
+                        </button>
+                      </WhatsAppRow>
                     ))}
-                  </ul><LoadMore q={paysQ} /></>
+                  </ul></>
                 ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No payments yet.</p></div>}
                 <RefundRows member={mid} admin={role.role === "admin"} />
               </Section>
             )}
-            <Section title="Recent visits">
+            <Section title="Recent visits" aside={role.role !== "member" && visits.data?.data.count ? (
+              <Link className="rl-link rl-link--plain" href={`/visits?member=${mid}`}><span>See All</span></Link>
+            ) : undefined}>
               {visits.data?.data.results.length ? (
                 <ul className="rl-card rl-mlist rl-mlist--compact">
                   {visits.data.data.results.map((c) => (
@@ -166,6 +235,7 @@ export default function MemberProfile() {
         <ul className="rl-sheet__list">
           <SheetItem icon={Pencil} label="Edit Details" onClick={() => setSheet("edit")} />
           <SheetItem icon={StickyNote} label="Add Note" onClick={() => setSheet("note")} />
+          {role.role === "admin" && sub && !sub.cancelled && <SheetItem icon={CalendarCog} label="Edit Membership" onClick={() => setSheet({ plan: sub })} />}
           {current && (current.frozen_from
             ? <SheetItem icon={Play} label="Unfreeze Membership" onClick={() => setSheet("freeze")} />
             : <SheetItem icon={Pause} label="Freeze Membership" onClick={() => setSheet("freeze")} />)}
@@ -174,14 +244,49 @@ export default function MemberProfile() {
           {role.role === "admin" && <SheetItem icon={Trash2} label="Archive Member" onClick={() => setSheet("archive")} />}
         </ul>
       </Sheet>
+      {(sheet === "whatsapp" || startChat) && (
+        <WhatsAppSheet start={startChat} phone={m.phone} chats={chats} optedOut={!!m.reminders_opted_out} onClose={() => setSheet(null)} />
+      )}
       <NoteSheet open={sheet === "note"} id={mid} onClose={() => setSheet(null)} />
       {current && <FreezeSheet open={sheet === "freeze"} sub={current} onClose={() => setSheet(null)} />}
       <LoginSheet open={sheet === "login"} member={m} onClose={() => setSheet(null)} />
       {desk && <EditSheet open={sheet === "edit"} member={m} onClose={() => setSheet(null)} />}
       <ArchiveSheet open={sheet === "archive"} member={m} onClose={() => setSheet(null)} />
       {sheet === "refund" && <RefundSheet member={mid} name={m.name} onClose={() => setSheet(null)} />}
-      <VoidSheet payment={typeof sheet === "object" && sheet ? sheet.void : null} onClose={() => setSheet(null)} />
+      {typeof sheet === "object" && sheet && "plan" in sheet && (
+        <EditMembershipSheet sub={sheet.plan} branch={typeof m.home_branch === "number" ? m.home_branch : null} onClose={() => setSheet(null)} />
+      )}
+      <VoidSheet payment={typeof sheet === "object" && sheet && "void" in sheet ? sheet.void : null} onClose={() => setSheet(null)} />
     </div>
+  );
+}
+
+/** How a plan was paid: " by UPI" for one way, " (Cash ₹500 + UPI ₹500)" for a split. */
+function paidBy(sub: Subscription) {
+  const name = (m: string) => METHODS.find((x) => x.value === m)?.title ?? m;
+  if (sub.paid_by.length === 1) return ` by ${name(sub.paid_by[0]!.method)}`;
+  return sub.paid_by.length ? ` (${sub.paid_by.map((p) => `${name(p.method)} ${rupees(p.amount_paise)}`).join(" + ")})` : "";
+}
+
+/** How many payments and visits the profile shows; each See All has the rest. */
+const RECENT = 5;
+
+/** What's still to pay on one plan. */
+const owedOn = (sub: Subscription) => Math.max(0, sub.price_paise - sub.paid_paise);
+
+/** A link-styled button (the pass's Manage) without a button's own border and fill. */
+const LINK_RESET = { border: 0, padding: 0, background: "none", fontFamily: "inherit", cursor: "pointer" } as const;
+
+/** One plan's money, for a pass: its price and offer, what's been paid and how, refunds, and what's still due. */
+function PlanMoney({ sub }: { sub: Subscription }) {
+  const due = owedOn(sub);
+  return (
+    <>
+      <span><strong>Price:</strong> {rupees(sub.price_paise)}{sub.offer_name ? ` with ${sub.offer_name} (was ${rupees(sub.list_price_paise)})` : ""}</span>
+      <span><strong>Paid:</strong> {sub.paid_paise ? <>{rupees(sub.paid_paise)}{due ? ` of ${rupees(sub.price_paise)}` : " in full"}{paidBy(sub)}</> : "Nothing yet"}</span>
+      {sub.refunded_paise > 0 && <span><strong>Refunded:</strong> {rupees(sub.refunded_paise)}</span>}
+      {due > 0 && <span><strong>Payment due:</strong> {rupees(due)}</span>}
+    </>
   );
 }
 
@@ -234,6 +339,63 @@ function RemindersCard({ member }: { member: Member }) {
 
 function SheetItem({ icon, label, onClick }: { icon: typeof Pencil; label: string; onClick: () => void }) {
   return <li><button className="rl-sheet__item" type="button" onClick={onClick}><span className="rl-chipicon"><Icon as={icon} size="sm" /></span><span className="rl-sheet__text">{label}</span></button></li>;
+}
+
+const CHAT_ICON: Record<ChatKind, typeof Pencil> = {
+  payment_due: IndianRupee, renewal: CalendarClock, next_plan: CalendarCheck, payment_received: ReceiptText, membership: IdCard, frozen: Snowflake,
+  missed_you: HandHeart, welcome: PartyPopper, blank: PenLine,
+};
+
+/** Pick a message (or start on one, from a card or row), check its words, then open the staff member's own WhatsApp
+ *  with it typed in, ready to send. Back always leads to every message that fits. */
+function WhatsAppSheet({ start, phone: to, chats, optedOut, onClose }: { start: Chat | null; phone: string; chats: Chat[]; optedOut: boolean; onClose: () => void }) {
+  const [pick, setPick] = useState<Chat | null>(start);
+  const [text, setText] = useState(start?.text ?? "");
+  const close = () => { setPick(null); onClose(); };
+  return (
+    <Sheet open onClose={close} title={pick?.title ?? "Send on WhatsApp"}>
+      {pick ? (
+        <>
+          <Field label="Message" area hint="WhatsApp opens with this typed in. Change anything before you send it.">
+            {(fid) => <textarea className="rl-field__input" id={fid} rows={7} value={text} onChange={(e) => setText(e.target.value)} />}
+          </Field>
+          <div className="rl-sheet__actions">
+            <a className="rl-button rl-button--block" href={whatsappLink(to, text.trim())} target="_blank" rel="noreferrer" onClick={close}><Icon as={MessageCircle} size="sm" />Open WhatsApp</a>
+            <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => setPick(null)}>Back</button>
+          </div>
+        </>
+      ) : (
+        <>{optedOut && <p className="rl-row__meta">Reminders are off for this member. Send one only if they expect it.</p>}
+        <ul className="rl-sheet__list">
+          {chats.map((c) => {
+            const inner = <>
+              <span className="rl-chipicon"><Icon as={CHAT_ICON[c.kind]} size="sm" /></span>
+              <span className="rl-sheet__text">{c.title}<span className="rl-row__meta" style={{ fontWeight: 400 }}>{c.note}</span></span>
+              <ChevronRight className="rl-icon rl-icon--sm rl-chev" strokeWidth={1.75} aria-hidden />
+            </>;
+            return <li key={c.kind}>{c.text
+              ? <button className="rl-sheet__item" type="button" onClick={() => { setPick(c); setText(c.text); }}>{inner}</button>
+              : <a className="rl-sheet__item" href={whatsappLink(to)} target="_blank" rel="noreferrer" onClick={close}>{inner}</a>}</li>;
+          })}
+        </ul></>
+      )}
+    </Sheet>
+  );
+}
+
+/** A list row with a WhatsApp button at its end. The line between rows moves to the item, so it runs under both;
+ *  the row inside sets its own line off. */
+function WhatsAppRow({ first, label, onSend, children }: { first: boolean; label: string; onSend?: () => void; children: React.ReactNode }) {
+  return (
+    <li style={{ display: "flex", alignItems: "center", borderTop: first ? undefined : "1px solid var(--line)" }}>
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>{children}</div>
+      {onSend && (
+        <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label={label} title={label} aria-haspopup="dialog" style={{ marginRight: "var(--space-3)" }} onClick={onSend}>
+          <Icon as={MessageCircle} size="sm" />
+        </button>
+      )}
+    </li>
+  );
 }
 
 function NoteSheet({ open, id, onClose }: { open: boolean; id: number; onClose: () => void }) {

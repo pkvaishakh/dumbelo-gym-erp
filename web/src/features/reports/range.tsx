@@ -22,14 +22,14 @@ export function useReportRange() {
   const { role, branch: chosen, setBranch } = useSession();
   const today = gymToday(role.timezone);
   const asked = params.get("period");
-  const period: Period = isPeriod(asked) ? asked : "7d";
+  const period: Period = isPeriod(asked) ? asked : "today";
   const [from, to] = rangeOf(period, today, params.get("from"), params.get("to"));
   const inUrl = params.get("branch");
   const branch = inUrl === "all" ? null : inUrl && /^\d+$/.test(inUrl) ? Number(inUrl) : chosen;
   const invalid = period === "custom" ? rangeError(from, to, today) : null;
 
   const query = new URLSearchParams();
-  if (period !== "7d") query.set("period", period);
+  if (period !== "today") query.set("period", period);
   if (period === "custom") { query.set("from", from); query.set("to", to); }
   if (inUrl) query.set("branch", inUrl);
   const search = query.toString();
@@ -37,7 +37,7 @@ export function useReportRange() {
   const go = (next: Change) => {
     const q = new URLSearchParams(search);
     if (next.period) {
-      if (next.period === "7d") q.delete("period"); else q.set("period", next.period);
+      if (next.period === "today") q.delete("period"); else q.set("period", next.period);
       if (next.period !== "custom") { q.delete("from"); q.delete("to"); }
     }
     if (next.from) q.set("from", next.from);

@@ -22,8 +22,20 @@ def next_start(member: Member, today):
     return today
 
 
+def no_overlap(member, kind, starts, ends, exclude=None):
+    """A member's plans of one kind (memberships, personal training) never run on the same day twice."""
+    clash = (member.subscriptions.filter(cancelled=False, plan__kind=kind, starts__lte=ends, ends__gte=starts)
+             .exclude(pk=exclude).select_related("plan").first())
+    if clash:
+        raise RuleBroken("plans_overlap", f"These dates overlap {clash.plan.name}, {_day(clash.starts)} to {_day(clash.ends)}. Pick dates around it.")
+
+
+def _day(d):
+    return f"{d.day} {d:%b}"
+
+
 @transaction.atomic
-def sell(member, plan, by, offer=None, starts=None):
+def sell(member, plan, by, offer=None, starts=None, ends=None):
     today = clock.today(member.gym)
     if plan.gym_id != member.gym_id or not plan.on_sale:
         raise RuleBroken("plan_not_on_sale", f"{plan.name} isn't on sale")
@@ -34,12 +46,16 @@ def sell(member, plan, by, offer=None, starts=None):
         if offer.gym_id != member.gym_id or not offer.applies_to(plan, today, branch):
             raise RuleBroken("offer_not_valid", f"{offer.name} doesn't apply to {plan.name} today")
     starts = starts or next_start(member, today)
+    ends = ends or clock.plan_end(starts, plan.months, member.gym.month_days)
+    if ends < starts:
+        raise RuleBroken("dates_invalid", "Pick an end date on or after the start date")
+    no_overlap(member, plan.kind, starts, ends)
     discount = offer.discount_on(plan.price_paise) if offer else 0
     return Subscription.objects.create(
         member=member,
         plan=plan,
         starts=starts,
-        ends=clock.plan_end(starts, plan.months),
+        ends=ends,
         list_price_paise=plan.price_paise,
         offer=offer,
         price_paise=plan.price_paise - discount,
@@ -48,7 +64,66 @@ def sell(member, plan, by, offer=None, starts=None):
 
 
 @transaction.atomic
-def take_payment(member, amount_paise, method, by, branch=None, subscription=None, note=""):
+def correct(sub: Subscription, changes: dict) -> dict:
+    """An admin's correction of a plan already sold: its plan, offer, price or dates. A new plan or offer works the price
+    out again the way a sale does, and a new plan or start date the end date, unless those are given too. Returns what
+    it was before, for the audit log. Money already paid stays with the plan, so the price can't go below it."""
+    member = sub.member
+    Member.objects.select_for_update().filter(pk=member.pk).first()  # one change at a time per member, as take_payment
+    sub = Subscription.objects.select_for_update(of=("self",)).select_related("plan", "offer").get(pk=sub.pk)
+    if sub.cancelled:
+        raise RuleBroken("cancelled", "This plan is cancelled")
+    before = {"plan": sub.plan_id, "offer": sub.offer_id, "starts": str(sub.starts), "ends": str(sub.ends), "price_paise": sub.price_paise}
+    today, branch = clock.today(member.gym), member.home_branch
+
+    plan = changes.get("plan", sub.plan)
+    new_plan = plan.pk != sub.plan_id
+    if new_plan and not plan.on_sale:
+        raise RuleBroken("plan_not_on_sale", f"{plan.name} isn't on sale")
+    if new_plan and not sold_at(plan, branch):
+        raise RuleBroken("plan_not_at_branch", f"{plan.name} isn't sold at {branch.name}")
+    offer = changes["offer"] if "offer" in changes else sub.offer
+    new_offer = (offer.pk if offer else None) != sub.offer_id
+    if offer and new_offer and not offer.applies_to(plan, today, branch):
+        raise RuleBroken("offer_not_valid", f"{offer.name} doesn't apply to {plan.name} today")
+    if offer and new_plan and not new_offer and offer.plans.exists() and not offer.plans.filter(pk=plan.pk).exists():
+        raise RuleBroken("offer_not_valid", f"{offer.name} doesn't apply to {plan.name}. Remove the offer or pick another.")
+
+    list_price = plan.price_paise if new_plan else sub.list_price_paise
+    if "price_paise" in changes:
+        price = changes["price_paise"]
+    elif new_plan or new_offer:
+        price = list_price - (offer.discount_on(list_price) if offer else 0)
+    else:
+        price = sub.price_paise
+    paid = sub.paid_paise()
+    if price < paid:
+        raise RuleBroken("price_below_paid", f"{rupees(paid)} has been paid for this plan. Set the price to that or more, or refund first.")
+
+    starts = changes.get("starts", sub.starts)
+    if "ends" in changes:
+        ends = changes["ends"]
+    elif new_plan or starts != sub.starts:
+        ends = clock.plan_end(starts, plan.months, member.gym.month_days)
+    else:
+        ends = sub.ends
+    if (starts, ends) != (sub.starts, sub.ends):  # a freeze can already push a plan into the next: only new dates are checked
+        if sub.frozen_from:
+            raise RuleBroken("frozen", "This plan is frozen. Unfreeze it before changing its dates.")
+        if ends < starts:
+            raise RuleBroken("dates_invalid", "Pick an end date on or after the start date")
+        no_overlap(member, plan.kind, starts, ends, exclude=sub.pk)
+
+    after = {"plan": plan.pk, "offer": offer.pk if offer else None, "starts": str(starts), "ends": str(ends), "price_paise": price}
+    if after == before:
+        raise RuleBroken("nothing_changed", "Nothing was changed")
+    sub.plan, sub.offer, sub.list_price_paise, sub.price_paise, sub.starts, sub.ends = plan, offer, list_price, price, starts, ends
+    sub.save(update_fields=["plan", "offer", "list_price_paise", "price_paise", "starts", "ends", "updated_at"])
+    return before
+
+
+@transaction.atomic
+def take_payment(member, amount_paise, method, by, branch=None, subscription=None, note="", receipt=True):
     Member.objects.select_for_update().filter(pk=member.pk).first()  # one desk at a time per member
     if amount_paise <= 0:
         raise RuleBroken("amount_invalid", "Enter an amount above zero")
@@ -75,8 +150,27 @@ def take_payment(member, amount_paise, method, by, branch=None, subscription=Non
         note=note,
         account=Account.objects.for_money(branch.id, method, on=clock.today(member.gym)),
     )
-    after_commit(send_payment_receipt, payment.pk)  # the member's receipt, if the gym sends them
+    if receipt:
+        after_commit(send_payment_receipt, payment.pk)  # the member's receipt, if the gym sends them
     return payment
+
+
+@transaction.atomic
+def take_split(member, parts: list[tuple[str, int]], by, branch=None, note="") -> list[Payment]:
+    """One amount paid more than one way (₹1,000 in cash and ₹500 by UPI): a payment for each, so every drawer and
+    account gets its share, saved together or not at all, and one receipt for the total."""
+    methods = [m for m, _ in parts]
+    if len(parts) < 2:
+        raise RuleBroken("split_too_few", "Split it two ways or more, or take one payment")
+    if len(set(methods)) != len(methods):
+        raise RuleBroken("split_same_method", "Use each way of paying once")
+    Member.objects.select_for_update().filter(pk=member.pk).first()
+    total, owed = sum(a for _, a in parts), Member.objects.with_totals().get(pk=member.pk).balance_paise()
+    if owed and total > owed:
+        raise RuleBroken("overpaid", f"{member.name} owes {rupees(owed)}. The parts add up to {rupees(total)}.")
+    payments = [take_payment(member, amount, method, by, branch=branch, note=note, receipt=False) for method, amount in parts]
+    after_commit(send_payment_receipt, payments[0].pk, [p.pk for p in payments[1:]])
+    return payments
 
 
 @transaction.atomic
