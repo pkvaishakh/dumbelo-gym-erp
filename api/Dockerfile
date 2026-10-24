@@ -2,7 +2,8 @@
 # processes on a server — the web process, the Celery worker and beat — each with its own command (docs/deploy.md).
 FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-WORKDIR /app
+# Named like the repo's folder, so a shell in the container finds the code at /api.
+WORKDIR /api
 
 # Requirements first: the layer is cached until they change, so a code-only build skips the install.
 COPY requirements.txt .
@@ -14,7 +15,7 @@ COPY . .
 RUN python manage.py collectstatic --noinput
 
 # Nothing here needs root.
-RUN useradd --create-home --uid 10001 dumbelo && chown -R dumbelo:dumbelo /app
+RUN useradd --create-home --uid 10001 dumbelo && chown -R dumbelo:dumbelo /api
 USER dumbelo
 
 # What this image is, for the Console's Server screen: the deploy workflow passes the commit and the time it built
