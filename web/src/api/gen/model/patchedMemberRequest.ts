@@ -9,7 +9,8 @@ import type { MethodEnum } from './methodEnum';
 
 /**
  * What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-and set the member's app login (their phone + a password).
+and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+they already have at another gym (`existing_username`). After that, logins change through set-login.
  */
 export interface PatchedMemberRequest {
   code?: string;
@@ -39,6 +40,17 @@ export interface PatchedMemberRequest {
   /** This member asked not to be sent reminders */
   reminders_opted_out?: boolean;
   is_archived?: boolean;
+  /**
+   * How they sign in to the app; null without a login. Set on create only
+   * @maxLength 60
+   * @nullable
+   */
+  username?: string | null;
+  /**
+   * Their login from another gym, instead of a new one
+   * @maxLength 60
+   */
+  existing_username?: string;
   first_plan?: number;
   /** @nullable */
   offer?: number | null;

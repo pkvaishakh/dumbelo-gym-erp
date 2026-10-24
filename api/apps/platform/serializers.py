@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.accounts import usernames
 from apps.core.errors import RuleBroken
 from apps.core.models import JobRun
 from apps.gyms.models import Branch, Gym, GymRole
@@ -30,6 +31,33 @@ def _password(value, user=None):
     return value
 
 
+def _new_username(value):
+    if not value:
+        return value
+    try:
+        return usernames.validate(value)
+    except DjangoValidationError as e:
+        raise serializers.ValidationError(e.messages[0])
+
+
+def _check_login(data, *, existing, name, password, name_message):
+    """Someone who already signs in is added by their username; a new login needs a name and a first password."""
+    if data.get(existing):
+        user = find_login(data[existing])
+        if user is None:
+            raise serializers.ValidationError({existing: "No one signs in with that username"})
+        if user.is_staff:
+            raise serializers.ValidationError({existing: "That's a Dumbelo team login. Use the gym admin's own username."})
+        return
+    errors = {}
+    if not data.get(name, "").strip():
+        errors[name] = name_message
+    if not data.get(password):
+        errors[password] = "They don't sign in to Dumbelo yet: set a first password and tell them"
+    if errors:
+        raise serializers.ValidationError(errors)
+
+
 class GymRowSerializer(serializers.ModelSerializer):
     """A gym in the Console's list. The counts and the owner come from the queryset (`views.gyms`)."""
 
@@ -38,11 +66,12 @@ class GymRowSerializer(serializers.ModelSerializer):
     member_count = serializers.IntegerField(read_only=True, help_text="Members, leaving out archived ones")
     owner_name = serializers.CharField(read_only=True, allow_null=True)
     owner_email = serializers.CharField(read_only=True, allow_null=True)
+    owner_username = serializers.CharField(read_only=True, allow_null=True, help_text="How the owner signs in")
     owed_paise = serializers.IntegerField(read_only=True, help_text="What its open Dumbelo invoices still owe")
 
     class Meta:
         model = Gym
-        fields = ["id", "name", "slug", "status", "timezone", "billing_email", "branch_count", "member_count", "owner_name", "owner_email", "owed_paise", "created_at"]
+        fields = ["id", "name", "slug", "status", "timezone", "billing_email", "branch_count", "member_count", "owner_name", "owner_email", "owner_username", "owed_paise", "created_at"]
         read_only_fields = fields  # output only: New Gym and edits have their own serializers
 
 
@@ -79,8 +108,12 @@ class GymCreateSerializer(serializers.Serializer):
     slug = serializers.CharField(max_length=40, help_text="Short name the app sends as X-Gym: lowercase letters, numbers and dashes")
     timezone = serializers.CharField(max_length=40, default="Asia/Kolkata")
     branch = serializers.CharField(max_length=80, help_text="The first branch's name")
+    owner_existing_username = serializers.CharField(max_length=60, required=False, allow_blank=True,
+                                                    help_text="The owner already signs in to Dumbelo (another gym): their username")
+    owner_username = serializers.CharField(max_length=60, required=False, allow_blank=True,
+                                           help_text="A new login's username; made from the email or name if left out")
     owner_name = serializers.CharField(max_length=120, required=False, allow_blank=True, help_text="Needed for a new login")
-    owner_email = serializers.EmailField(max_length=254)
+    owner_email = serializers.EmailField(max_length=254, required=False, allow_blank=True, help_text="For contact, and invoices unless billing_email is given")
     owner_password = serializers.CharField(max_length=128, required=False, allow_blank=True, write_only=True, help_text="Needed for a new login")
     billing_email = serializers.EmailField(max_length=254, required=False, allow_blank=True, help_text="The owner's email if left out")
 
@@ -108,15 +141,12 @@ class GymCreateSerializer(serializers.Serializer):
     def validate_owner_password(self, value):
         return _password(value) if value else value
 
+    def validate_owner_username(self, value):
+        return _new_username(value)
+
     def validate(self, data):
-        if find_login(data["owner_email"]) is None:  # a new login needs a name and a first password
-            errors = {}
-            if not data.get("owner_name", "").strip():
-                errors["owner_name"] = "Enter the owner's name"
-            if not data.get("owner_password"):
-                errors["owner_password"] = "They don't sign in to Dumbelo yet: set a first password and tell them"
-            if errors:
-                raise serializers.ValidationError(errors)
+        _check_login(data, existing="owner_existing_username", name="owner_name", password="owner_password",
+                     name_message="Enter the owner's name")
         return data
 
 
@@ -146,6 +176,7 @@ class StatusChangeSerializer(serializers.Serializer):
 class GymAdminSerializer(serializers.ModelSerializer):
     """An admin of the gym. `other_gyms` counts the other gyms the same login opens: a new password works there too."""
 
+    username = serializers.CharField(source="user.username", read_only=True)
     name = serializers.CharField(source="user.name", read_only=True)
     email = serializers.CharField(source="user.email", read_only=True, allow_null=True)
     phone = serializers.CharField(source="user.phone", read_only=True, allow_null=True)
@@ -153,29 +184,28 @@ class GymAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GymRole
-        fields = ["id", "name", "email", "phone", "is_owner", "is_active", "other_gyms"]
+        fields = ["id", "username", "name", "email", "phone", "is_owner", "is_active", "other_gyms"]
         read_only_fields = fields
 
 
 class GymAdminAddSerializer(serializers.Serializer):
-    """Add Admin: their email, and for someone new to Dumbelo, their name and a first password."""
+    """Add Admin: the username of someone who already signs in to Dumbelo, or for someone new, their name, a first
+    password, and a username (made from their email or name if left out)."""
 
-    email = serializers.EmailField(max_length=254)
+    existing_username = serializers.CharField(max_length=60, required=False, allow_blank=True)
+    username = serializers.CharField(max_length=60, required=False, allow_blank=True)
+    email = serializers.EmailField(max_length=254, required=False, allow_blank=True)
     name = serializers.CharField(max_length=120, required=False, allow_blank=True)
     password = serializers.CharField(max_length=128, required=False, allow_blank=True, write_only=True)
 
     def validate_password(self, value):
         return _password(value) if value else value
 
+    def validate_username(self, value):
+        return _new_username(value)
+
     def validate(self, data):
-        if find_login(data["email"]) is None:
-            errors = {}
-            if not data.get("name", "").strip():
-                errors["name"] = "Enter their name"
-            if not data.get("password"):
-                errors["password"] = "They don't sign in to Dumbelo yet: set a first password and tell them"
-            if errors:
-                raise serializers.ValidationError(errors)
+        _check_login(data, existing="existing_username", name="name", password="password", name_message="Enter their name")
         return data
 
 

@@ -124,7 +124,8 @@ class MemberQuerySet(models.QuerySet):
 
 
 class Member(GymScoped):
-    """The gym's view of a member. `user` is set when the desk creates their login (phone + password)."""
+    """The gym's view of a member. `user` is their app login, set when the desk gives them one (or links the one
+    they already have at another gym): the same person at two gyms is one login with a profile in each."""
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="member_profiles")
     code = models.CharField(max_length=20, help_text="Member ID shown on cards, e.g. RL-2041")
@@ -145,6 +146,8 @@ class Member(GymScoped):
         constraints = [
             models.UniqueConstraint(fields=["gym", "code"], name="member_code_unique_in_gym"),
             models.UniqueConstraint(fields=["gym", "phone"], name="member_phone_unique_in_gym"),
+            # one person, one member profile in a gym: a login opens at most one
+            models.UniqueConstraint(fields=["gym", "user"], condition=models.Q(user__isnull=False), name="one_member_profile_per_login_in_gym"),
         ]
         ordering = ["name"]
         indexes = [models.Index(fields=["gym", "joined_on"], name="member_gym_joined")]

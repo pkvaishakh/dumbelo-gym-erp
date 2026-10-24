@@ -5,14 +5,14 @@ from apps.core import clock
 
 
 def login(client, password="pass12345"):
-    return client.post("/api/auth/login/", {"identifier": "admin0@x.in", "password": password}, content_type="application/json")
+    return client.post("/api/auth/login/", {"username": "admin0", "password": password}, content_type="application/json")
 
 
 def test_login_is_rate_limited_per_account(w, client):
     codes = [login(client, "wrong").status_code for _ in range(11)]
     assert codes[:10] == [401] * 10 and codes[10] == 429
     assert login(client).json()["error"]["code"] == "throttled"  # the right password waits too
-    other = client.post("/api/auth/login/", {"identifier": "desk0@x.in", "password": "pass12345"}, content_type="application/json")
+    other = client.post("/api/auth/login/", {"username": "desk0", "password": "pass12345"}, content_type="application/json")
     assert other.status_code == 200  # someone else on the same Wi-Fi can still sign in
 
 

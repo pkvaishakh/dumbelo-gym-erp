@@ -186,7 +186,8 @@ aws ecs run-task --cluster dumbelo --task-definition dumbelo-migrate --launch-ty
 Watch it in CloudWatch under `/ecs/dumbelo`; it should end with `OK` for every migration and exit 0.
 
 A gym of your own comes next. Make a Dumbelo superuser with the same one-off task (command
-`["python", "manage.py", "createsuperuser", "--noinput"]` with `DJANGO_SUPERUSER_*` set), sign in to the Console
+`["python", "manage.py", "createsuperuser", "--noinput"]` with `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_NAME` and
+`DJANGO_SUPERUSER_PASSWORD` set), sign in to the Console with that username
 (`/console`) and add Dumbelo's prices first (Prices → Add Price List): no gym opens without them. Then New Gym in
 the Console, or `python manage.py create_gym` from the command line, makes the gym, its first branch, its owner
 admin and its Dumbelo plan. Don't create gyms in the Django admin: they get no Dumbelo plan, so they can't add

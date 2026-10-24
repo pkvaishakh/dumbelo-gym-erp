@@ -10,7 +10,8 @@ import type { MemberPlan } from './memberPlan';
 
 /**
  * What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-and set the member's app login (their phone + a password).
+and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+they already have at another gym (`existing_username`). After that, logins change through set-login.
  */
 export interface Member {
   readonly id: number;
@@ -41,4 +42,10 @@ export interface Member {
   /** @nullable */
   readonly plan: MemberPlan;
   readonly has_login: boolean;
+  /**
+   * How they sign in to the app; null without a login. Set on create only
+   * @maxLength 60
+   * @nullable
+   */
+  username?: string | null;
 }

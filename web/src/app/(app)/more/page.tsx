@@ -1,6 +1,6 @@
 "use client";
 import {
-  Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, MessageCircle, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  AtSign, Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, MessageCircle, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -107,6 +107,7 @@ export default function MorePage() {
         <Section title="Account Details">
           <Details rows={[
             { icon: UserRound, label: "Name", value: me.name },
+            { icon: AtSign, label: "Username", value: `@${me.username}` },
             ...(me.email ? [{ icon: UserRound, label: "Email", value: me.email }] : []),
             { icon: UserRound, label: "Mobile number", value: phone(me.phone) },
             { icon: Building2, label: "Gym", value: role.gym_name },

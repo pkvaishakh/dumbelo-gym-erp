@@ -29,7 +29,7 @@ export default function LoginPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const next: typeof errors = {};
-    if (!id.trim()) next.id = "Enter your mobile number or email";
+    if (!id.trim()) next.id = "Enter your username";
     if (!pw) next.pw = "Enter your password";
     setErrors(next);
     if (next.id) return idRef.current?.focus();
@@ -64,10 +64,10 @@ export default function LoginPage() {
           <p className="rl-lede">Sign in to manage your gym</p>
           <form className="rl-auth__form" noValidate onSubmit={submit}>
             <div className={`rl-field${errors.id ? " is-invalid" : ""}`}>
-              <label className="rl-field__label" htmlFor="rl-id">Mobile number or email</label>
+              <label className="rl-field__label" htmlFor="rl-id">Username</label>
               <div className="rl-field__control">
                 <input ref={idRef} className="rl-field__input" id="rl-id" name="username" type="text" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next"
-                  placeholder="98765 43210 or you@gym.com" value={id} aria-invalid={!!errors.id} aria-describedby="rl-id-e"
+                  placeholder="your.username" value={id} aria-invalid={!!errors.id} aria-describedby="rl-id-e"
                   onChange={(e) => { setId(e.target.value); setErrors((x) => ({ ...x, id: undefined, form: undefined })); }}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); pwRef.current?.focus(); } }} />
               </div>
@@ -92,7 +92,7 @@ export default function LoginPage() {
           </form>
         </section>
         <footer className="rl-legal" style={{ textAlign: "center", padding: "var(--space-6)" }}>
-          <p className="rl-row__meta" style={{ margin: 0 }}>Forgot your password? Ask your gym&apos;s front desk to reset it.</p>
+          <p className="rl-row__meta" style={{ margin: 0 }}>Forgot your username or password? Ask your gym&apos;s front desk.</p>
         </footer>
       </div>
     </main>

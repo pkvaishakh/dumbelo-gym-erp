@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useMembersRetrieve } from "@/api/gen/members/members";
 import { useMessagesList } from "@/api/gen/messages/messages";
-import type { CurrentPlan, Member, Note, Payment, Subscription } from "@/api/gen/model";
+import type { CurrentPlan, LoginSet, Member, Note, Payment, Subscription } from "@/api/gen/model";
 import { usePaymentsList } from "@/api/gen/payments/payments";
 import { useStaffList } from "@/api/gen/staff/staff";
 import { useSubscriptionsList, useSubscriptionsRetrieve } from "@/api/gen/subscriptions/subscriptions";
@@ -20,8 +20,9 @@ import { CheckInResult, useCheckIn } from "@/features/checkin";
 import { EditMembershipSheet } from "@/features/plan-correct";
 import { METHODS } from "@/features/sell";
 import { RefundRows, RefundSheet } from "@/features/refunds";
+import { cleanUsername, ExistingLoginField, type LoginKind, LoginKindChips, UsernameField } from "@/features/username";
 import { day, daysLeft, gymToday, isoDate, phone, rupees } from "@/lib/format";
-import { useAction, useGet } from "@/lib/hooks";
+import { fieldError, useAction, useGet } from "@/lib/hooks";
 import { type Chat, type ChatFacts, type ChatKind, memberChats, membershipChat, nextPlanChat, receiptChat, whatsappLink } from "@/lib/member-chat";
 import { useSession } from "@/lib/session";
 import type { TrainerMember } from "@/lib/types";
@@ -174,7 +175,7 @@ export default function MemberProfile() {
                 { icon: MapPin, label: "Home branch", value: typeof m.home_branch === "string" ? m.home_branch : role.branches.find((b) => b.id === m.home_branch)?.name },
                 ...(desk ? [{ icon: Dumbbell, label: "Trainer", value: m.trainer_name ?? "Not set" }] : []),
                 { icon: Target, label: "Goal", value: m.goal || "Not set" },
-                ...(desk ? [{ icon: CalendarCheck, label: "Joined", value: m.joined_on ? day(m.joined_on) : "" }, { icon: KeyRound, label: "App login", value: m.has_login ? "Set. Signs in with their mobile number" : "Not set" }] : []),
+                ...(desk ? [{ icon: CalendarCheck, label: "Joined", value: m.joined_on ? day(m.joined_on) : "" }, { icon: KeyRound, label: "App login", value: m.has_login ? `Signs in as @${m.username}` : "Not set" }] : []),
               ].filter((r) => r.value !== undefined)} />
             </Section>
           </div>
@@ -239,7 +240,7 @@ export default function MemberProfile() {
           {current && (current.frozen_from
             ? <SheetItem icon={Play} label="Unfreeze Membership" onClick={() => setSheet("freeze")} />
             : <SheetItem icon={Pause} label="Freeze Membership" onClick={() => setSheet("freeze")} />)}
-          <SheetItem icon={KeyRound} label={m.has_login ? "Reset App Password" : "Set Up App Login"} onClick={() => setSheet("login")} />
+          <SheetItem icon={KeyRound} label={m.has_login ? "Change App Login" : "Set Up App Login"} onClick={() => setSheet("login")} />
           {role.role === "admin" && pays.length > 0 && <SheetItem icon={Undo2} label="Refund Money" onClick={() => setSheet("refund")} />}
           {role.role === "admin" && <SheetItem icon={Trash2} label="Archive Member" onClick={() => setSheet("archive")} />}
         </ul>
@@ -442,30 +443,55 @@ function FreezeSheet({ open, sub, onClose }: { open: boolean; sub: CurrentPlan; 
   );
 }
 
+/** A member's app login: a new one, the one they already have at another gym, or a new password or username for
+ *  the one this gym gave them. A login they share with another gym is theirs to change: the API says so. */
 function LoginSheet({ open, member, onClose }: { open: boolean; member: Member; onClose: () => void }) {
-  const [pw, setPw] = useState("");
-  const [done, setDone] = useState(false);
-  const [err, setErr] = useState<string>();
+  const blank = { username: member.username ?? "", existing: "", pw: "" };
+  const [f, setF] = useState(blank);
+  const [kind, setKind] = useState<LoginKind>("new");
+  const [done, setDone] = useState<LoginSet | null>(null);
+  const [errs, setErrs] = useState<Record<string, string>>({});
   const a = useAction();
+  const linking = !member.has_login && kind === "existing";
+  const renamed = member.has_login && cleanUsername(f.username) !== member.username;
   async function go() {
-    if (pw.length < 6) return setErr("Use at least 6 characters");
-    try { await a.run(`/api/members/${member.id}/set-login/`, { password: pw }); setDone(true); } catch { /* shown */ }
+    const e: Record<string, string> = {};
+    if (linking && !cleanUsername(f.existing)) e.existing_username = "Enter the username they sign in with";
+    if (!linking && (f.pw || !renamed) && f.pw.length < 6) e.password = "Use at least 6 characters";
+    if (member.has_login && !cleanUsername(f.username)) e.username = "Enter their username";
+    setErrs(e);
+    if (Object.keys(e).length) return;
+    const body = linking ? { existing_username: cleanUsername(f.existing) } : { username: cleanUsername(f.username) || undefined, ...(f.pw ? { password: f.pw } : {}) };
+    try { setDone((await a.run<LoginSet>(`/api/members/${member.id}/set-login/`, body))!); } catch { /* shown */ }
   }
+  const close = () => { setDone(null); setF(blank); setErrs({}); a.clearError(); onClose(); };
+  const err = (k: string) => errs[k] || fieldError(a.error, k);
   return (
-    <Sheet open={open} onClose={() => { setDone(false); setPw(""); onClose(); }} title={done ? undefined : "App login"}>
+    <Sheet open={open} onClose={close} title={done ? undefined : "App login"}>
       {done ? (
         <>
-          <div className="rl-confirm"><h2 className="rl-confirm__title">Login is ready</h2><p className="rl-confirm__text">{member.name} signs in with {phone(member.phone)} and the password you set.</p></div>
-          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={() => { setDone(false); setPw(""); onClose(); }}>Done</button></div>
+          <div className="rl-confirm"><h2 className="rl-confirm__title">Login is ready</h2>
+            <p className="rl-confirm__text">{done.linked ? `${member.name} signs in as @${done.username} with their own password, as at their other gym.` : `${member.name} signs in as @${done.username}${f.pw ? " with the password you set" : ""}.`}</p></div>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={close}>Done</button></div>
         </>
       ) : (
         <>
-          <p className="rl-row__meta">{member.name} signs in to the app with their mobile number, {phone(member.phone)}.</p>
-          <Field label="Password" error={err} hint="Tell them the password. They can't change it themselves yet.">
-            {(fid) => <input className="rl-field__input" id={fid} type="text" autoComplete="new-password" value={pw} onChange={(e) => { setPw(e.target.value); setErr(undefined); }} />}
-          </Field>
-          <ErrorText>{a.error?.message}</ErrorText>
-          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Saving…" : "Set Password"}</button></div>
+          {member.has_login ? <p className="rl-row__meta">{member.name} signs in to the app as @{member.username}.</p> : <LoginKindChips value={kind} onChange={setKind} />}
+          {linking ? (
+            <ExistingLoginField value={f.existing} onChange={(v) => setF({ ...f, existing: v })} error={err("existing_username")} />
+          ) : (
+            <>
+              <UsernameField value={f.username} onChange={(v) => setF({ ...f, username: v })} email={member.email} name={member.name} current={member.username ?? undefined}
+                optional={!member.has_login} error={err("username")} />
+              <Field label={member.has_login ? "New password" : "Password"} optional={renamed} error={err("password")} hint="Tell them the password. They're signed out of the app until they use it.">
+                {(fid) => <input className="rl-field__input" id={fid} type="text" autoComplete="new-password" value={f.pw} onChange={(e) => { setF({ ...f, pw: e.target.value }); setErrs({}); }} />}
+              </Field>
+            </>
+          )}
+          <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>
+            {a.busy ? "Saving…" : linking ? "Link Login" : member.has_login ? "Save Login" : "Set Up Login"}
+          </button></div>
         </>
       )}
     </Sheet>

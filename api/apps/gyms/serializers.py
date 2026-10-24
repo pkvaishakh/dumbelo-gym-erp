@@ -1,21 +1,19 @@
 import secrets
 from datetime import timedelta
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.accounts.models import normalize_phone
-from apps.accounts.services import check_login_is_this_gyms
+from apps.accounts import usernames
+from apps.accounts.models import normalize_email, normalize_phone
+from apps.accounts.services import check_login_is_this_gyms, check_no_role_here, find_by_username, new_login
 from apps.billing.services import make_room_for_branch
 from apps.core.errors import RuleBroken
 
 from .models import Branch, BranchSession, Gym, GymRole, SupportAccess
-
-User = get_user_model()
 
 
 class SessionSerializer(serializers.ModelSerializer):
@@ -105,27 +103,37 @@ class GymSettingsSerializer(serializers.ModelSerializer):
 
 
 def _same_form(field, value):
-    """A sent name, email or phone in the form it's stored in, so resending an unchanged value isn't an edit."""
+    """A sent username, name, email or phone in the form it's stored in, so resending an unchanged value isn't an edit."""
     if field == "phone":
         try:
             return normalize_phone(value)
         except DjangoValidationError:
             return value
+    if field == "email":
+        return normalize_email(value)
+    if field == "username":
+        return usernames.clean(value)
     return value
 
 
 class StaffSerializer(serializers.ModelSerializer):
-    """A trainer, receptionist or admin. Creating one creates their login (email + a first password they change)."""
+    """A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+    or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+    and details stay theirs."""
 
-    name = serializers.CharField(source="user.name")
-    email = serializers.EmailField(source="user.email")
+    username = serializers.CharField(source="user.username", required=False, allow_blank=True, max_length=60,
+                                     help_text="How they sign in. Left out on Add Staff, one is made from the email or name")
+    existing_username = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=60,
+                                              help_text="Add someone who already signs in to Dumbelo (at another gym) by their username")
+    name = serializers.CharField(source="user.name", max_length=120, error_messages={"required": "Enter their name", "blank": "Enter their name"})
+    email = serializers.EmailField(source="user.email", required=False, allow_null=True, allow_blank=True)
     phone = serializers.CharField(source="user.phone", required=False, allow_null=True, allow_blank=True)
     password = serializers.CharField(write_only=True, required=False, min_length=8)
     branches = serializers.PrimaryKeyRelatedField(many=True, queryset=Branch.objects.none())
 
     class Meta:
         model = GymRole
-        fields = ["id", "name", "email", "phone", "password", "role", "branches", "is_owner", "is_active", "shift", "specialities", "day_off", "device_user_id"]
+        fields = ["id", "username", "existing_username", "name", "email", "phone", "password", "role", "branches", "is_owner", "is_active", "shift", "specialities", "day_off", "device_user_id"]
         read_only_fields = ["id", "is_owner"]
 
     def __init__(self, *args, **kwargs):
@@ -133,11 +141,23 @@ class StaffSerializer(serializers.ModelSerializer):
         req = self.context.get("request")
         if req is not None and hasattr(req, "gym"):
             self.fields["branches"].child_relation.queryset = Branch.objects.filter(gym=req.gym)
+        data = kwargs.get("data")
+        if self.instance is not None or (hasattr(data, "get") and data.get("existing_username")):
+            self.fields["name"].required = False  # an edit, or someone who brings their own login, name and all
 
     def validate_role(self, value):
         if value not in GymRole.STAFF_ROLES:
             raise serializers.ValidationError("Staff are admins, receptionists or trainers")
         return value
+
+    def validate_phone(self, value):
+        try:
+            return normalize_phone(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages[0])
+
+    def validate_email(self, value):
+        return normalize_email(value)
 
     def validate(self, data):
         role = data.get("role", getattr(self.instance, "role", None))
@@ -151,13 +171,14 @@ class StaffSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, data):
         gym = self.context["request"].gym
-        u = data.pop("user")
+        u = data.pop("user", {})
         password = data.pop("password", None) or secrets.token_urlsafe(12)
-        user = User.objects.filter(email__iexact=u["email"]).first()
-        if user is None:
-            user = User.objects.create_user(email=u["email"], password=password, name=u["name"], phone=u.get("phone") or None)
-        elif GymRole.objects.filter(user=user, gym=gym).exists():
-            raise serializers.ValidationError({"email": "This person already has a role in this gym"})
+        existing = data.pop("existing_username", "")
+        if existing:
+            user = find_by_username(existing)
+            check_no_role_here(user, gym)
+        else:
+            user = new_login(username=u.get("username"), password=password, name=u["name"].strip(), email=u.get("email"), phone=u.get("phone"))
         branches = data.pop("branches", [])
         role = GymRole.objects.create(user=user, gym=gym, **data)
         role.branches.set(branches)
@@ -167,11 +188,21 @@ class StaffSerializer(serializers.ModelSerializer):
     def update(self, role, data):
         u = data.pop("user", {})
         data.pop("password", None)
+        data.pop("existing_username", None)
         if any(_same_form(k, v) != getattr(role.user, k) for k, v in u.items()):
-            check_login_is_this_gyms(role, "name, email or mobile number")
+            check_login_is_this_gyms(role, "username, name, email or mobile number")
+        if "username" in u:
+            try:
+                u["username"] = usernames.validate(u["username"], exclude=role.user)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError({"username": e.messages})
         for k, v in u.items():
-            setattr(role.user, k, v or None if k == "phone" else v)
-        role.user.save()
+            setattr(role.user, k, v or None if k in ("phone", "email") else v)
+        try:
+            with transaction.atomic():
+                role.user.save()
+        except IntegrityError:
+            raise serializers.ValidationError({"username": ["That username was just taken. Pick another."]})
         branches = data.pop("branches", None)
         for k, v in data.items():
             setattr(role, k, v)

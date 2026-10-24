@@ -3,7 +3,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
-from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, RefreshView
+from apps.accounts.views import LoginView, LogoutView, MeView, PasswordView, RefreshView, UsernameCheckView
 from apps.attendance.views import CheckInViewSet, DevicePunchView, DeviceViewSet, QRCheckInView
 from apps.billing.views import (
     BranchRequestViewSet, ChargeViewSet, ConsoleBranchRequestViewSet, ConsoleInvoicePaymentViewSet, ConsoleInvoiceViewSet, GymPlanPricesView,
@@ -69,6 +69,7 @@ urlpatterns = [
     path("api/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/me/", MeView.as_view(), name="me"),
     path("api/me/password/", PasswordView.as_view(), name="me-password"),
+    path("api/usernames/check/", UsernameCheckView.as_view(), name="username-check"),
     path("api/leads/", LeadAskView.as_view(), name="lead-ask"),  # the landing page's demo form: no sign-in
     path("api/checkins/qr/", QRCheckInView.as_view(), name="qr-checkin"),
     path("api/devices/punch/", DevicePunchView.as_view(), name="device-punch"),  # before the router: never shadowed by devices/<pk>/

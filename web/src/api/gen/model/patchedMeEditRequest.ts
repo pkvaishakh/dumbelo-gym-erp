@@ -7,19 +7,25 @@
  */
 
 /**
- * A staff member's own name, sign-in email and mobile number.
+ * A staff member's own username, name, email and mobile number. Email and phone are for contact (others may
+share them); the username must be free.
  */
 export interface PatchedMeEditRequest {
+  /**
+   * @minLength 1
+   * @maxLength 60
+   */
+  username?: string;
   /**
    * @minLength 1
    * @maxLength 120
    */
   name?: string;
   /**
-   * @minLength 1
    * @maxLength 254
+   * @nullable
    */
-  email?: string;
+  email?: string | null;
   /**
    * @maxLength 20
    * @nullable

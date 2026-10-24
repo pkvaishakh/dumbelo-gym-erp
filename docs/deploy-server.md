@@ -250,7 +250,8 @@ If something isn't up, read its log: `docker compose logs --tail 100 api` (or `w
 
 ## 10. The first sign-in and the first gym
 
-Make yourself a Dumbelo admin (it asks for an email and a password; use a long one, from your password manager):
+Make yourself a Dumbelo admin (it asks for a username, your name and a password; use a long one, from your password
+manager). The username is how you sign in: lowercase letters, numbers, `.` and `_`, and not `admin` or `dumbelo`:
 
 ```bash
 docker compose exec api python manage.py createsuperuser

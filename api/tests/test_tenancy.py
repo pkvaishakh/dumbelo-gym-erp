@@ -7,7 +7,7 @@ from apps.gyms.models import SupportAccess
 
 
 def test_login_and_me(w, client):
-    r = client.post("/api/auth/login/", {"identifier": "admin0@x.in", "password": "pass12345"}, content_type="application/json")
+    r = client.post("/api/auth/login/", {"username": "Admin0", "password": "pass12345"}, content_type="application/json")
     assert r.status_code == 200
     me = client.get("/api/me/", HTTP_AUTHORIZATION="Bearer " + r.json()["access"]).json()
     assert me["roles"][0]["gym"] == "iron" and me["roles"][0]["role"] == "admin"
@@ -15,7 +15,7 @@ def test_login_and_me(w, client):
 
 
 def test_wrong_password(w, client):
-    r = client.post("/api/auth/login/", {"identifier": "admin0@x.in", "password": "nope"}, content_type="application/json")
+    r = client.post("/api/auth/login/", {"username": "admin0", "password": "nope"}, content_type="application/json")
     assert r.status_code == 401 and r.json()["error"]["code"] == "login_failed"
 
 
@@ -78,10 +78,12 @@ def test_member_sees_only_self(w):
     assert c.post("/api/payments/", {}).status_code == 403
 
 
-def test_member_can_sign_in_with_phone(w, client):
-    w.client(w.desk).post(f"/api/members/{w.member.id}/set-login/", {"password": "secret1"}, format="json")
-    r = client.post("/api/auth/login/", {"identifier": "98000 00001", "password": "secret1"}, content_type="application/json")
-    assert r.status_code == 200
+def test_member_signs_in_with_their_username_not_their_phone(w, client):
+    r = w.client(w.desk).post(f"/api/members/{w.member.id}/set-login/", {"password": "secret1"}, format="json")
+    assert r.json() == {"username": "asha", "name": "Asha", "linked": False}  # made from their name
+    login = lambda name: client.post("/api/auth/login/", {"username": name, "password": "secret1"}, content_type="application/json")
+    assert login("@Asha").status_code == 200
+    assert login("98000 00001").status_code == 401  # a phone is contact only: families share them
 
 
 def test_only_admin_manages_staff(w):

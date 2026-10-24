@@ -30,6 +30,11 @@ export interface GymDetail {
   readonly owner_name: string | null;
   /** @nullable */
   readonly owner_email: string | null;
+  /**
+   * How the owner signs in
+   * @nullable
+   */
+  readonly owner_username: string | null;
   /** What its open Dumbelo invoices still owe */
   readonly owed_paise: number;
   readonly created_at: string;

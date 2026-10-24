@@ -30,14 +30,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  LoginSet,
   Member,
   MemberRequest,
   MembersListParams,
   Note,
   NoteRequest,
   PaginatedMemberList,
-  PasswordRequest,
-  PatchedMemberRequest
+  PatchedMemberRequest,
+  SetLoginRequest
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -862,10 +863,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Set or reset the member's app password. They sign in with their phone number.
+ * The member's app login: a new one (username and password), a new password or username for the one this
+gym gave them, or the login they already have at another gym (`existing_username`), linked as it is.
  */
 export type membersSetLoginCreateResponse200 = {
-  data: void
+  data: LoginSet
   status: 200
 }
     
@@ -885,7 +887,7 @@ export const getMembersSetLoginCreateUrl = (id: number,) => {
 }
 
 export const membersSetLoginCreate = async (id: number,
-    passwordRequest: PasswordRequest, options?: RequestInit): Promise<membersSetLoginCreateResponse> => {
+    setLoginRequest: SetLoginRequest, options?: RequestInit): Promise<membersSetLoginCreateResponse> => {
   
   return apiFetch<membersSetLoginCreateResponse>(getMembersSetLoginCreateUrl(id),
   {      
@@ -893,7 +895,7 @@ export const membersSetLoginCreate = async (id: number,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      passwordRequest,)
+      setLoginRequest,)
   }
 );}
 
@@ -901,8 +903,8 @@ export const membersSetLoginCreate = async (id: number,
 
 
 export const getMembersSetLoginCreateMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof membersSetLoginCreate>>, TError,{id: number;data: PasswordRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof membersSetLoginCreate>>, TError,{id: number;data: PasswordRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof membersSetLoginCreate>>, TError,{id: number;data: SetLoginRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof membersSetLoginCreate>>, TError,{id: number;data: SetLoginRequest}, TContext> => {
 
 const mutationKey = ['membersSetLoginCreate'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -914,7 +916,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof membersSetLoginCreate>>, {id: number;data: PasswordRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof membersSetLoginCreate>>, {id: number;data: SetLoginRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  membersSetLoginCreate(id,data,requestOptions)
@@ -926,15 +928,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type MembersSetLoginCreateMutationResult = NonNullable<Awaited<ReturnType<typeof membersSetLoginCreate>>>
-    export type MembersSetLoginCreateMutationBody = PasswordRequest
+    export type MembersSetLoginCreateMutationBody = SetLoginRequest
     export type MembersSetLoginCreateMutationError = unknown
 
     export const useMembersSetLoginCreate = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof membersSetLoginCreate>>, TError,{id: number;data: PasswordRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof membersSetLoginCreate>>, TError,{id: number;data: SetLoginRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof membersSetLoginCreate>>,
         TError,
-        {id: number;data: PasswordRequest},
+        {id: number;data: SetLoginRequest},
         TContext
       > => {
 

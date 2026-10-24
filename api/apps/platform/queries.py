@@ -17,6 +17,7 @@ def gyms():
         member_count=count_of(Member.objects.filter(gym=OuterRef("pk"), is_archived=False)),
         owner_name=Subquery(owner.values("user__name")[:1]),
         owner_email=Subquery(owner.values("user__email")[:1]),
+        owner_username=Subquery(owner.values("user__username")[:1]),
         owed_paise=owed_by_gym(),
     )
 

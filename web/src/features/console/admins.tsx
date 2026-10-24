@@ -1,6 +1,6 @@
 "use client";
 /* A gym's admin accounts in the Console: the list, Add Admin, and each admin's actions. */
-import { Mail, Phone } from "lucide-react";
+import { AtSign, Mail, Phone } from "lucide-react";
 import { useState } from "react";
 
 import type { GymAdmin } from "@/api/gen/model";
@@ -8,6 +8,8 @@ import { usePlatformGymsAdminsList } from "@/api/gen/platform/platform";
 import { Details, ErrorText, Field, Photo, Section, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { phone, plural } from "@/lib/format";
 import { fieldError, useAction } from "@/lib/hooks";
+
+import { cleanUsername, ExistingLoginField, type LoginKind, LoginKindChips, UsernameField } from "../username";
 
 const refresh = (gymId: number) => [`/api/platform/gyms/${gymId}/`];
 
@@ -27,7 +29,7 @@ export function AdminsSection({ gymId }: { gymId: number }) {
             <li key={r.id}><button className="rl-mrow" type="button" aria-haspopup="dialog" onClick={() => setOpen(r)}>
               <Photo name={r.name} />
               <span className="rl-row__title rl-mrow__name">{r.name}</span>
-              <span className="rl-row__meta rl-mrow__meta">{r.email}{r.other_gyms ? ` • also ${plural(r.other_gyms, "other gym")}` : ""}</span>
+              <span className="rl-row__meta rl-mrow__meta">@{r.username}{r.other_gyms ? ` • also ${plural(r.other_gyms, "other gym")}` : ""}</span>
               {r.is_owner ? <span className="rl-tag">Owner</span> : !r.is_active && <Status status="off" />}
             </button></li>
           ))}
@@ -62,7 +64,7 @@ function AdminSheet({ gymId, admin, onClose }: { gymId: number; admin: GymAdmin;
       {step === "menu" && (
         <>
           <p className="rl-row__meta">{admin.is_owner ? "The account owner: they look after the gym's Dumbelo plan and can't be deactivated." : admin.is_active ? "An admin of this gym." : "Deactivated: they can't open this gym."}</p>
-          <Details rows={[{ icon: Mail, label: "Email", value: admin.email }, { icon: Phone, label: "Mobile number", value: phone(admin.phone) }]} />
+          <Details rows={[{ icon: AtSign, label: "Username", value: `@${admin.username}` }, { icon: Mail, label: "Email", value: admin.email || "Not set" }, { icon: Phone, label: "Mobile number", value: phone(admin.phone) }]} />
           {failed}
           <div className="rl-sheet__actions">
             {admin.is_active && <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => setStep("password")}>Reset Password</button>}
@@ -87,7 +89,7 @@ function AdminSheet({ gymId, admin, onClose }: { gymId: number; admin: GymAdmin;
       )}
       {step === "reset-done" && (
         <>
-          <div className="rl-confirm"><h2 className="rl-confirm__title">Password reset</h2><p className="rl-confirm__text">{admin.name} signs in with {admin.email} and the password you set.</p></div>
+          <div className="rl-confirm"><h2 className="rl-confirm__title">Password reset</h2><p className="rl-confirm__text">{admin.name} signs in as @{admin.username} with the password you set.</p></div>
           <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={onClose}>Done</button></div>
         </>
       )}
@@ -116,35 +118,47 @@ function AdminSheet({ gymId, admin, onClose }: { gymId: number; admin: GymAdmin;
 }
 
 function AddAdminSheet({ gymId, open, onClose }: { gymId: number; open: boolean; onClose: () => void }) {
-  const blank = { email: "", name: "", password: "" };
+  const blank = { existing_username: "", username: "", email: "", name: "", password: "" };
   const [f, setF] = useState(blank);
+  const [kind, setKind] = useState<LoginKind>("new");
   const [err, setErr] = useState<string>();
   const [added, setAdded] = useState<GymAdmin | null>(null);
   const a = useAction();
-  const close = () => { setF(blank); setErr(undefined); setAdded(null); a.clearError(); onClose(); };
+  const close = () => { setF(blank); setKind("new"); setErr(undefined); setAdded(null); a.clearError(); onClose(); };
   async function save() {
-    if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr("Enter their email");
-    try { setAdded((await a.run<GymAdmin>(`/api/platform/gyms/${gymId}/admins/`, { ...f, email: f.email.trim() }, { refresh: refresh(gymId) }))!); } catch { /* shown */ }
+    if (kind === "existing" && !cleanUsername(f.existing_username)) return setErr("Enter the username they sign in with");
+    if (kind === "new" && f.email.trim() && !/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr("Enter an email like name@gym.in, or leave it empty");
+    const body = kind === "existing" ? { existing_username: cleanUsername(f.existing_username) }
+      : { username: cleanUsername(f.username), email: f.email.trim(), name: f.name, password: f.password };
+    try { setAdded((await a.run<GymAdmin>(`/api/platform/gyms/${gymId}/admins/`, body, { refresh: refresh(gymId) }))!); } catch { /* shown */ }
   }
   return (
     <Sheet open={open} onClose={close} title={added ? undefined : "Add Admin"}>
       {added ? (
         <>
           <div className="rl-confirm"><h2 className="rl-confirm__title">{added.name} is an admin</h2>
-            <p className="rl-confirm__text">They can open {added.other_gyms ? "this gym with their other gyms" : "the gym"} now, signing in with {added.email}.</p></div>
+            <p className="rl-confirm__text">They can open {added.other_gyms ? "this gym with their other gyms" : "the gym"} now, signing in as @{added.username}.</p></div>
           <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={close}>Done</button></div>
         </>
       ) : (
         <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
-          <Field label="Email" error={err ?? fieldError(a.error, "email")} hint="They sign in with it.">
-            {(id) => <input className="rl-field__input" id={id} type="email" inputMode="email" autoComplete="off" autoCapitalize="none" value={f.email} onChange={(e) => { setF({ ...f, email: e.target.value }); setErr(undefined); }} />}
-          </Field>
-          <Field label="Name" error={fieldError(a.error, "name")} hint="Leave it empty if they already sign in to Dumbelo.">
-            {(id) => <input className="rl-field__input" id={id} autoComplete="off" autoCapitalize="words" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}
-          </Field>
-          <Field label="First password" error={fieldError(a.error, "password")} hint="For someone new to Dumbelo: tell them. Leave it empty if they already sign in.">
-            {(id) => <input className="rl-field__input" id={id} type="text" autoComplete="new-password" autoCapitalize="none" spellCheck={false} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />}
-          </Field>
+          <LoginKindChips value={kind} onChange={(k) => { setKind(k); setErr(undefined); a.clearError(); }} />
+          {kind === "existing" ? (
+            <ExistingLoginField value={f.existing_username} onChange={(v) => { setF({ ...f, existing_username: v }); setErr(undefined); }} error={err ?? fieldError(a.error, "existing_username")} />
+          ) : (
+            <>
+              <Field label="Name" error={fieldError(a.error, "name")}>
+                {(id) => <input className="rl-field__input" id={id} autoComplete="off" autoCapitalize="words" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}
+              </Field>
+              <Field label="Email" optional error={err ?? fieldError(a.error, "email")}>
+                {(id) => <input className="rl-field__input" id={id} type="email" inputMode="email" autoComplete="off" autoCapitalize="none" value={f.email} onChange={(e) => { setF({ ...f, email: e.target.value }); setErr(undefined); }} />}
+              </Field>
+              <UsernameField value={f.username} onChange={(v) => setF({ ...f, username: v })} email={f.email} name={f.name} error={fieldError(a.error, "username")} />
+              <Field label="First password" error={fieldError(a.error, "password")} hint="Tell them, and they change it from More.">
+                {(id) => <input className="rl-field__input" id={id} type="text" autoComplete="new-password" autoCapitalize="none" spellCheck={false} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />}
+              </Field>
+            </>
+          )}
           <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
           <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="submit" disabled={a.busy}>{a.busy ? "Adding…" : "Add Admin"}</button></div>
         </form>

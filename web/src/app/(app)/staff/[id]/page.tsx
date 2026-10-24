@@ -1,5 +1,5 @@
 "use client";
-import { Banknote, CalendarCheck, CalendarOff, Clock, Dumbbell, Fingerprint, Mail, MapPin, Minus, Phone, Pencil, Plus, Wallet } from "lucide-react";
+import { AtSign, Banknote, CalendarCheck, CalendarOff, Clock, Dumbbell, Fingerprint, Mail, MapPin, Minus, Phone, Pencil, Plus, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -43,7 +43,8 @@ export default function StaffProfile() {
         </div>
         <Section title="Details">
           <Details rows={[
-            { icon: Mail, label: "Email", value: s.email },
+            { icon: AtSign, label: "Username", value: `@${s.username}` },
+            { icon: Mail, label: "Email", value: s.email || "Not set" },
             { icon: Phone, label: "Mobile number", value: phone(s.phone) },
             { icon: MapPin, label: "Branches", value: s.branches.map((b) => role.branches.find((x) => x.id === b)?.name).filter(Boolean).join(", ") },
             { icon: Clock, label: "Shift", value: s.shift || "Not set" },
@@ -105,12 +106,12 @@ function ResetSheet({ open, staff, onClose }: { open: boolean; staff: Staff; onC
     <Sheet open={open} onClose={close} title={done ? undefined : "Reset Password"}>
       {done ? (
         <>
-          <div className="rl-confirm"><h2 className="rl-confirm__title">Password reset</h2><p className="rl-confirm__text">{staff.name} signs in with {staff.email} and the password you set. They&apos;ve been signed out everywhere else.</p></div>
+          <div className="rl-confirm"><h2 className="rl-confirm__title">Password reset</h2><p className="rl-confirm__text">{staff.name} signs in as @{staff.username} with the password you set. They&apos;ve been signed out everywhere else.</p></div>
           <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={close}>Done</button></div>
         </>
       ) : (
         <>
-          <p className="rl-row__meta">For when {staff.name} has forgotten theirs. They sign in with {staff.email}.</p>
+          <p className="rl-row__meta">For when {staff.name} has forgotten theirs. They sign in as @{staff.username}.</p>
           <Field label="New password" error={err ?? fieldError(a.error, "password")} hint="At least 8 characters. Tell them the password.">
             {(fid) => <input className="rl-field__input" id={fid} type="text" autoComplete="new-password" value={pw} onChange={(e) => { setPw(e.target.value); setErr(undefined); }} />}
           </Field>

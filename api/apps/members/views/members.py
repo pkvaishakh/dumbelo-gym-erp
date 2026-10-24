@@ -20,8 +20,9 @@ from apps.gyms.models import GymRole
 from .. import services
 from ..models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Subscription
 from ..serializers import (
-    FreezeSerializer, MemberSelfSerializer, MemberSerializer, NoteSerializer, OfferSerializer, PasswordSerializer, PaymentCorrectSerializer,
-    PaymentSerializer, PaymentSplitSerializer, PlanSerializer, SubscriptionCorrectSerializer, SubscriptionSerializer, TrainerMemberSerializer, VoidSerializer, set_login,
+    FreezeSerializer, LoginSetSerializer, MemberSelfSerializer, MemberSerializer, NoteSerializer, OfferSerializer, PaymentCorrectSerializer,
+    PaymentSerializer, PaymentSplitSerializer, PlanSerializer, SetLoginSerializer, SubscriptionCorrectSerializer, SubscriptionSerializer,
+    TrainerMemberSerializer, VoidSerializer, set_login, sync_login,
 )
 
 class SoldAtMixin:
@@ -158,7 +159,7 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
         member.is_archived = True  # history stays: archive, never delete
         member.save(update_fields=["is_archived"])
         if member.user_id:
-            GymRole.objects.filter(user=member.user, gym=self.gym, role=GymRole.MEMBER).update(is_active=False)
+            sync_login(member)  # their login stops opening this gym
         record(self.request, "member.archived", member)
 
     @extend_schema(request=NoteSerializer, responses=NoteSerializer(many=True))
@@ -173,16 +174,18 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
             return Response(s.data, status=201)
         return Response(NoteSerializer(member.notes.select_related("author__user"), many=True).data)
 
-    @extend_schema(request=PasswordSerializer, responses=None)
+    @extend_schema(request=SetLoginSerializer, responses=LoginSetSerializer)
     @action(detail=True, methods=["post"], url_path="set-login")
     def set_login(self, request, pk=None):
-        """Set or reset the member's app password. They sign in with their phone number."""
+        """The member's app login: a new one (username and password), a new password or username for the one this
+        gym gave them, or the login they already have at another gym (`existing_username`), linked as it is."""
         member = self.get_object()
-        s = PasswordSerializer(data=request.data)
+        s = SetLoginSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        set_login(member, s.validated_data["password"])
-        record(request, "member.login_set", member)
-        return Response({"ok": True})
+        v = s.validated_data
+        user, linked = set_login(member, v.get("password"), username=v.get("username"), existing=v.get("existing_username"))
+        record(request, "member.login_linked" if linked else "member.login_set", member, None, {"username": user.username})
+        return Response(LoginSetSerializer({"username": user.username, "name": user.name, "linked": linked}).data)
 
 
 class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):

@@ -1994,7 +1994,7 @@ paths:
       operationId: me_retrieve
       description: |-
         Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
-        Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+        Staff can change their own username, name, email and mobile number; a member's are changed by the front desk.
 
         This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
         there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
@@ -2013,7 +2013,7 @@ paths:
       operationId: me_partial_update
       description: |-
         Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
-        Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+        Staff can change their own username, name, email and mobile number; a member's are changed by the front desk.
 
         This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
         there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
@@ -2338,8 +2338,9 @@ paths:
   /api/members/{id}/set-login/:
     post:
       operationId: members_set_login_create
-      description: Set or reset the member's app password. They sign in with their
-        phone number.
+      description: |-
+        The member's app login: a new one (username and password), a new password or username for the one this
+        gym gave them, or the login they already have at another gym (`existing_username`), linked as it is.
       parameters:
       - in: path
         name: id
@@ -2353,19 +2354,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordRequest'
+              $ref: '#/components/schemas/SetLoginRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PasswordRequest'
+              $ref: '#/components/schemas/SetLoginRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PasswordRequest'
-        required: true
+              $ref: '#/components/schemas/SetLoginRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSet'
+          description: ''
   /api/messages/:
     get:
       operationId: messages_list
@@ -4139,7 +4143,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/GymAdminAddRequest'
-        required: true
       security:
       - jwtAuth: []
       responses:
@@ -7122,6 +7125,42 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/usernames/check/:
+    get:
+      operationId: usernames_check_retrieve
+      description: |-
+        Is this username free? If not, why, and some free ones made from what was typed, the email or the name.
+
+        For gym staff (Add Staff, a member's app login, their own username in More) and Dumbelo admins (the Console).
+        A taken username answers whose it is, so the desk adding someone who already signs in sees it's the right
+        person; never for a Dumbelo team login.
+      parameters:
+      - in: query
+        name: email
+        schema:
+          type: string
+        description: Suggestions start from the part before the @
+      - in: query
+        name: name
+        schema:
+          type: string
+        description: Suggestions start from the name when there's no email
+      - in: query
+        name: username
+        schema:
+          type: string
+        description: What they typed; leave out for suggestions only
+      tags:
+      - usernames
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsernameCheck'
+          description: ''
 components:
   schemas:
     Account:
@@ -9350,6 +9389,9 @@ components:
         id:
           type: integer
           readOnly: true
+        username:
+          type: string
+          readOnly: true
         name:
           type: string
           readOnly: true
@@ -9380,15 +9422,22 @@ components:
       - name
       - other_gyms
       - phone
+      - username
     GymAdminAddRequest:
       type: object
-      description: 'Add Admin: their email, and for someone new to Dumbelo, their
-        name and a first password.'
+      description: |-
+        Add Admin: the username of someone who already signs in to Dumbelo, or for someone new, their name, a first
+        password, and a username (made from their email or name if left out).
       properties:
+        existing_username:
+          type: string
+          maxLength: 60
+        username:
+          type: string
+          maxLength: 60
         email:
           type: string
           format: email
-          minLength: 1
           maxLength: 254
         name:
           type: string
@@ -9397,8 +9446,6 @@ components:
           type: string
           writeOnly: true
           maxLength: 128
-      required:
-      - email
     GymBranch:
       type: object
       properties:
@@ -9459,6 +9506,16 @@ components:
           minLength: 1
           description: The first branch's name
           maxLength: 80
+        owner_existing_username:
+          type: string
+          description: 'The owner already signs in to Dumbelo (another gym): their
+            username'
+          maxLength: 60
+        owner_username:
+          type: string
+          description: A new login's username; made from the email or name if left
+            out
+          maxLength: 60
         owner_name:
           type: string
           description: Needed for a new login
@@ -9466,7 +9523,7 @@ components:
         owner_email:
           type: string
           format: email
-          minLength: 1
+          description: For contact, and invoices unless billing_email is given
           maxLength: 254
         owner_password:
           type: string
@@ -9481,7 +9538,6 @@ components:
       required:
       - branch
       - name
-      - owner_email
       - slug
     GymDetail:
       type: object
@@ -9526,6 +9582,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owner_username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: How the owner signs in
         owed_paise:
           type: integer
           readOnly: true
@@ -9559,6 +9620,7 @@ components:
       - owed_paise
       - owner_email
       - owner_name
+      - owner_username
       - slug
       - status
       - status_changed_at
@@ -9696,6 +9758,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owner_username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: How the owner signs in
         owed_paise:
           type: integer
           readOnly: true
@@ -9714,6 +9781,7 @@ components:
       - owed_paise
       - owner_email
       - owner_name
+      - owner_username
       - slug
       - status
       - timezone
@@ -10403,22 +10471,42 @@ components:
     LoginRequest:
       type: object
       properties:
-        identifier:
+        username:
           type: string
           minLength: 1
-          description: Email (staff) or 10-digit mobile number (members)
+          description: Everyone signs in with their username; capitals don't matter
+          maxLength: 60
         password:
           type: string
           writeOnly: true
           minLength: 1
       required:
-      - identifier
       - password
+      - username
+    LoginSet:
+      type: object
+      properties:
+        username:
+          type: string
+          description: How they sign in
+        name:
+          type: string
+          description: 'Whose login it is: for a linked one, the name they gave Dumbelo'
+        linked:
+          type: boolean
+          description: 'It''s the login they already had: they use their own password'
+      required:
+      - linked
+      - name
+      - username
     Me:
       type: object
       properties:
         id:
           type: integer
+        username:
+          type: string
+          description: How they sign in
         name:
           type: string
         initials:
@@ -10445,11 +10533,13 @@ components:
       - name
       - phone
       - roles
+      - username
     Member:
       type: object
       description: |-
         What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-        and set the member's app login (their phone + a password).
+        and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+        they already have at another gym (`existing_username`). After that, logins change through set-login.
       properties:
         id:
           type: integer
@@ -10504,6 +10594,12 @@ components:
         has_login:
           type: boolean
           readOnly: true
+        username:
+          type: string
+          nullable: true
+          description: How they sign in to the app; null without a login. Set on create
+            only
+          maxLength: 60
       required:
       - balance_paise
       - has_login
@@ -10518,7 +10614,8 @@ components:
       type: object
       description: |-
         What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-        and set the member's app login (their phone + a password).
+        and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+        they already have at another gym (`existing_username`). After that, logins change through set-login.
       properties:
         code:
           type: string
@@ -10554,6 +10651,17 @@ components:
           description: This member asked not to be sent reminders
         is_archived:
           type: boolean
+        username:
+          type: string
+          nullable: true
+          description: How they sign in to the app; null without a login. Set on create
+            only
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Their login from another gym, instead of a new one
+          maxLength: 60
         first_plan:
           type: integer
           writeOnly: true
@@ -11137,6 +11245,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owner_username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: How the owner signs in
         owed_paise:
           type: integer
           readOnly: true
@@ -11176,6 +11289,7 @@ components:
       - owner_email
       - owner_name
       - owner_new_login
+      - owner_username
       - slug
       - status
       - status_changed_at
@@ -12129,14 +12243,6 @@ components:
       required:
       - current_password
       - new_password
-    PasswordRequest:
-      type: object
-      properties:
-        password:
-          type: string
-          minLength: 6
-      required:
-      - password
     PatchedAccountRequest:
       type: object
       properties:
@@ -12296,8 +12402,14 @@ components:
           type: boolean
     PatchedMeEditRequest:
       type: object
-      description: A staff member's own name, sign-in email and mobile number.
+      description: |-
+        A staff member's own username, name, email and mobile number. Email and phone are for contact (others may
+        share them); the username must be free.
       properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 60
         name:
           type: string
           minLength: 1
@@ -12305,7 +12417,7 @@ components:
         email:
           type: string
           format: email
-          minLength: 1
+          nullable: true
           maxLength: 254
         phone:
           type: string
@@ -12315,7 +12427,8 @@ components:
       type: object
       description: |-
         What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-        and set the member's app login (their phone + a password).
+        and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+        they already have at another gym (`existing_username`). After that, logins change through set-login.
       properties:
         code:
           type: string
@@ -12351,6 +12464,17 @@ components:
           description: This member asked not to be sent reminders
         is_archived:
           type: boolean
+        username:
+          type: string
+          nullable: true
+          description: How they sign in to the app; null without a login. Set on create
+            only
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Their login from another gym, instead of a new one
+          maxLength: 60
         first_plan:
           type: integer
           writeOnly: true
@@ -12544,16 +12668,30 @@ components:
             $ref: '#/components/schemas/SalaryItemRequest'
     PatchedStaffRequest:
       type: object
-      description: A trainer, receptionist or admin. Creating one creates their login
-        (email + a first password they change).
+      description: |-
+        A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+        or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+        and details stay theirs.
       properties:
+        username:
+          type: string
+          description: How they sign in. Left out on Add Staff, one is made from the
+            email or name
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Add someone who already signs in to Dumbelo (at another gym)
+            by their username
+          maxLength: 60
         name:
           type: string
           minLength: 1
+          maxLength: 120
         email:
           type: string
           format: email
-          minLength: 1
+          nullable: true
         phone:
           type: string
           nullable: true
@@ -14563,6 +14701,22 @@ components:
       - ends
       - name
       - starts
+    SetLoginRequest:
+      type: object
+      description: |-
+        A new login (password, and a username or one made up), a new password or username for it, or
+        `existing_username` to link the login they already have at another gym.
+      properties:
+        password:
+          type: string
+          maxLength: 128
+          minLength: 6
+        username:
+          type: string
+          maxLength: 60
+        existing_username:
+          type: string
+          maxLength: 60
     SourceEnum:
       enum:
       - desk
@@ -14575,17 +14729,26 @@ components:
         * `device` - Turnstile or biometric
     Staff:
       type: object
-      description: A trainer, receptionist or admin. Creating one creates their login
-        (email + a first password they change).
+      description: |-
+        A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+        or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+        and details stay theirs.
       properties:
         id:
           type: integer
           readOnly: true
+        username:
+          type: string
+          description: How they sign in. Left out on Add Staff, one is made from the
+            email or name
+          maxLength: 60
         name:
           type: string
+          maxLength: 120
         email:
           type: string
           format: email
+          nullable: true
         phone:
           type: string
           nullable: true
@@ -14617,7 +14780,6 @@ components:
           maxLength: 20
       required:
       - branches
-      - email
       - id
       - is_owner
       - name
@@ -14636,16 +14798,30 @@ components:
       - password
     StaffRequest:
       type: object
-      description: A trainer, receptionist or admin. Creating one creates their login
-        (email + a first password they change).
+      description: |-
+        A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+        or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+        and details stay theirs.
       properties:
+        username:
+          type: string
+          description: How they sign in. Left out on Add Staff, one is made from the
+            email or name
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Add someone who already signs in to Dumbelo (at another gym)
+            by their username
+          maxLength: 60
         name:
           type: string
           minLength: 1
+          maxLength: 120
         email:
           type: string
           format: email
-          minLength: 1
+          nullable: true
         phone:
           type: string
           nullable: true
@@ -14676,7 +14852,6 @@ components:
           maxLength: 20
       required:
       - branches
-      - email
       - name
       - role
     StateEnum:
@@ -15256,6 +15431,34 @@ components:
       - category
       - messages
       - rate_paise
+    UsernameCheck:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 'What was typed, as it would be stored: lowercase, no @'
+        available:
+          type: boolean
+        problem:
+          type: string
+          nullable: true
+          description: Why it can't be used, in words for the person typing
+        name:
+          type: string
+          nullable: true
+          description: Whose it is when it's taken, so the desk can see they're adding
+            the right person
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Free usernames, closest first; empty when it's available
+      required:
+      - available
+      - name
+      - problem
+      - suggestions
+      - username
     VoidRequest:
       type: object
       properties:
