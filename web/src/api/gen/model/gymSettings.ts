@@ -7,8 +7,8 @@
  */
 
 /**
- * The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
-set. Its message switches are /api/gym/messages/.
+ * The gym as Dumbelo set it up (name, slug, time zone), and what its admins set: how long its plans' months
+run, and whether personal training needs a membership. Its message switches are /api/gym/messages/.
  */
 export interface GymSettings {
   readonly name: string;
@@ -24,4 +24,6 @@ export interface GymSettings {
    * @maximum 32767
    */
   month_days?: number;
+  /** Personal training is sold only on top of a membership, and only a membership lets a member in. Off: personal training alone does too */
+  pt_needs_membership?: boolean;
 }

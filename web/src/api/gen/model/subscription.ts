@@ -5,6 +5,7 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { PlanKindEnum } from './planKindEnum';
 import type { PaidBy } from './paidBy';
 
 export interface Subscription {
@@ -12,6 +13,7 @@ export interface Subscription {
   member: number;
   plan: number;
   readonly plan_name: string;
+  readonly kind: PlanKindEnum;
   /** @nullable */
   offer?: number | null;
   readonly offer_name: string;
@@ -33,4 +35,14 @@ export interface Subscription {
   /** @nullable */
   readonly frozen_until: string | null;
   readonly cancelled: boolean;
+  /** Personal training: the sessions bought, from the plan at sale. 0 for a membership */
+  readonly sessions: number;
+  /** Personal training sessions given */
+  readonly sessions_used: number;
+  /**
+   * Personal training: who trains them. Left out, the member's trainer; they become the member's trainer
+   * @nullable
+   */
+  trainer?: number | null;
+  readonly trainer_name: string;
 }

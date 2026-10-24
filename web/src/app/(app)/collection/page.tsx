@@ -5,19 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { useMembersRetrieve } from "@/api/gen/members/members";
-import type { PaymentsListMethod } from "@/api/gen/model";
+import type { Payment, PaymentsListMethod } from "@/api/gen/model";
 import { usePaymentsListInfinite } from "@/api/gen/payments/payments";
 import { PageBar } from "@/components/shell";
-import { Chips, DayStrip, Empty, Field, Icon, LoadMore, Photo, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
+import { Chips, DayStrip, Empty, ErrorText, Field, Icon, LoadMore, Photo, SearchField, Section, Sheet, SkeletonRows, Stat } from "@/components/ui";
 import { day, dayTime, isoDate, plural, rangeLabel, rupees, until } from "@/lib/format";
-import { paged, pages, useGet, useSearch } from "@/lib/hooks";
+import { RefundRows } from "@/features/refunds";
+import { paged, pages, useAction, useGet, useSearch } from "@/lib/hooks";
 import { historyPeriod, HISTORY_PERIODS, type Period, PERIODS, rangeOf } from "@/lib/periods";
 import { useSession } from "@/lib/session";
 import type { Collection } from "@/lib/types";
 
 const METHOD = { upi: "UPI", cash: "Cash", card: "Card", bank: "Bank transfer" } as Record<string, string>;
 
-/** `member`: one member's payments, any day (from their profile's See All); "" for everyone's. */
+/** `member`: one member's payments, any day (Payments in their profile's Member actions); "" for everyone's. */
 type Filters = { period: Period; from: string; to: string; branch: string; method: string; member: string };
 
 /** Filters live in the address, so Back and a shared link keep the list as it was. */
@@ -48,6 +49,7 @@ function CollectionPage() {
   const f: Filters = { period, from, to, branch: params.get("branch") ?? "default", method: params.get("method") ?? "all", member: params.get("member") ?? "" };
   const who = useMembersRetrieve(memberId, { query: { enabled: !!memberId } }).data?.data;
   const [sheet, setSheet] = useState(false);
+  const [voiding, setVoiding] = useState<Payment | null>(null);
   const [text, setText] = useState("");
   const dq = useSearch(text);
 
@@ -127,12 +129,12 @@ function CollectionPage() {
               {list.isLoading ? <SkeletonRows /> : rows.length ? (
                 <><ul className="rl-card rl-mlist rl-mlist--compact">
                   {rows.map((p) => memberId ? (
-                    <li key={p.id}><div className="rl-mrow">
+                    <li key={p.id}><button className="rl-mrow" type="button" disabled={!isAdmin || p.voided} onClick={() => setVoiding(p)}>
                       <span className="rl-chipicon" aria-hidden="true"><Icon as={UserRound} size="sm" /></span>
                       <span className="rl-row__title rl-mrow__name" style={p.voided ? { textDecoration: "line-through" } : undefined}>{METHOD[p.method]}{p.note ? ` • ${p.note}` : ""}</span>
                       <span className="rl-row__meta rl-mrow__meta">{dayTime(p.taken_at)} • {p.taken_by_name}{p.voided ? ` • Voided: ${p.void_reason}` : ""}</span>
                       <span className="rl-mrow__time" style={p.voided ? { textDecoration: "line-through" } : undefined}>{rupees(p.amount_paise)}</span>
-                    </div></li>
+                    </button></li>
                   ) : (
                     <li key={p.id}><Link className="rl-mrow" href={`/members/${p.member}`}>
                       <Photo name={p.member_name} />
@@ -154,6 +156,7 @@ function CollectionPage() {
               ) : memberId && period === "all" ? <Empty icon={Wallet} title="No payments yet" text={`Payments taken for ${who?.name ?? "this member"} show up here.`} />
                 : memberId ? <Empty icon={Wallet} title={oneDay ? "No payments this day" : "No payments in these dates"} text="Try All time to see every payment they've made." />
                 : <Empty icon={Wallet} title={oneDay ? "No payments this day" : "No payments in these dates"} text="Payments taken at the desk show up here." />}
+              {memberId > 0 && <RefundRows member={memberId} admin={isAdmin} />}
             </Section>
           </>
         )}
@@ -173,10 +176,33 @@ function CollectionPage() {
           <button className="rl-button rl-button--secondary rl-button--block" type="button" disabled={!filtered} onClick={resetFilters}>Reset</button>
         </div>
       </Sheet>
+      <VoidSheet payment={voiding} onClose={() => setVoiding(null)} />
     </div>
   );
 }
 
 export default function Page() {
   return <Suspense><CollectionPage /></Suspense>;
+}
+
+/** An admin voids one of a member's payments: it stays on record, struck through, and is owed again. */
+function VoidSheet({ payment, onClose }: { payment: Payment | null; onClose: () => void }) {
+  const [reason, setReason] = useState("");
+  const [err, setErr] = useState<string>();
+  const a = useAction();
+  async function go() {
+    if (!reason.trim()) return setErr("Say why, for the record");
+    try { await a.run(`/api/payments/${payment!.id}/void/`, { reason: reason.trim() }); setReason(""); onClose(); } catch { /* shown */ }
+  }
+  return (
+    <Sheet open={!!payment} onClose={onClose} title="Void this payment?">
+      {payment && <p className="rl-row__meta">{rupees(payment.amount_paise)} by {payment.method.toUpperCase()} on {day(payment.taken_at)}. It stays on record, marked void, and the amount is owed again.</p>}
+      <Field label="Reason" error={err}>{(id) => <input className="rl-field__input" id={id} value={reason} placeholder="Entered twice" onChange={(e) => { setReason(e.target.value); setErr(undefined); }} />}</Field>
+      <ErrorText>{a.error?.message}</ErrorText>
+      <div className="rl-sheet__actions">
+        <button className="rl-button rl-button--danger rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Voiding…" : "Void Payment"}</button>
+        <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={onClose}>Keep Payment</button>
+      </div>
+    </Sheet>
+  );
 }

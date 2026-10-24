@@ -233,8 +233,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     /**
  * The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
-run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
-switches are `/api/gym/messages/`.
+run and whether personal training needs a membership, which admins change here (audited; plans already sold keep
+their dates). Admins only. The gym's message switches are `/api/gym/messages/`.
  */
 export type gymSettingsRetrieveResponse200 = {
   data: GymSettings
@@ -344,8 +344,8 @@ export function useGymSettingsRetrieve<TData = Awaited<ReturnType<typeof gymSett
 
 /**
  * The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
-run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
-switches are `/api/gym/messages/`.
+run and whether personal training needs a membership, which admins change here (audited; plans already sold keep
+their dates). Admins only. The gym's message switches are `/api/gym/messages/`.
  */
 export type gymSettingsPartialUpdateResponse200 = {
   data: GymSettings

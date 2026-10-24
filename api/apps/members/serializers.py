@@ -15,11 +15,15 @@ from apps.gyms.models import Branch, GymRole
 
 from . import services
 from .models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Refund, Subscription
+from .pt_serializers import PTPlanSerializer, pt_plan
 
 
 class CurrentPlanSerializer(serializers.Serializer):
+    """The plan that lets the member in: their membership, or personal training at a gym that sells it alone."""
+
     id = serializers.IntegerField()
     name = serializers.CharField()
+    kind = serializers.ChoiceField(Plan.KINDS)
     starts = serializers.DateField()
     ends = serializers.DateField()
     frozen_from = serializers.DateField(allow_null=True)
@@ -32,14 +36,19 @@ def gym_of(ctx):
 
 @extend_schema_field(OpenApiTypes.INT)
 class GymPK(serializers.PrimaryKeyRelatedField):
-    """A foreign key that only accepts rows from the caller's gym."""
+    """A foreign key that only accepts rows from the caller's gym, and with `branch_field`, from the caller's
+    branches: another branch's row answers as if it didn't exist."""
 
-    def __init__(self, model, gym_field="gym", extra=None, **kw):
-        self.model, self.gym_field, self.extra = model, gym_field, extra or {}
+    def __init__(self, model, gym_field="gym", extra=None, branch_field=None, **kw):
+        self.model, self.gym_field, self.extra, self.branch_field = model, gym_field, extra or {}, branch_field
         super().__init__(**kw)
 
     def get_queryset(self):
-        return self.model.objects.filter(**{self.gym_field: gym_of(self.context)}, **self.extra)
+        qs = self.model.objects.filter(**{self.gym_field: gym_of(self.context)}, **self.extra)
+        ids = self.context["request"].gym_role.branch_ids() if self.branch_field else None
+        if ids is None:
+            return qs
+        return qs.filter(pk__in=self.model.objects.filter(**{f"{self.branch_field}__in": ids}).values("pk"))  # once each, even many-to-many
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -51,8 +60,9 @@ class PlanSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         kind = data.get("kind", getattr(self.instance, "kind", Plan.MEMBERSHIP))
-        if kind == Plan.MEMBERSHIP and not data.get("months", getattr(self.instance, "months", 0)):
-            raise serializers.ValidationError({"months": "A membership plan needs a length"})
+        if not data.get("months", getattr(self.instance, "months", 0)):
+            raise serializers.ValidationError({"months": "A membership plan needs a length" if kind == Plan.MEMBERSHIP
+                                               else "Say how many months they have to use the sessions"})
         if kind == Plan.PT and not data.get("sessions", getattr(self.instance, "sessions", 0)):
             raise serializers.ValidationError({"sessions": "A personal training plan needs a number of sessions"})
         name = data.get("name")
@@ -106,11 +116,16 @@ class PaidBySerializer(serializers.Serializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    member = GymPK(Member)
+    member = GymPK(Member, branch_field="home_branch")
     plan = GymPK(Plan, extra={"on_sale": True})
     offer = GymPK(Offer, required=False, allow_null=True)
     plan_name = serializers.CharField(source="plan.name", read_only=True)
+    kind = serializers.ChoiceField(Plan.KINDS, source="plan.kind", read_only=True)
     offer_name = serializers.CharField(source="offer.name", read_only=True, default=None)
+    trainer = GymPK(GymRole, required=False, allow_null=True, extra={"role": GymRole.TRAINER, "is_active": True}, branch_field="branches",
+                    help_text="Personal training: who trains them. Left out, the member's trainer; they become the member's trainer")
+    trainer_name = serializers.CharField(source="trainer.user.name", read_only=True, default=None)
+    sessions_used = serializers.IntegerField(read_only=True, source="used_total", default=0, help_text="Personal training sessions given")
     paid_paise = serializers.SerializerMethodField()
     refunded_paise = serializers.SerializerMethodField(help_text="Given back: the price and what was paid are both that much lower")
     paid_by = serializers.SerializerMethodField(help_text="What was paid, by method, voided payments left out")
@@ -119,18 +134,23 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ["id", "member", "plan", "plan_name", "offer", "offer_name", "starts", "ends", "list_price_paise", "price_paise", "paid_paise",
-                  "refunded_paise", "paid_by", "frozen_from", "frozen_until", "cancelled"]
-        read_only_fields = ["list_price_paise", "price_paise", "frozen_from", "frozen_until", "cancelled"]
+        fields = ["id", "member", "plan", "plan_name", "kind", "offer", "offer_name", "starts", "ends", "list_price_paise", "price_paise", "paid_paise",
+                  "refunded_paise", "paid_by", "frozen_from", "frozen_until", "cancelled", "sessions", "sessions_used", "trainer", "trainer_name"]
+        read_only_fields = ["list_price_paise", "price_paise", "frozen_from", "frozen_until", "cancelled", "sessions"]
 
     def validate_ends(self, ends):
         if self.context["request"].gym_role.role != GymRole.ADMIN:
             raise serializers.ValidationError("Only an admin can set the end date. It follows the plan's length.")
         return ends
 
+    def validate(self, data):
+        if data.get("trainer") and data["plan"].kind != Plan.PT:
+            raise serializers.ValidationError({"trainer": "Only personal training has a trainer"})
+        return data
+
     def create(self, data):
         return services.sell(data["member"], data["plan"], by=self.context["request"].gym_role, offer=data.get("offer"), starts=data.get("starts"),
-                             ends=data.get("ends"))
+                             ends=data.get("ends"), trainer=data.get("trainer"))
 
     def get_paid_paise(self, sub) -> int:
         return sub.paid_paise()
@@ -154,12 +174,13 @@ class MemberSerializer(serializers.ModelSerializer):
     they already have at another gym (`existing_username`). After that, logins change through set-login."""
 
     home_branch = GymPK(Branch)
-    trainer = GymPK(GymRole, required=False, allow_null=True, extra={"role": GymRole.TRAINER, "is_active": True})
+    trainer = GymPK(GymRole, required=False, allow_null=True, extra={"role": GymRole.TRAINER, "is_active": True}, branch_field="branches")
     trainer_name = serializers.CharField(source="trainer.user.name", read_only=True, default=None)
     code = serializers.CharField(required=False, allow_blank=True)
     status = serializers.SerializerMethodField()
     balance_paise = serializers.SerializerMethodField()
     plan = serializers.SerializerMethodField()
+    pt = serializers.SerializerMethodField()
     has_login = serializers.SerializerMethodField()
     username = serializers.CharField(source="user.username", required=False, allow_null=True, allow_blank=True, max_length=60,
                                      help_text="How they sign in to the app; null without a login. Set on create only")
@@ -176,7 +197,7 @@ class MemberSerializer(serializers.ModelSerializer):
         model = Member
         fields = [
             "id", "code", "name", "phone", "email", "home_branch", "trainer", "trainer_name", "goal", "joined_on",
-            "device_user_id", "reminders_opted_out", "is_archived", "status", "balance_paise", "plan", "has_login",
+            "device_user_id", "reminders_opted_out", "is_archived", "status", "balance_paise", "plan", "pt", "has_login",
             "username", "existing_username", "first_plan", "offer", "paid_paise", "method", "password",
         ]
 
@@ -190,7 +211,12 @@ class MemberSerializer(serializers.ModelSerializer):
     @extend_schema_field(CurrentPlanSerializer(allow_null=True))
     def get_plan(self, m):
         sub = m.current_subscription(self.context.get("today"))
-        return sub and {"id": sub.id, "name": sub.plan.name, "starts": sub.starts, "ends": sub.ends, "frozen_from": sub.frozen_from, "frozen_until": sub.frozen_until}
+        return sub and {"id": sub.id, "name": sub.plan.name, "kind": sub.plan.kind, "starts": sub.starts, "ends": sub.ends,
+                        "frozen_from": sub.frozen_from, "frozen_until": sub.frozen_until}
+
+    @extend_schema_field(PTPlanSerializer(allow_null=True))
+    def get_pt(self, m):
+        return pt_plan(m, self.context.get("today"))
 
     def get_has_login(self, m) -> bool:
         return m.user_id is not None
@@ -326,11 +352,12 @@ class TrainerMemberSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     payment_due = serializers.SerializerMethodField()
     plan_ends = serializers.SerializerMethodField()
+    pt = serializers.SerializerMethodField()
     home_branch = serializers.CharField(source="home_branch.name")
 
     class Meta:
         model = Member
-        fields = ["id", "code", "name", "phone", "goal", "home_branch", "status", "payment_due", "plan_ends"]
+        fields = ["id", "code", "name", "phone", "goal", "home_branch", "status", "payment_due", "plan_ends", "pt"]
 
     @extend_schema_field(serializers.ChoiceField(STATUSES))
     def get_status(self, m):
@@ -339,10 +366,41 @@ class TrainerMemberSerializer(serializers.ModelSerializer):
     def get_payment_due(self, m) -> bool:
         return m.balance_paise() > 0
 
+    @extend_schema_field(PTPlanSerializer(allow_null=True))
+    def get_pt(self, m):
+        return pt_plan(m, self.context.get("today"))
+
     @extend_schema_field(serializers.DateField(allow_null=True))
     def get_plan_ends(self, m):
         sub = m.current_subscription(self.context.get("today"))
         return sub and sub.ends
+
+
+class TrainerTodaySerializer(serializers.Serializer):
+    """A trainer's day on their Home. Never amounts."""
+
+    class CheckedIn(serializers.Serializer):
+        time = serializers.CharField(help_text="6:05 AM, in the gym's time zone")
+        branch_name = serializers.CharField()
+
+    class InToday(serializers.Serializer):
+        id = serializers.IntegerField()
+        name = serializers.CharField()
+        code = serializers.CharField()
+        time = serializers.CharField()
+        branch_name = serializers.CharField()
+
+    class PTClient(serializers.Serializer):
+        id = serializers.IntegerField(help_text="The member")
+        name = serializers.CharField()
+        code = serializers.CharField()
+        pt = PTPlanSerializer()
+        marked_today = serializers.BooleanField(help_text="Today's session is marked")
+
+    checked_in = CheckedIn(allow_null=True, help_text="The trainer's own check-in today")
+    statuses = serializers.DictField(child=serializers.IntegerField(), help_text="Their members counted by status: " + ", ".join(STATUSES))
+    in_today = InToday(many=True, help_text="Their members who checked in today, latest first")
+    pt = PTClient(many=True, help_text="Their members' personal training running now, fewest sessions left first")
 
 
 class MemberSelfSerializer(TrainerMemberSerializer):
@@ -357,7 +415,7 @@ class MemberSelfSerializer(TrainerMemberSerializer):
 
     def get_plan(self, m):
         sub = m.current_subscription(self.context.get("today"))
-        return sub and {"name": sub.plan.name, "starts": sub.starts, "ends": sub.ends, "frozen_until": sub.frozen_until}
+        return sub and {"name": sub.plan.name, "kind": sub.plan.kind, "starts": sub.starts, "ends": sub.ends, "frozen_until": sub.frozen_until}
 
     def get_balance_paise(self, m):
         return m.balance_paise()
@@ -372,7 +430,7 @@ class NoteSerializer(serializers.ModelSerializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
-    member = GymPK(Member)
+    member = GymPK(Member, branch_field="home_branch")
     member_name = serializers.CharField(source="member.name", read_only=True)
     subscription = serializers.PrimaryKeyRelatedField(queryset=Subscription.objects.none(), required=False, allow_null=True)
     branch = GymPK(Branch, required=False)
@@ -406,6 +464,19 @@ class PaymentSerializer(serializers.ModelSerializer):
         )
 
 
+class MemberPaymentSerializer(serializers.ModelSerializer):
+    """A payment as the member who made it sees it: what, how, when and for which plan. No desk notes."""
+
+    plan_name = serializers.CharField(source="subscription.plan.name", read_only=True, default=None)
+    branch_name = serializers.CharField(source="branch.name", read_only=True, default=None)
+    taken_by_name = serializers.CharField(source="taken_by.user.name", read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ["id", "subscription", "plan_name", "amount_paise", "method", "branch_name", "taken_by_name", "taken_at"]
+        read_only_fields = fields
+
+
 class PaymentPartSerializer(serializers.Serializer):
     method = serializers.ChoiceField(choices=Payment.METHODS)
     amount_paise = serializers.IntegerField(min_value=1)
@@ -414,7 +485,7 @@ class PaymentPartSerializer(serializers.Serializer):
 class PaymentSplitSerializer(serializers.Serializer):
     """One amount paid more than one way: a payment is recorded for each part, together, with one receipt."""
 
-    member = GymPK(Member)
+    member = GymPK(Member, branch_field="home_branch")
     branch = GymPK(Branch, required=False)
     note = serializers.CharField(required=False, allow_blank=True, max_length=200)
     parts = PaymentPartSerializer(many=True, min_length=2, max_length=len(Payment.METHODS))

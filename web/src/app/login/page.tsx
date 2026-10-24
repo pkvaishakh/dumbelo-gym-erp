@@ -30,6 +30,8 @@ export default function LoginPage() {
     e.preventDefault();
     const next: typeof errors = {};
     if (!id.trim()) next.id = "Enter your username";
+    // A username is letters, numbers, dots and underscores (a leading @ is fine): an @ inside means an email.
+    else if (/.@/.test(id.trim())) next.id = "That's an email. Sign in with your username instead, like priya.s";
     if (!pw) next.pw = "Enter your password";
     setErrors(next);
     if (next.id) return idRef.current?.focus();
@@ -67,11 +69,12 @@ export default function LoginPage() {
               <label className="rl-field__label" htmlFor="rl-id">Username</label>
               <div className="rl-field__control">
                 <input ref={idRef} className="rl-field__input" id="rl-id" name="username" type="text" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next"
-                  placeholder="your.username" value={id} aria-invalid={!!errors.id} aria-describedby="rl-id-e"
+                  placeholder="your.username" value={id} aria-invalid={!!errors.id} aria-describedby={errors.id ? "rl-id-e" : "rl-id-h"}
                   onChange={(e) => { setId(e.target.value); setErrors((x) => ({ ...x, id: undefined, form: undefined })); }}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); pwRef.current?.focus(); } }} />
               </div>
               <ErrorText id="rl-id-e">{errors.id}</ErrorText>
+              {!errors.id && <p className="rl-field__hint" id="rl-id-h">The username your gym gave you, not your email or phone number.</p>}
             </div>
             <div className={`rl-field${errors.pw ? " is-invalid" : ""}`}>
               <label className="rl-field__label" htmlFor="rl-pw">Password</label>

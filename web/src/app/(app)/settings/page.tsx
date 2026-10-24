@@ -111,7 +111,24 @@ function MonthLength({ days }: { days: number }) {
   );
 }
 
-/** The gym's own rules, for admins: how long a plan's month runs, which WhatsApp messages it sends, and how WhatsApp is set up. */
+/** Whether personal training is sold only on top of a membership (and only a membership lets members in), or alone. */
+function PTRule({ on }: { on: boolean }) {
+  const a = useAction();
+  async function turn(v: boolean) {
+    try { await a.run("/api/gym/settings/", { pt_needs_membership: v }, { method: "PATCH" }); } catch { /* shown */ }
+  }
+  return (
+    <>
+      <div className="rl-card">
+        <Setting name="pt-needs-membership" title="Personal training needs a membership" checked={on} disabled={a.busy} onChange={turn}
+          note={on ? "Sold on top of a membership. Only the membership lets members in." : "Members can buy personal training alone, and it lets them in."} />
+      </div>
+      <ErrorText>{a.error?.message}</ErrorText>
+    </>
+  );
+}
+
+/** The gym's own rules, for admins: how long a plan's month runs, personal training, which WhatsApp messages it sends, and how WhatsApp is set up. */
 export default function SettingsPage() {
   const { role } = useSession();
   const wa = useGymWhatsappRetrieve().data?.data;
@@ -122,6 +139,9 @@ export default function SettingsPage() {
       <main className="rl-app__main">
         <Section title="Plans">
           <MonthLength key={role.month_days} days={role.month_days} />
+        </Section>
+        <Section title="Personal training">
+          <PTRule on={role.pt_needs_membership} />
         </Section>
         <Section title="Messages" aside={<span className="rl-row__meta">Times set by Dumbelo</span>}>
           <MessageSwitches />

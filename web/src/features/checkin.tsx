@@ -114,19 +114,19 @@ export function CheckInSearch({ hint }: { hint?: boolean }) {
         </section>
       )}
       {/* After Done, the search is empty and focused again: ready for the next member in the queue. */}
-      <CheckInResult outcome={outcome} onClose={() => { close(); type(""); requestAnimationFrame(() => box.current?.querySelector("input")?.focus()); }} />
+      <CheckInResult outcome={outcome} onClose={() => { close(); type(""); requestAnimationFrame(() => box.current?.querySelector("input")?.focus({ preventScroll: true })); }} />
     </>
   );
 }
 
-/** Check In Member as a bottom sheet: it slides up over Home with the search focused, and stays open so the desk
- *  can check in one member after another. */
+/** Check In Member as a bottom sheet: it opens over Home with the search focused (in place, so the phone keyboard
+ *  finds the search where it stays), and stays open so the desk can check in one member after another. */
 export function CheckInSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   // The sheet focuses itself as it opens; this runs after that, so the keyboard comes up on the search.
-  useEffect(() => { if (open) box.current?.querySelector("input")?.focus(); }, [open]);
+  useEffect(() => { if (open) box.current?.querySelector("input")?.focus({ preventScroll: true }); }, [open]);
   return (
-    <Sheet open={open} onClose={onClose} title="Check In Member">
+    <Sheet open={open} onClose={onClose} title="Check In Member" instant>
       <div className="rl-checkin-sheet" ref={box}><CheckInSearch hint /></div>
     </Sheet>
   );

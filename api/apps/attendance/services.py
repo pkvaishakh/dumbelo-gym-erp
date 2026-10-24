@@ -1,6 +1,6 @@
 """One check-in rule book for the desk, the wall QR and the turnstile."""
 from collections import defaultdict
-from datetime import time
+from datetime import UTC, datetime, time
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Min
@@ -32,6 +32,8 @@ def check_in(branch, *, member=None, staff=None, source, by=None, at=None):
         status = member.status(local.date())
         if status == "frozen":
             raise RuleBroken("membership_frozen", f"{member.name}'s plan is frozen")
+        if status == "none" and gym.pt_needs_membership and member.subscriptions.filter(cancelled=False).exists():
+            raise RuleBroken("membership_expired", f"{member.name} has personal training but no membership. Sell them one to check in.")
         if status in ("expired", "none"):
             raise RuleBroken("membership_expired", f"{member.name}'s plan has ended. Renew it to check in.")
         earlier = CheckIn.objects.filter(member=member, local_date=local.date()).first()
@@ -52,6 +54,17 @@ def check_in(branch, *, member=None, staff=None, source, by=None, at=None):
             return CheckIn.objects.create(gym=gym, branch=branch, member=member, staff=staff, at=at, local_date=local.date(), source=source, recorded_by=by)
     except IntegrityError:  # two doors at the same second
         raise RuleBroken("already_checked_in", f"{who} already checked in today")
+
+
+def change_time(checkin, new_time: time, *, now=None):
+    """Move a check-in to another time on the same day, e.g. a turnstile whose clock was off. Its day never changes,
+    so the one-per-day rule still holds; its session follows the new time."""
+    at = datetime.combine(checkin.local_date, new_time, tzinfo=clock.tz(checkin.gym)).astimezone(UTC)  # stored UTC, as every time is
+    if at > (now or timezone.now()):
+        raise RuleBroken("time_in_future", "Pick a time that has already passed")
+    checkin.at = at
+    checkin.save(update_fields=["at", "updated_at"])
+    return checkin
 
 
 def session_name(checkin, gym):

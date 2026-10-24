@@ -5,11 +5,16 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { MembersListSort } from './membersListSort';
 import type { MembersListStatus } from './membersListStatus';
 
 export type MembersListParams = {
 archived?: boolean;
 branch?: number;
+/**
+ * A diet plan's id: members on it now; any: on one; none: on none
+ */
+diet?: string;
 /**
  * Number of results to return per page.
  */
@@ -19,7 +24,7 @@ limit?: number;
  */
 offset?: number;
 /**
- * Members whose current plan is this one
+ * Members whose current plan is this one: their membership or personal training
  */
 plan?: number;
 /**
@@ -27,8 +32,16 @@ plan?: number;
  */
 q?: string;
 /**
+ * name (A to Z) when missing; newest: the latest to join first
+ */
+sort?: MembersListSort;
+/**
  * attention: anything but active
  */
 status?: MembersListStatus;
 trainer?: number;
+/**
+ * A workout plan's id: members on it now; any: on one; none: on none
+ */
+workout?: string;
 };

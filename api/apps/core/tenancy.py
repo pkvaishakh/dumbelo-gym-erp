@@ -80,6 +80,7 @@ class InGym(permissions.BasePermission):
 ALL = (GymRole.ADMIN, GymRole.RECEPTIONIST, GymRole.TRAINER, GymRole.MEMBER)
 STAFF = (GymRole.ADMIN, GymRole.RECEPTIONIST, GymRole.TRAINER)
 DESK = (GymRole.ADMIN, GymRole.RECEPTIONIST)
+DESK_OR_SELF = (*DESK, GymRole.MEMBER)  # the desk, or a member reading their own (the view keeps them to it)
 ADMIN = (GymRole.ADMIN,)
 
 

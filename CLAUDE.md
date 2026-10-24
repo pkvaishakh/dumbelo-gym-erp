@@ -31,9 +31,9 @@ member aarav.reddy, Dumbelo admin (the Console) dumbelo.admin. `python manage.py
 | Role | Can | Can't |
 |---|---|---|
 | Admin | Everything in every branch: plans, offers, staff, branches, reports, expenses, recurring bills, payroll, cash and bank, correct/void payments, refunds, settle cash counts, reconcile, tasks | Remove the account owner |
-| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, payments and expenses one day at a time (and add expenses), their branches' cash in hand (read-only) and counting it at close, their tasks | Revenue totals, reports, staff data, the bank, expenses over longer spans, edit expenses, make offers, correct/void, refunds, move money, settle a count |
-| Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in | See any amount |
-| Member | Their own membership and visits, self check-in by wall QR | See anyone else |
+| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, payments and expenses one day at a time (and add expenses), their branches' cash in hand (read-only) and counting it at close, their tasks, their own salary and check-ins | Revenue totals, reports, staff data, the bank, expenses over longer spans, edit expenses, make offers, correct/void, refunds, move money, settle a count |
+| Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in, their own salary and check-ins | See any amount but their own pay |
+| Member | Their own membership, plans, payments and visits, self check-in by wall QR | See anyone else |
 
 Dumbelo support: read-only, only while an admin-granted window is open, and logged.
 Dumbelo admins (`is_superuser`): the Console (`/console`, `/api/platform/`): gyms, their admins, prices, Dumbelo

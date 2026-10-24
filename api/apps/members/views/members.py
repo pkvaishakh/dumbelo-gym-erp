@@ -8,21 +8,23 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from apps.attendance.models import CheckIn
 from apps.audit.models import record
 from apps.core import clock
 from apps.core.errors import RuleBroken
 from apps.core.params import day_range, int_param
-from apps.core.tenancy import ADMIN, ALL, DESK, STAFF, GymViewMixin
+from apps.core.tenancy import ADMIN, ALL, DESK, DESK_OR_SELF, STAFF, GymViewMixin
 from apps.finance.models import StatementTick
 from apps.finance.services import before_change
 from apps.gyms.models import GymRole
 
 from .. import services
-from ..models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Subscription
+from ..models import STATUSES, Member, MemberNote, Offer, Payment, Plan, PTSession, Subscription
+from ..pt_serializers import pt_plan
 from ..serializers import (
-    FreezeSerializer, LoginSetSerializer, MemberSelfSerializer, MemberSerializer, NoteSerializer, OfferSerializer, PaymentCorrectSerializer,
+    FreezeSerializer, LoginSetSerializer, MemberPaymentSerializer, MemberSelfSerializer, MemberSerializer, NoteSerializer, OfferSerializer, PaymentCorrectSerializer,
     PaymentSerializer, PaymentSplitSerializer, PlanSerializer, SetLoginSerializer, SubscriptionCorrectSerializer, SubscriptionSerializer,
-    TrainerMemberSerializer, VoidSerializer, set_login, sync_login,
+    TrainerMemberSerializer, TrainerTodaySerializer, VoidSerializer, set_login, sync_login,
 )
 
 class SoldAtMixin:
@@ -86,11 +88,25 @@ class OfferViewSet(SoldAtMixin, GymViewMixin, viewsets.ModelViewSet):
         offer.delete()
 
 
+def on_coaching_plan(qs, request, param, related):
+    """?workout= or ?diet=: members on that plan now, `any` (on one of that kind) or `none` (on none). `related` is
+    the Member's reverse name for those plans' assignments, so this app needn't import the workouts app."""
+    value = request.query_params.get(param, "").strip()
+    if not value:
+        return qs
+    given = getattr(Member, related).field.model.objects.filter(member=OuterRef("pk"), ended_at__isnull=True)
+    if value == "none":
+        return qs.exclude(Exists(given))
+    if value != "any":
+        given = given.filter(plan_id=int_param(request, param))
+    return qs.filter(Exists(given))
+
+
 class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
     """Members. The desk and admins manage them in their branches; a trainer sees only their own members
     (no amounts); a member sees only themselves."""
 
-    roles = {"list": ALL, "retrieve": ALL, "notes": STAFF, "destroy": ADMIN, "*": DESK}
+    roles = {"list": ALL, "retrieve": ALL, "notes": STAFF, "today": (GymRole.TRAINER,), "destroy": ADMIN, "*": DESK}
 
     def get_serializer_class(self):
         if self.me.role == GymRole.MEMBER:
@@ -124,16 +140,23 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
         if (plan := int_param(self.request, "plan")) is not None:
             # Narrows to members who ever bought the plan; list() keeps those whose current plan it is.
             qs = qs.filter(Exists(Subscription.objects.filter(member=OuterRef("pk"), plan_id=plan, cancelled=False)))
+        qs = on_coaching_plan(qs, self.request, "workout", "workouts")
+        qs = on_coaching_plan(qs, self.request, "diet", "diets")
         if p.get("q"):
             q = p["q"].strip()
             qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q) | Q(phone__contains=q))
+        if p.get("sort") == "newest":  # the latest to join first; the status filter in list() keeps this order
+            qs = qs.order_by("-joined_on", "-id")
         return qs
 
     @extend_schema(parameters=[
         OpenApiParameter("q", str, description="Name, member ID or phone"),
         OpenApiParameter("status", str, enum=STATUSES + ("attention",), description="attention: anything but active"),
         OpenApiParameter("branch", int), OpenApiParameter("trainer", int), OpenApiParameter("archived", bool),
-        OpenApiParameter("plan", int, description="Members whose current plan is this one"),
+        OpenApiParameter("plan", int, description="Members whose current plan is this one: their membership or personal training"),
+        OpenApiParameter("workout", str, description="A workout plan's id: members on it now; any: on one; none: on none"),
+        OpenApiParameter("diet", str, description="A diet plan's id: members on it now; any: on one; none: on none"),
+        OpenApiParameter("sort", str, enum=["name", "newest"], description="name (A to Z) when missing; newest: the latest to join first"),
     ])
     def list(self, request, *args, **kwargs):
         status = request.query_params.get("status")
@@ -146,7 +169,7 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
         today = clock.today(self.gym)
 
         def wanted(m):
-            if plan is not None and getattr(m.current_subscription(today), "plan_id", None) != plan:
+            if plan is not None and plan not in {getattr(m.plan_of(kind, today), "plan_id", None) for kind in (Plan.MEMBERSHIP, Plan.PT)}:
                 return False
             s = m.status(today)
             return not status or (s != "active" if status == "attention" else s == status)
@@ -154,6 +177,30 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
         rows = [m for m in self.get_queryset() if wanted(m)]
         page = self.paginate_queryset(rows)
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
+
+    @extend_schema(parameters=[OpenApiParameter("branch", int)], responses=TrainerTodaySerializer)
+    @action(detail=False, methods=["get"], pagination_class=None)
+    def today(self, request):
+        """A trainer's day: their own check-in, their members by status and who of them came in today, and their
+        personal training with the sessions left and whether today's is marked."""
+        today = clock.today(self.gym)
+        members = list(self.get_queryset())
+        statuses = dict.fromkeys(STATUSES, 0)
+        for m in members:
+            statuses[m.status(today)] += 1
+        visits = CheckIn.objects.filter(gym=self.gym, local_date=today).select_related("gym", "branch")
+        mine = visits.filter(staff=self.me).first()
+        came = visits.filter(member__in=[m.pk for m in members]).select_related("member").order_by("-at")
+        pt = [(m, plan) for m in members if (plan := pt_plan(m, today))]
+        marked = set(PTSession.objects.filter(subscription__in=[p["id"] for _, p in pt], local_date=today, voided=False).values_list("subscription", flat=True))
+        pt.sort(key=lambda mp: (mp[1]["sessions"] - mp[1]["sessions_used"], mp[0].name))
+        return Response(TrainerTodaySerializer({
+            "checked_in": mine and {"time": clock.time_label(self.gym, mine.at), "branch_name": mine.branch.name},
+            "statuses": statuses,
+            "in_today": [{"id": c.member_id, "name": c.member.name, "code": c.member.code, "time": clock.time_label(self.gym, c.at),
+                          "branch_name": c.branch.name} for c in came],
+            "pt": [{"id": m.pk, "name": m.name, "code": m.code, "pt": p, "marked_today": p["id"] in marked} for m, p in pt],
+        }).data)
 
     def perform_destroy(self, member):
         member.is_archived = True  # history stays: archive, never delete
@@ -190,15 +237,18 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
 
 class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-    plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile)."""
+    plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+    their own, cancelled ones left out."""
 
     serializer_class = SubscriptionSerializer
-    roles = {"cancel": ADMIN, "correct": ADMIN, "*": DESK}
+    roles = {"list": DESK_OR_SELF, "retrieve": DESK_OR_SELF, "cancel": ADMIN, "correct": ADMIN, "*": DESK}
     filterset_fields = ["member", "plan"]
 
     def get_queryset(self):
-        qs = (Subscription.objects.filter(member__gym=self.gym).select_related("plan", "offer", "member").with_paid()
+        qs = (Subscription.objects.filter(member__gym=self.gym).select_related("plan", "offer", "member", "trainer__user").with_paid().with_used()
               .prefetch_related("payments").order_by("-starts", "-id"))
+        if self.me.role == GymRole.MEMBER:
+            return qs.filter(member__user=self.request.user, cancelled=False)
         return self.in_my_branches(qs, "member__home_branch")
 
     @extend_schema(request=FreezeSerializer, responses=SubscriptionSerializer)
@@ -279,17 +329,23 @@ _PAYMENT_FILTERS = [
 
 @extend_schema_view(list=extend_schema(parameters=_PAYMENT_FILTERS))
 class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
-    """Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void."""
+    """Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+    lists their own, any dates, voided ones and the desk's notes left out."""
 
-    roles = {"update": ADMIN, "partial_update": ADMIN, "void": ADMIN, "*": DESK}
+    roles = {"list": DESK_OR_SELF, "retrieve": DESK_OR_SELF, "update": ADMIN, "partial_update": ADMIN, "void": ADMIN, "*": DESK}
     filterset_fields = ["member", "branch", "method", "voided"]
 
     def get_serializer_class(self):
-        return PaymentCorrectSerializer if self.action in ("update", "partial_update") else PaymentSerializer
+        if self.action in ("update", "partial_update"):
+            return PaymentCorrectSerializer
+        return MemberPaymentSerializer if self.me.role == GymRole.MEMBER else PaymentSerializer
 
     def get_queryset(self):
         qs = Payment.objects.filter(gym=self.gym).select_related("member", "taken_by__user")
-        qs = self.in_my_branches(qs)
+        if self.me.role == GymRole.MEMBER:
+            qs = qs.filter(member__user=self.request.user, voided=False).select_related("subscription__plan", "branch")
+        else:
+            qs = self.in_my_branches(qs)
         if days := self._days():
             start, end = clock.day_bounds(self.gym, days[0])[0], clock.day_bounds(self.gym, days[1])[1]
             qs = qs.filter(taken_at__gte=start, taken_at__lt=end)
@@ -299,8 +355,9 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
 
     def _days(self):
         """Receptionists see one day's money at a time; totals over longer spans are for admins. One member's payments
-        are the exception: the desk already sees all of them on the profile, so it may narrow them to any dates."""
-        one_member = self.action == "list" and bool(self.request.query_params.get("member"))
+        are the exception: the desk already sees all of them on the profile, and a member all of their own, so either
+        may narrow them to any dates."""
+        one_member = self.action == "list" and (bool(self.request.query_params.get("member")) or self.me.role == GymRole.MEMBER)
         many = self.me.role in (GymRole.ADMIN, "support") or one_member
         return day_range(self.request, clock.today(self.gym), many_days=many, what="collection")
 

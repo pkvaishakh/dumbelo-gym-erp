@@ -14,7 +14,7 @@ from apps.expenses.views import ExpenseDueViewSet, ExpenseViewSet, RecurringExpe
 from apps.finance.views import AccountViewSet, CashView, DrawerCloseViewSet, MoneyMoveViewSet
 from apps.gyms.views import BranchViewSet, GymSettingsView, StaffViewSet, SupportAccessViewSet
 from apps.leads.views import ConsoleLeadViewSet, LeadAskView
-from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, RefundViewSet, SubscriptionViewSet
+from apps.members.views import MemberViewSet, OfferViewSet, PaymentViewSet, PlanViewSet, PTSessionViewSet, RefundViewSet, SubscriptionViewSet
 from apps.messages.views import (
     AutomationView, ConsoleMessageViewSet, ConsoleUsageView, GymMessagesView, GymMessageTimesView, GymMessageTimeView, GymMessageView, GymWhatsAppView, MessageViewSet,
     WhatsAppAccountViewSet, WhatsAppTemplateViewSet, WhatsAppWebhookView,
@@ -23,6 +23,7 @@ from apps.payroll.views import PayslipViewSet, SalaryRuleViewSet
 from apps.platform.views import GymAdminViewSet, GymViewSet, JobRunNowView, PlatformSummaryView, ServerStatusView
 from apps.reports.views import AttendanceView, ExpensesView, MembersView, MoneyView, OverviewView, RevenueView, SummaryView, TasksView
 from apps.tasks.views import TaskViewSet
+from apps.workouts.views import DietAssignmentViewSet, DietPlanViewSet, WorkoutAssignmentViewSet, WorkoutPlanViewSet
 
 router = DefaultRouter()
 router.register("branches", BranchViewSet, basename="branch")
@@ -34,9 +35,14 @@ router.register("members", MemberViewSet, basename="member")
 router.register("subscriptions", SubscriptionViewSet, basename="subscription")
 router.register("payments", PaymentViewSet, basename="payment")
 router.register("refunds", RefundViewSet, basename="refund")
+router.register("pt-sessions", PTSessionViewSet, basename="pt-session")
 router.register("checkins", CheckInViewSet, basename="checkin")
 router.register("devices", DeviceViewSet, basename="device")
 router.register("tasks", TaskViewSet, basename="task")
+router.register("workout-plans", WorkoutPlanViewSet, basename="workout-plan")
+router.register("workout-assignments", WorkoutAssignmentViewSet, basename="workout-assignment")
+router.register("diet-plans", DietPlanViewSet, basename="diet-plan")
+router.register("diet-assignments", DietAssignmentViewSet, basename="diet-assignment")
 router.register("expenses", ExpenseViewSet, basename="expense")
 router.register("recurring-expenses", RecurringExpenseViewSet, basename="recurring-expense")
 router.register("expense-dues", ExpenseDueViewSet, basename="expense-due")

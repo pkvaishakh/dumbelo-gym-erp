@@ -18,7 +18,7 @@ from apps.members.models import Member
 from apps.members.serializers import GymPK, gym_of
 
 from .models import CheckIn, Device
-from .services import check_in, count_by_session, deactivate_device, rotate_device_token, session_name
+from .services import change_time, check_in, count_by_session, deactivate_device, rotate_device_token, session_name
 
 
 class CheckInSerializer(serializers.ModelSerializer):
@@ -63,32 +63,33 @@ class CheckInCreateSerializer(serializers.Serializer):
         return data
 
 
+class CheckInTimeSerializer(serializers.Serializer):
+    time = serializers.TimeField(help_text="The new time on the check-in's own day, in the gym's time zone, e.g. 06:30")
+
+
 class CheckInViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     """Who came in. Only the time in is recorded — there is no check-out.
 
-    The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-    a mistaken check-in (audited)."""
+    The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+    their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+    only, admins any day."""
 
     serializer_class = CheckInSerializer
-    roles = {"list": ALL, "summary": ("admin", "receptionist", "trainer"), "destroy": ADMIN, "*": DESK}
+    roles = {"list": ALL, "summary": ("admin", "receptionist", "trainer"), "*": DESK}
 
     def get_queryset(self):
         qs = CheckIn.objects.filter(gym=self.gym).select_related("gym", "member", "staff__user", "branch").prefetch_related("branch__sessions")
         if self.me.role == GymRole.MEMBER:
             return qs.filter(member__user=self.request.user)
-        qs = self.in_my_branches(qs)
-        if self.action == "destroy":
-            return qs
         p = self.request.query_params
+        if self.action == "list" and p.get("mine") == "true":  # a staff member's own check-ins, at any branch (My Attendance)
+            return self._between(qs.filter(staff_id=self.me.id) if self.me.id else qs.none())
+        qs = self.in_my_branches(qs)
+        if self.action in ("partial_update", "destroy"):
+            return qs
         member, staff = int_param(self.request, "member"), int_param(self.request, "staff")
         if member is not None or staff is not None:  # one person's visits, any day or between two (member, staff profile)
-            qs = qs.filter(member_id=member) if member is not None else qs.filter(staff_id=staff)
-            first, last = open_days(self.request)
-            if first:
-                qs = qs.filter(local_date__gte=first)
-            if last:
-                qs = qs.filter(local_date__lte=last)
-            return qs
+            return self._between(qs.filter(member_id=member) if member is not None else qs.filter(staff_id=staff))
         day = clock.parse_date(p.get("date"), clock.today(self.gym))
         qs = qs.filter(local_date=day)
         if (branch := int_param(self.request, "branch")) is not None:
@@ -107,13 +108,23 @@ class CheckInViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
             qs = qs.filter(member__name__icontains=q) | qs.filter(staff__user__name__icontains=q) | qs.filter(member__code__icontains=q)
         return qs
 
+    def _between(self, qs):
+        """?from= and ?to= on one person's check-ins."""
+        first, last = open_days(self.request)
+        if first:
+            qs = qs.filter(local_date__gte=first)
+        if last:
+            qs = qs.filter(local_date__lte=last)
+        return qs
+
     @extend_schema(parameters=[
         OpenApiParameter("date", str, description="YYYY-MM-DD, today by default"), OpenApiParameter("branch", int),
         OpenApiParameter("kind", str, enum=["member", "staff", "trainer", "receptionist", "admin"]),
         OpenApiParameter("session", str, description="Session name, e.g. Morning; Other for outside every session"), OpenApiParameter("source", str), OpenApiParameter("q", str),
         OpenApiParameter("member", int, description="One member's visits, any day"), OpenApiParameter("staff", int),
-        OpenApiParameter("from", str, description="With member or staff: YYYY-MM-DD, the first day"),
-        OpenApiParameter("to", str, description="With member or staff: YYYY-MM-DD, the last day"),
+        OpenApiParameter("mine", bool, description="Staff: your own check-ins at any branch, any day"),
+        OpenApiParameter("from", str, description="With member, staff or mine: YYYY-MM-DD, the first day"),
+        OpenApiParameter("to", str, description="With member, staff or mine: YYYY-MM-DD, the last day"),
     ])
     def list(self, request, *args, **kwargs):
         session = request.query_params.get("session")
@@ -131,19 +142,38 @@ class CheckInViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         branch = self.in_my_branches(Branch.objects.filter(gym=self.gym), "id").filter(pk=d["branch"]).first()
         if branch is None:
             raise RuleBroken("wrong_branch", "You don't work at this branch")
+        # The desk checks in its own branches' members and staff; anyone else answers as if they didn't exist.
         if "member" in d:
-            member = Member.objects.filter(gym=self.gym, pk=d["member"]).first()
+            member = self.in_my_branches(Member.objects.filter(gym=self.gym), "home_branch").filter(pk=d["member"]).first()
             if member is None:
                 raise RuleBroken("not_found", "No such member")
             c = check_in(branch, member=member, source=CheckIn.DESK, by=request.user)
         else:
-            staff = GymRole.objects.filter(gym=self.gym, pk=d["staff"]).select_related("user").first()
+            mine = self.in_my_branches(GymRole.objects.filter(gym=self.gym), "branches").values("pk")
+            staff = GymRole.objects.filter(gym=self.gym, pk=d["staff"]).filter(pk__in=mine).select_related("user").first()
             if staff is None:
                 raise RuleBroken("not_found", "No such staff member")
             c = check_in(branch, staff=staff, source=CheckIn.DESK, by=request.user)
         return Response(self.get_serializer(c).data, status=201)
 
+    def _correctable(self, c):
+        """Earlier days are a record for the desk; only an admin corrects them."""
+        if self.me.role != GymRole.ADMIN and c.local_date != clock.today(self.gym):
+            raise RuleBroken("past_day", "Only an admin can change an earlier day's check-in")
+        return c
+
+    @extend_schema(request=CheckInTimeSerializer, responses=CheckInSerializer)
+    def partial_update(self, request, *args, **kwargs):
+        c = self._correctable(self.get_object())
+        s = CheckInTimeSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        before = c.at.isoformat()
+        change_time(c, s.validated_data["time"])
+        record(request, "checkin.time_changed", c, {"at": before}, {"at": c.at.isoformat()})
+        return Response(self.get_serializer(c).data)
+
     def perform_destroy(self, c):
+        self._correctable(c)
         record(self.request, "checkin.removed", c, {"at": c.at.isoformat(), "member": c.member_id, "staff": c.staff_id})
         c.delete()
 

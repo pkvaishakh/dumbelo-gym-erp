@@ -107,11 +107,13 @@ class RoleSerializer(serializers.ModelSerializer):
                                          help_text="suspended: the app shows its paused screen; only admins reach More")
     timezone = serializers.CharField(source="gym.timezone", read_only=True, help_text="The gym's time zone, like Asia/Kolkata: its days start and end there")
     month_days = serializers.IntegerField(source="gym.month_days", read_only=True, help_text="How long a plan's month runs: 0 for calendar months, else that many days")
+    pt_needs_membership = serializers.BooleanField(source="gym.pt_needs_membership", read_only=True,
+                                                   help_text="Personal training is sold only on top of a membership")
     branches = serializers.SerializerMethodField()
 
     class Meta:
         model = GymRole
-        fields = ["gym", "gym_name", "gym_status", "timezone", "month_days", "role", "is_owner", "branches"]
+        fields = ["gym", "gym_name", "gym_status", "timezone", "month_days", "pt_needs_membership", "role", "is_owner", "branches"]
 
     @extend_schema_field(BranchRefSerializer(many=True))
     def get_branches(self, obj):

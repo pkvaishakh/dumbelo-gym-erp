@@ -44,13 +44,20 @@ src/app/page.tsx              the public landing page (the one page search index
 src/components/brand.tsx      Icon, Mark, Barbell: markup only, no "use client", so server components can use them
                               (ui.tsx re-exports them for the app)
 src/components/ui.tsx         design-system pieces: Icon, Photo, Status, TaskStatus, Section, Stat, Field,
-                              Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details
+                              Chips, Seg, Choices, Sheet, Confirm, Empty, SkeletonRows, SearchField, MenuRow, Details, PassLink
 src/components/shell.tsx      HomeBar + Greeting, PageBar (tab screens), DetailBar (records), TaskBar (task screens),
                               TabBar per role, CreateSheet, BranchSheet
-src/features/                 bigger parts shared by routes: homes (Attention, GlanceLoading: also Console Home), checkin (desk), self-checkin (QR), sell
+src/features/                 bigger parts shared by routes: homes (Attention, GlanceLoading: also Console Home), checkin (desk), visit (VisitSheet: a check-in's Change
+                              Time and Remove Check-In), self-checkin (QR), sell
                               (MemberPicker, PlanPicker, ActionBar, METHODS), staff-form, branch-form, members-ui,
-                              money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, rateText),
-                              recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), account-form, drawer (CountRow,
+                              money-out (PaySheet, DueSheet, bill and payslip badges), payroll (Breakdown, TakeHome, SalaryPayments, SalarySlip, rateText),
+                              recurring-form, money (MoveRow, MoveSheet, BranchMoneySheet), pt (PTCard: a member's personal training,
+                              Mark Session and Remove Session), coach-plans (workout and diet plans alike: KINDS, usePlans,
+                              usePlan, useGiven, PlanBody, PlanCard on a member's profile, AssignPlanSheet, AssignMemberSheet,
+                              MyPlansRows on Member Home), coach-screens (PlanLibrary, PlanScreen, NewPlanScreen, EditPlanScreen,
+                              MyPlanScreen: the routes pass their kind), plan-form (PlanFormShell: name, goal, save) with
+                              workout-form and diet-form inside it, workouts (PlanDays), diets (DietTargets, Meals), member-filters (the
+                              members list's Sort and filter sheet: newest first or by name, membership, workout and diet plan, branch; ActiveFilters pills), account-form, drawer (CountRow,
                               CountSheet), refunds (RefundSheet, RefundRows), dumbelo-plan (PlanCard, BranchRoom,
                               PlanPrices, AskStatus, proRataText: a gym's Dumbelo plan, for the gym and the Console),
                               messages (MessageBadge: also the Console's log, GymLogFilterSheet,
@@ -68,6 +75,18 @@ src/lib/types.ts              shapes of endpoints the schema leaves loose (summa
 src/lib/console-home.ts       Console Home's Needs attention rows from the summary (consoleAttention, serverMeta)
 src/lib/messages.ts           when each WhatsApp message goes out, in words (hourLabel, daysLabel, whenLabel, MESSAGE_TO);
                               MESSAGE_LABEL; the gym's log filters (gymLogFilters, gymLogUrl, gymLogParams, narrowedBy); recentMonths
+src/lib/pt.ts                 personal training's sessions left and status (ptState), as the API works them out
+src/lib/workouts.ts           exerciseLine ("4 sets × 8 reps"), planSummary, the plan form's rows to and from days
+src/lib/diets.ts              dietSummary, macrosLine, the diet form's meals to and from the API's
+src/app/(app)/salary          My Salary (More, receptionists and trainers): their own approved months, a month ([id], read
+                              only) and its printable slip ([id]/slip: features/payroll SalarySlip, like Payroll's).
+                              Their check-ins are My Attendance: /visits without ?member= for staff (`mine: true`)
+src/app/(app)/membership      the member's own (Home's membership card, More): My plans (now, up next and ended; personal
+                              training opens /members/[id]/pt) and My payments (payments/). features/my-membership:
+                              MemberScreen (title, what they owe); features/plan-money: PlanMoney (also the member profile)
+src/app/(app)/workouts        the gym's workout plans (More → Workout plans), a plan ([id]: Assign to Member, Copy,
+                              Edit, Archive), new (?copy=) and [id]/edit; /diets the same for diet plans; /workout and
+                              /diet: the member's own
 src/lib/reports.ts            report categories, periods, MAX_MONTHS (the API's) and the range check
 src/lib/report-rows.ts        each report as plain rows: its CSV (reportCsv) and its print page
 src/lib/csv.ts                toCsv, plainRupees, download, statementCsv

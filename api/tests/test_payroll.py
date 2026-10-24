@@ -219,13 +219,16 @@ def test_months_still_to_come_are_refused(w):
     assert w.client(w.admin).get(SLIPS, {"month": "Oct"}).status_code == 400
 
 
-def test_only_admins_and_only_this_gym(w, other):
+def test_only_admins_run_payroll_and_only_this_gym(w, other):
     salary(w, w.trainer)
     slip = generate(w)[w.trainer.id]
     for role in (w.desk, w.trainer):
         c = w.client(role)
-        assert c.get(SLIPS).status_code == 403 and c.get(RULES).status_code == 403
+        assert c.get(RULES).status_code == 403 and c.get(f"{SLIPS}summary/").status_code == 403
+        assert c.post(f"{SLIPS}generate/", {"month": mkey(w)}, format="json").status_code == 403
         assert c.post(f"{SLIPS}{slip['id']}/approve/").status_code == 403
+        assert c.post(f"{SLIPS}{slip['id']}/pay/", {"amount_paise": 1, "method": "cash"}, format="json").status_code == 403
+    assert w.member_client().get(SLIPS).status_code == 403
     them = other.client(other.admin)
     assert them.get(f"{SLIPS}{slip['id']}/").status_code == 404
     assert them.post(f"{SLIPS}{slip['id']}/pay/", {"amount_paise": 1, "method": "cash"}, format="json").status_code == 404
@@ -243,3 +246,28 @@ def test_salary_history_and_list_budget(w, django_assert_max_num_queries):
         assert len(c.get(RULES).json()) == 4
     history = c.get(SLIPS, {"staff": w.trainer.id}).json()["results"]
     assert [h["month"] for h in history] == [month_of(w).isoformat()]
+
+
+def test_staff_see_their_own_salary_once_approved_or_paid(w):
+    salary(w, w.trainer, "fixed", 20_000_00)
+    salary(w, w.desk, "daily", 800_00)
+    salary(w, w.desk_b, "fixed", 15_000_00)
+    checked_in(w, w.desk, 1)
+    slips = generate(w)
+    mine = w.client(w.trainer)
+    assert mine.get(SLIPS).json()["results"] == []  # a draft still changes: not their pay yet
+    assert mine.get(f"{SLIPS}{slips[w.trainer.id]['id']}/").status_code == 404
+    admin = w.client(w.admin)
+    admin.post(f"{SLIPS}{slips[w.trainer.id]['id']}/approve/")
+    admin.post(f"{SLIPS}{slips[w.trainer.id]['id']}/pay/", {"amount_paise": 5_000_00, "method": "bank", "note": "First part"}, format="json")
+    admin.post(f"{SLIPS}{slips[w.desk_b.id]['id']}/approve/")
+    rows = mine.get(SLIPS).json()["results"]
+    assert [(r["staff"], r["net_paise"], r["paid_paise"], r["payment_status"]) for r in rows] == [(w.trainer.id, 20_000_00, 5_000_00, "part")]
+    one = mine.get(f"{SLIPS}{slips[w.trainer.id]['id']}/").json()
+    assert [(p["amount_paise"], p["method"], p["paid_by_name"]) for p in one["payments"]] == [(5_000_00, "bank", w.admin.user.name)]
+    assert mine.get(SLIPS, {"staff": w.desk_b.id}).json()["results"] == []  # never anyone else's
+    assert mine.get(f"{SLIPS}{slips[w.desk_b.id]['id']}/").status_code == 404
+    desk = w.client(w.desk)  # a daily wage paid on a draft is money they've had
+    assert desk.get(SLIPS).json()["results"] == []
+    admin.post(f"{SLIPS}{slips[w.desk.id]['id']}/pay/", {"amount_paise": 800_00, "method": "cash"}, format="json")
+    assert [r["status"] for r in desk.get(SLIPS).json()["results"]] == ["draft"]

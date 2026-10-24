@@ -8,8 +8,10 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.core.models import GymScoped, TimeStamped
+from apps.core.queries import count_of
 
 EXPIRING_DAYS = 7
+FEW_SESSIONS_LEFT = 2  # personal training this close to its last session shows as expiring
 STATUSES = ("active", "expiring", "due", "frozen", "expired", "none")  # what Member.status() can answer
 
 
@@ -43,8 +45,8 @@ class Plan(GymScoped):
         return self.name
 
     def clean(self):
-        if self.kind == self.MEMBERSHIP and not self.months:
-            raise ValidationError({"months": "A membership plan needs a length"})
+        if not self.months:
+            raise ValidationError({"months": "A plan needs a length"})
         if self.kind == self.PT and not self.sessions:
             raise ValidationError({"sessions": "A personal training plan needs a number of sessions"})
 
@@ -112,8 +114,8 @@ class MemberQuerySet(models.QuerySet):
         refunds = Refund.objects.filter(member=OuterRef("pk"), voided=False)
         refunded_live = _total(refunds.filter(subscription__cancelled=False), "member", "amount_paise")
         refunded = _total(refunds, "member", "amount_paise")
-        live = Subscription.objects.filter(cancelled=False).select_related("plan").order_by("-ends")
-        return self.annotate(owed_total=owed - refunded_live, paid_total=paid - refunded).prefetch_related(
+        live = Subscription.objects.filter(cancelled=False).select_related("plan", "trainer__user").with_used().order_by("-ends")
+        return self.select_related("gym").annotate(owed_total=owed - refunded_live, paid_total=paid - refunded).prefetch_related(
             Prefetch("subscriptions", queryset=live, to_attr="live_subs"))
 
     def owing(self) -> dict:
@@ -159,26 +161,42 @@ class Member(GymScoped):
     def _live_subs(self):
         """Subscriptions that aren't cancelled, latest end first: from with_totals() when loaded with it."""
         cached = getattr(self, "live_subs", None)
-        return cached if cached is not None else list(self.subscriptions.filter(cancelled=False).select_related("plan").order_by("-ends"))
+        if cached is not None:
+            return cached
+        return list(self.subscriptions.filter(cancelled=False).select_related("plan", "trainer__user").with_used().order_by("-ends"))
 
-    def current_subscription(self, today=None):
+    def plan_of(self, kind, today=None):
+        """The member's plan of one kind (membership or personal training) now: the latest that has started, or else
+        the one sold to start later."""
         today = today or timezone.localdate()
-        subs = self._live_subs()
+        subs = [s for s in self._live_subs() if s.plan.kind == kind]
         return next((s for s in subs if s.starts <= today), subs[0] if subs else None)
 
+    def current_subscription(self, today=None):
+        """The plan that lets the member in: their membership. At a gym that sells personal training on its own, the
+        one of the two that is running today (the membership first)."""
+        today = today or timezone.localdate()
+        membership = self.plan_of(Plan.MEMBERSHIP, today)
+        if self.gym.pt_needs_membership:
+            return membership
+        plans = [s for s in (membership, self.plan_of(Plan.PT, today)) if s]
+        running = [s for s in plans if s.starts <= today and not s.is_over(today)]
+        return (running or plans or [None])[0]
+
     def status(self, today=None):
-        """active | expiring | due | frozen | expired | none — the same five badges the prototype shows."""
+        """active | expiring | due | frozen | expired | none — the same five badges the prototype shows, from the
+        plan that lets them in."""
         today = today or timezone.localdate()
         sub = self.current_subscription(today)
         if sub is None:
             return "none"
         if sub.is_frozen(today):
             return "frozen"
-        if sub.ends < today:
+        if sub.is_over(today):
             return "expired"
         if self.balance_paise() > 0:
             return "due"
-        if sub.ends <= today + timedelta(days=EXPIRING_DAYS):
+        if sub.is_ending(today):
             return "expiring"
         return "active"
 
@@ -204,6 +222,10 @@ class MemberNote(TimeStamped):
 
 
 class SubscriptionQuerySet(models.QuerySet):
+    def with_used(self):
+        """How many personal training sessions each plan has used, so a list doesn't count them row by row."""
+        return self.annotate(used_total=count_of(PTSession.objects.filter(subscription=OuterRef("pk"), voided=False)))
+
     def with_paid(self):
         """What has been paid toward each subscription, so a list doesn't sum payments row by row."""
         return self.annotate(paid_total=_total(Payment.objects.filter(subscription=OuterRef("pk"), voided=False), "subscription", "amount_paise"),
@@ -222,6 +244,9 @@ class Subscription(TimeStamped):
     frozen_until = models.DateField(null=True, blank=True)
     cancelled = models.BooleanField(default=False)
     sold_by = models.ForeignKey("gyms.GymRole", null=True, on_delete=models.SET_NULL, related_name="+")
+    sessions = models.PositiveSmallIntegerField(default=0, help_text="Personal training: the sessions bought, from the plan at sale. 0 for a membership")
+    trainer = models.ForeignKey("gyms.GymRole", null=True, blank=True, on_delete=models.SET_NULL, related_name="pt_plans",
+                                help_text="Personal training: who trains them")
 
     objects = SubscriptionQuerySet.as_manager()
 
@@ -235,6 +260,22 @@ class Subscription(TimeStamped):
         today = today or timezone.localdate()
         return bool(self.frozen_from and self.frozen_from <= today and (self.frozen_until is None or today <= self.frozen_until))
 
+    def sessions_used(self):
+        if hasattr(self, "used_total"):  # annotated by with_used()
+            return self.used_total
+        return self.pt_sessions.filter(voided=False).count()
+
+    def sessions_left(self):
+        return max(0, self.sessions - self.sessions_used())
+
+    def is_over(self, today):
+        """Past its last day, or personal training with every session used."""
+        return self.ends < today or (self.sessions > 0 and self.sessions_left() == 0)
+
+    def is_ending(self, today):
+        """Within a week of its last day, or personal training down to its last few sessions."""
+        return self.ends <= today + timedelta(days=EXPIRING_DAYS) or (self.sessions > 0 and self.sessions_left() <= FEW_SESSIONS_LEFT)
+
     def paid_paise(self):
         if hasattr(self, "paid_total"):  # annotated by the subscription list
             return self.paid_total
@@ -245,6 +286,32 @@ class Subscription(TimeStamped):
         if hasattr(self, "refunded_total"):
             return self.refunded_total
         return self.refunds.filter(voided=False).aggregate(t=Sum("amount_paise"))["t"] or 0
+
+
+class PTSession(GymScoped):
+    """One personal training session given: it uses one of the plan's sessions. Marked by the trainer or the desk,
+    one a day for each plan, with what they worked and notes that can be changed later. One marked by mistake is
+    voided with a reason, never deleted."""
+
+    BODY_PARTS = ["Chest", "Back", "Legs", "Shoulders", "Triceps", "Biceps", "Cardio"]
+
+    subscription = models.ForeignKey(Subscription, on_delete=models.PROTECT, related_name="pt_sessions")
+    member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="pt_sessions")
+    trainer = models.ForeignKey("gyms.GymRole", null=True, blank=True, on_delete=models.PROTECT, related_name="+", help_text="Who trained them")
+    local_date = models.DateField(help_text="The gym's day it was given")
+    marked_by = models.ForeignKey("gyms.GymRole", on_delete=models.PROTECT, related_name="+")
+    marked_at = models.DateTimeField(default=timezone.now)
+    body_parts = models.JSONField(default=list, blank=True, help_text="What they worked: from BODY_PARTS, or any other the trainer adds")
+    notes = models.CharField(max_length=500, blank=True)
+    voided = models.BooleanField(default=False)
+    void_reason = models.CharField(max_length=200, blank=True)
+    voided_by = models.ForeignKey("gyms.GymRole", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    voided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-local_date", "-marked_at"]
+        constraints = [models.UniqueConstraint(fields=["subscription", "local_date"], condition=models.Q(voided=False), name="one_pt_session_a_day")]
+        indexes = [models.Index(fields=["gym", "local_date"], name="ptsession_gym_day")]
 
 
 class Payment(GymScoped):

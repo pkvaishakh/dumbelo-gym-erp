@@ -7,6 +7,7 @@
  */
 import type { MemberStatusEnum } from './memberStatusEnum';
 import type { MemberPlan } from './memberPlan';
+import type { MemberPt } from './memberPt';
 
 /**
  * What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
@@ -41,6 +42,8 @@ export interface Member {
   readonly balance_paise: number;
   /** @nullable */
   readonly plan: MemberPlan;
+  /** @nullable */
+  readonly pt: MemberPt;
   readonly has_login: boolean;
   /**
    * How they sign in to the app; null without a login. Set on create only

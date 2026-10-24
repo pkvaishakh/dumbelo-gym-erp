@@ -60,13 +60,119 @@ test("receptionist: check a member in from home, once a day", async ({ page }) =
   await expect(search).toBeFocused();  // the check-in sheet stays open, ready for the next member
 });
 
-test("trainer: sees own members without amounts", async ({ page }) => {
+test("trainer: home shows their day, and own members without amounts", async ({ page }) => {
   await signIn(page, "neha");
+  await expect(page.getByRole("heading", { name: "Your members in today" })).toBeVisible();
+  await expect(page.getByText(/^Of your \d+ members?$/)).toBeVisible();
+  await expect(page.getByText(/₹/)).toHaveCount(0);
   await page.goto("/members");
   await expect(page.getByRole("heading", { name: "My Members" })).toBeVisible();
   await page.locator("a.rl-mrow").first().click();
   await expect(page.getByRole("heading", { name: "Payments" })).toHaveCount(0);
   await expect(page.getByText(/₹/)).toHaveCount(0);
+});
+
+test("trainer: marks today's personal training session with what they worked, edits it and removes it", async ({ page }) => {
+  await signIn(page, "neha");
+  // Her Home lists her personal training clients. One session a day: pick one whose session today isn't marked
+  // yet and whose plan hasn't ended.
+  const clients = page.locator("section", { has: page.getByRole("heading", { name: "Personal training" }) });
+  await clients.locator("a.rl-mrow").filter({ hasNotText: "Done today" }).filter({ hasNotText: "Expired" }).first().click();
+  await expect(page.getByRole("button", { name: "Mark Session" })).toBeVisible();
+  const left = Number(await page.locator(".rl-pass .rl-figure").last().innerText().then((t) => t.split(" ")[0]));
+  await page.getByRole("button", { name: "Mark Session" }).click();
+  const sheet = page.locator(".rl-sheet");
+  await sheet.getByRole("checkbox", { name: "Chest" }).check();
+  await sheet.getByRole("checkbox", { name: "Biceps" }).check();
+  await sheet.getByLabel("Notes").fill("Bench press 40 kg, 3 sets of 8");
+  await sheet.getByRole("button", { name: "Mark Session" }).click();
+  await expect(page.locator(".rl-pass .rl-figure").last()).toHaveText(new RegExp(`^${left - 1} `));
+  // The plan in full from the eye on its card: what they've worked, every session given. The newest is first;
+  // earlier runs leave removed ones below it.
+  await page.getByRole("link", { name: "View Details" }).click();
+  await expect(page.getByRole("heading", { name: "Worked most" })).toBeVisible();
+  await expect(page.getByText(/^Chest \d+$/)).toBeVisible();
+  await page.getByRole("button", { name: /^Today/ }).first().click();
+  await expect(sheet.getByText("Chest and Biceps")).toBeVisible();
+  await expect(sheet.getByText("Bench press 40 kg, 3 sets of 8")).toBeVisible();
+  await sheet.getByRole("button", { name: "Edit Session" }).click();
+  await sheet.getByLabel("Another part").fill("Abs");
+  await sheet.getByRole("button", { name: "Add", exact: true }).click();
+  await sheet.getByRole("button", { name: "Save Changes" }).click();
+  await expect(sheet.getByText("Chest, Biceps and Abs")).toBeVisible();
+  await sheet.getByRole("button", { name: "Remove Session" }).click();
+  await page.getByLabel("Reason").fill("Marked by mistake");
+  await sheet.getByRole("button", { name: "Remove Session" }).click();
+  await expect(page.locator(".rl-pass .rl-figure").last()).toHaveText(new RegExp(`^${left} `));
+  await expect(page.getByText(/₹/)).toHaveCount(0);
+});
+
+test("trainer writes a workout plan and gives it to a member, who sees it", async ({ page }) => {
+  const name = `Push pull ${Date.now() % 100000}`;  // a new plan each run, so giving it never repeats one
+  await signIn(page, "neha");
+  await page.goto("/workouts");
+  // The + sits under the dev server's own corner button, so follow its link rather than tapping it.
+  await expect(page.getByRole("link", { name: "New Plan" }).first()).toHaveAttribute("href", "/workouts/new");
+  await page.goto("/workouts/new");
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Title").fill("Push day");
+  await page.getByRole("checkbox", { name: "Chest" }).check();
+  await page.getByLabel("Day 1, exercise 1").fill("Bench Press");
+  await page.getByLabel("Reps").fill("8");
+  await page.getByLabel("Load").fill("40 kg");
+  await page.getByRole("button", { name: "Save Plan" }).click();
+  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+  await expect(page.getByText("3 sets × 8 reps")).toBeVisible();
+  // Give it to Aarav, one of Neha's members.
+  await page.getByRole("button", { name: "Assign to Member" }).click();
+  await page.getByLabel("Find the member").fill("Aarav");
+  await page.locator(".rl-sheet .rl-result").filter({ hasText: "Aarav Reddy" }).click();
+  await page.getByLabel("Note for them").fill("Start light");
+  await page.locator(".rl-sheet").getByRole("button", { name: "Assign Plan" }).click();
+  await expect(page.getByText(/1 member on it/)).toBeVisible();
+  // Members filtered by this plan: only Aarav, with the filter showing as a pill above the list.
+  await page.goto(`/members?workout=${page.url().split("/").pop()}`);
+  await expect(page.getByRole("button", { name: `Remove filter Workout: ${name}` })).toBeVisible();
+  await expect(page.locator("a.rl-mrow")).toHaveCount(1);
+  await expect(page.locator("a.rl-mrow")).toContainText("Aarav Reddy");
+
+  // The member's side: sign Neha out of this browser, then in as Aarav.
+  await page.evaluate(() => localStorage.clear());
+  await signIn(page, "aarav.reddy");
+  await page.getByRole("link", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("heading", { name: "Push day" })).toBeVisible();
+  await expect(page.getByText("Bench Press")).toBeVisible();
+  await expect(page.getByText("“Start light”")).toBeVisible();
+});
+
+test("trainer writes a diet plan and gives it to a member from their profile, who sees it", async ({ page }) => {
+  const name = `Lean ${Date.now() % 100000}`;
+  await signIn(page, "neha");
+  await page.goto("/diets/new");
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByLabel("Calories a day, kcal").fill("1800");
+  await page.getByLabel("Protein, g").fill("110");
+  await page.getByLabel("What's in it").first().fill("Oats with banana and milk");  // the first meal, Breakfast
+  await page.getByRole("button", { name: "Save Plan" }).click();
+  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+  await expect(page.getByText("Oats with banana and milk")).toBeVisible();
+  await expect(page.getByText("Protein 110 g")).toBeVisible();
+  // Give it from Aarav's profile this time.
+  await page.goto("/members");
+  await page.locator("a.rl-mrow").filter({ hasText: "Aarav Reddy" }).click();
+  const card = page.locator("section", { has: page.getByRole("heading", { name: "Diet plan" }) });
+  await card.getByRole("button", { name: /Assign Plan|Change Plan/ }).click();
+  const sheet = page.locator(".rl-sheet");
+  await sheet.getByLabel("Find a plan").fill(name);
+  await sheet.getByRole("radio", { name: new RegExp(name) }).check({ force: true });  // the card is the target; its radio is hidden, as in the design
+  await sheet.getByRole("button", { name: "Assign Plan" }).click();
+  await expect(card.getByText(name)).toBeVisible();
+
+  await page.evaluate(() => localStorage.clear());
+  await signIn(page, "aarav.reddy");
+  await page.getByRole("link", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("heading", { name: "Meals" })).toBeVisible();
+  await expect(page.getByText("Oats with banana and milk")).toBeVisible();
 });
 
 test("member: home shows the membership and visits", async ({ page }) => {

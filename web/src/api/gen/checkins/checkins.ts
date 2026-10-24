@@ -35,6 +35,7 @@ import type {
   CheckinsListParams,
   CheckinsSummaryRetrieveParams,
   PaginatedCheckInList,
+  PatchedCheckInTimeRequest,
   QRRequest
 } from '.././model';
 
@@ -48,8 +49,9 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 /**
  * Who came in. Only the time in is recorded — there is no check-out.
 
-The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-a mistaken check-in (audited).
+The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+only, admins any day.
  */
 export type checkinsListResponse200 = {
   data: PaginatedCheckInList
@@ -237,8 +239,9 @@ export function useCheckinsList<TData = Awaited<ReturnType<typeof checkinsList>>
 /**
  * Who came in. Only the time in is recorded — there is no check-out.
 
-The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-a mistaken check-in (audited).
+The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+only, admins any day.
  */
 export type checkinsCreateResponse201 = {
   data: CheckIn
@@ -320,8 +323,94 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     /**
  * Who came in. Only the time in is recorded — there is no check-out.
 
-The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-a mistaken check-in (audited).
+The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+only, admins any day.
+ */
+export type checkinsPartialUpdateResponse200 = {
+  data: CheckIn
+  status: 200
+}
+    
+export type checkinsPartialUpdateResponseSuccess = (checkinsPartialUpdateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type checkinsPartialUpdateResponse = (checkinsPartialUpdateResponseSuccess)
+
+export const getCheckinsPartialUpdateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/checkins/${id}/`
+}
+
+export const checkinsPartialUpdate = async (id: number,
+    patchedCheckInTimeRequest: PatchedCheckInTimeRequest, options?: RequestInit): Promise<checkinsPartialUpdateResponse> => {
+  
+  return apiFetch<checkinsPartialUpdateResponse>(getCheckinsPartialUpdateUrl(id),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      patchedCheckInTimeRequest,)
+  }
+);}
+
+
+
+
+export const getCheckinsPartialUpdateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkinsPartialUpdate>>, TError,{id: number;data: PatchedCheckInTimeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkinsPartialUpdate>>, TError,{id: number;data: PatchedCheckInTimeRequest}, TContext> => {
+
+const mutationKey = ['checkinsPartialUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkinsPartialUpdate>>, {id: number;data: PatchedCheckInTimeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  checkinsPartialUpdate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckinsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof checkinsPartialUpdate>>>
+    export type CheckinsPartialUpdateMutationBody = PatchedCheckInTimeRequest
+    export type CheckinsPartialUpdateMutationError = unknown
+
+    export const useCheckinsPartialUpdate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkinsPartialUpdate>>, TError,{id: number;data: PatchedCheckInTimeRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof checkinsPartialUpdate>>,
+        TError,
+        {id: number;data: PatchedCheckInTimeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCheckinsPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Who came in. Only the time in is recorded — there is no check-out.
+
+The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+only, admins any day.
  */
 export type checkinsDestroyResponse204 = {
   data: void

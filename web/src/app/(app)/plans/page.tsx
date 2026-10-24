@@ -126,8 +126,8 @@ function PlanSheet({ plan, onClose }: { plan: Plan | "new" | null; onClose: () =
         <Seg label="Kind" value={f.kind} onChange={(v) => setF({ ...f, kind: v })} options={[{ value: "membership", label: "Membership" }, { value: "pt", label: "Personal training" }]} />
         <Field label="Name" error={fieldError(a.error, "name")}>{(id) => <input className="rl-field__input" id={id} value={f.name} placeholder="Quarterly" onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
         <div className="rl-pair">
-          <Field label="Months" error={fieldError(a.error, "months")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.months} placeholder="3" onChange={(e) => setF({ ...f, months: e.target.value })} />}</Field>
           {f.kind === "pt" && <Field label="Sessions" error={fieldError(a.error, "sessions")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.sessions} onChange={(e) => setF({ ...f, sessions: e.target.value })} />}</Field>}
+          <Field label={f.kind === "pt" ? "Months to use them" : "Months"} error={fieldError(a.error, "months")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.months} placeholder="3" onChange={(e) => setF({ ...f, months: e.target.value })} />}</Field>
         </div>
         <p className="rl-field__hint">
           {role.month_days

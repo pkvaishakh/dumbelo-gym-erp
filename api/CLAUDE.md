@@ -16,14 +16,24 @@ apps/core/           tenancy.py (X-Gym, InGym permission, role tuples, GymViewMi
 apps/accounts/       User (email for staff, +91 phone for members), login/refresh/me
 apps/gyms/           Gym, Branch, BranchSession (named opening hours), GymRole (one role per user per gym,
                      branches M2M, is_owner), SupportAccess
-apps/members/        Plan, Offer, Member, MemberNote, Subscription, Payment, Refund; services.py (sell, take_payment, refund,
-                     void_refund); views/ (members.py, refunds.py)
-apps/attendance/     CheckIn (member XOR staff), Device; services.py (check_in: the one rule book)
+apps/members/        Plan, Offer, Member, MemberNote, Subscription, PTSession (a personal training session given), Payment,
+                     Refund; services.py (sell, take_payment, refund, void_refund, mark_session, void_session,
+                     needs_membership: Gym.pt_needs_membership); pt_serializers.py (a member's `pt`, sessions);
+                     views/ (members.py, refunds.py, pt_sessions.py: /api/pt-sessions/)
+apps/attendance/     CheckIn (member XOR staff; `?mine=true`: a staff member's own, any branch), Device; services.py (check_in: the one rule book; change_time: the
+                     desk's Change Time, same day). PATCH/DELETE /api/checkins/<id>/: receptionists today only
 apps/tasks/          Task, TaskUpdate (note | status)
+apps/workouts/       Coaching plans, one pattern for two kinds: CoachPlan + PlanAssignment (abstract) under WorkoutPlan
+                     (days as JSON: body_parts, exercises) + WorkoutAssignment and DietPlan (targets, meals as JSON) +
+                     DietAssignment (a member's current plan of each kind, one at a time); services.py (can_change,
+                     assign_plan, end_plan); views.py (CoachPlanViewSet, PlanAssignmentViewSet and their four subclasses:
+                     /api/workout-plans/, /api/diet-plans/ (staff read, trainers and admins write), /api/workout-assignments/,
+                     /api/diet-assignments/ (give, end)). A third kind is a model pair, two serializers and two subclasses
 apps/expenses/       Expense, RecurringExpense + ExpenseDue (each date a bill is due); services.py (sync_dues,
                      pay_due, skip_due, bills_due)
 apps/payroll/        SalaryRule (+ SalaryItem), Payslip (+ PayslipLine), SalaryPayment; services.py (generate,
-                     pay_for, approve, pay, salaries_owed). Paying a bill or salary writes an Expense
+                     pay_for, approve, pay, salaries_owed). Paying a bill or salary writes an Expense. Receptionists
+                     and trainers list and read their own payslips (approved, or with a payment); the rest is admins'
 apps/finance/        Account (branch cash or bank; BranchAccount: the one bank account a branch uses), MoneyMove (deposit,
                      withdrawal, transfer), DrawerClose (the desk's cash count), Reconciliation + StatementTick (bank
                      reconciliation); services.py (with_balance, set_branches, move, void, overview, statement, close_drawer,
@@ -113,8 +123,10 @@ Full rules (query patterns, pagination, filters, throttling, review order): `../
 ## Conventions
 
 - Money fields end in `_paise` and are integers. Dates the user sees are local (`clock.today(gym)`).
-- Member status is computed (`Member.status()`): active, expiring (≤7 days), due (balance > 0), frozen, expired, none.
-- A renewal starts the day after the current plan ends (`services.next_start`). Freezing moves the end date.
+- Member status is computed (`Member.status()`): active, expiring (≤7 days), due (balance > 0), frozen, expired, none,
+  from the plan that lets them in (`current_subscription`: the membership, or personal training at a gym that sells
+  it alone). `plan_of(kind)` is the member's membership or personal training now.
+- A renewal starts the day after the current plan of its kind ends (`services.next_start`). Freezing moves the end date.
 - A check-in's session is the one its time falls in; during a break it counts toward the next session.
 - Keep docstrings short and in plain words; the error and help texts are user-facing.
 - Lists of members load through `Member.objects.with_totals()` (balance, status and current plan without a query

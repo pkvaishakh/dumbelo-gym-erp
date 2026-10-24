@@ -2,6 +2,7 @@
 from datetime import timedelta
 
 from django.db import transaction
+from django.utils import timezone
 
 from apps.core import clock
 from apps.core.errors import RuleBroken
@@ -11,15 +12,28 @@ from apps.finance.services import before_change
 from apps.messages.notify import after_commit
 from apps.messages.tasks import send_payment_receipt
 
-from .models import Member, Payment, Refund, Subscription, sold_at
+from apps.gyms.models import GymRole
+
+from .models import Member, Payment, Plan, PTSession, Refund, Subscription, sold_at
 
 
-def next_start(member: Member, today):
-    """A renewal starts the day after the current plan ends, or today if it has already ended."""
-    last = member.subscriptions.filter(cancelled=False).order_by("-ends").first()
+def next_start(member: Member, today, kind=Plan.MEMBERSHIP):
+    """A renewal starts the day after the current plan of its kind ends, or today if it has already ended."""
+    last = member.subscriptions.filter(cancelled=False, plan__kind=kind).order_by("-ends").first()
     if last and last.ends >= today:
         return last.ends + timedelta(days=1)
     return today
+
+
+def membership_on(member: Member, day) -> bool:
+    return member.subscriptions.filter(cancelled=False, plan__kind=Plan.MEMBERSHIP, starts__lte=day, ends__gte=day).exists()
+
+
+def needs_membership(member: Member, plan: Plan, starts):
+    """At a gym that sells personal training only on top of a membership, it starts on a day a membership covers."""
+    if plan.kind == Plan.PT and member.gym.pt_needs_membership and not membership_on(member, starts):
+        raise RuleBroken("membership_needed", f"{member.name} has no membership on {_day(starts)}. Sell them a membership first, "
+                                              "or start personal training on a day their membership covers.")
 
 
 def no_overlap(member, kind, starts, ends, exclude=None):
@@ -31,11 +45,13 @@ def no_overlap(member, kind, starts, ends, exclude=None):
 
 
 def _day(d):
-    return f"{d.day} {d:%b}"
+    return clock.date_label(d)
 
 
 @transaction.atomic
-def sell(member, plan, by, offer=None, starts=None, ends=None):
+def sell(member, plan, by, offer=None, starts=None, ends=None, trainer=None):
+    """A plan sold to a member. Personal training takes its sessions from the plan and its trainer from `trainer`
+    (who becomes the member's trainer) or the member's own."""
     today = clock.today(member.gym)
     if plan.gym_id != member.gym_id or not plan.on_sale:
         raise RuleBroken("plan_not_on_sale", f"{plan.name} isn't on sale")
@@ -45,11 +61,17 @@ def sell(member, plan, by, offer=None, starts=None, ends=None):
     if offer is not None:
         if offer.gym_id != member.gym_id or not offer.applies_to(plan, today, branch):
             raise RuleBroken("offer_not_valid", f"{offer.name} doesn't apply to {plan.name} today")
-    starts = starts or next_start(member, today)
+    starts = starts or next_start(member, today, plan.kind)
     ends = ends or clock.plan_end(starts, plan.months, member.gym.month_days)
     if ends < starts:
         raise RuleBroken("dates_invalid", "Pick an end date on or after the start date")
     no_overlap(member, plan.kind, starts, ends)
+    needs_membership(member, plan, starts)
+    pt = plan.kind == Plan.PT
+    trainer = (trainer or member.trainer) if pt else None
+    if pt and trainer is not None and member.trainer_id != trainer.id:
+        member.trainer = trainer
+        member.save(update_fields=["trainer", "updated_at"])
     discount = offer.discount_on(plan.price_paise) if offer else 0
     return Subscription.objects.create(
         member=member,
@@ -60,6 +82,8 @@ def sell(member, plan, by, offer=None, starts=None, ends=None):
         offer=offer,
         price_paise=plan.price_paise - discount,
         sold_by=by,
+        sessions=plan.sessions if pt else 0,
+        trainer=trainer,
     )
 
 
@@ -73,7 +97,8 @@ def correct(sub: Subscription, changes: dict) -> dict:
     sub = Subscription.objects.select_for_update(of=("self",)).select_related("plan", "offer").get(pk=sub.pk)
     if sub.cancelled:
         raise RuleBroken("cancelled", "This plan is cancelled")
-    before = {"plan": sub.plan_id, "offer": sub.offer_id, "starts": str(sub.starts), "ends": str(sub.ends), "price_paise": sub.price_paise}
+    before = {"plan": sub.plan_id, "offer": sub.offer_id, "starts": str(sub.starts), "ends": str(sub.ends), "price_paise": sub.price_paise,
+              "sessions": sub.sessions}
     today, branch = clock.today(member.gym), member.home_branch
 
     plan = changes.get("plan", sub.plan)
@@ -113,12 +138,21 @@ def correct(sub: Subscription, changes: dict) -> dict:
         if ends < starts:
             raise RuleBroken("dates_invalid", "Pick an end date on or after the start date")
         no_overlap(member, plan.kind, starts, ends, exclude=sub.pk)
+    if new_plan or starts != sub.starts:
+        needs_membership(member, plan, starts)
 
-    after = {"plan": plan.pk, "offer": offer.pk if offer else None, "starts": str(starts), "ends": str(ends), "price_paise": price}
+    sessions = (plan.sessions if plan.kind == Plan.PT else 0) if new_plan else sub.sessions
+    used = sub.sessions_used()
+    if sessions < used:
+        raise RuleBroken("sessions_below_used", f"{used} sessions have been given on this plan. Pick a plan with that many or more.")
+    trainer = (sub.trainer or member.trainer) if plan.kind == Plan.PT else None
+
+    after = {"plan": plan.pk, "offer": offer.pk if offer else None, "starts": str(starts), "ends": str(ends), "price_paise": price, "sessions": sessions}
     if after == before:
         raise RuleBroken("nothing_changed", "Nothing was changed")
     sub.plan, sub.offer, sub.list_price_paise, sub.price_paise, sub.starts, sub.ends = plan, offer, list_price, price, starts, ends
-    sub.save(update_fields=["plan", "offer", "list_price_paise", "price_paise", "starts", "ends", "updated_at"])
+    sub.sessions, sub.trainer = sessions, trainer
+    sub.save(update_fields=["plan", "offer", "list_price_paise", "price_paise", "starts", "ends", "sessions", "trainer", "updated_at"])
     return before
 
 
@@ -228,6 +262,61 @@ def void_refund(r: Refund, reason: str) -> Refund:
     r.voided, r.void_reason = True, reason
     r.save(update_fields=["voided", "void_reason", "updated_at"])
     return r
+
+
+@transaction.atomic
+def mark_session(sub: Subscription, by, on=None, body_parts=(), notes="") -> PTSession:
+    """A personal training session given on `on` (today when left out): it uses one of the plan's sessions. One a
+    day for each plan. At a gym where personal training needs a membership, that day needs one too."""
+    member = sub.member
+    Member.objects.select_for_update().filter(pk=member.pk).first()  # two taps at once count once
+    sub = Subscription.objects.select_related("plan").with_used().get(pk=sub.pk)
+    today = clock.today(member.gym)
+    on = on or today
+    if sub.cancelled or sub.plan.kind != Plan.PT:
+        raise RuleBroken("not_pt", "Sessions are marked on personal training plans")
+    if on > today:
+        raise RuleBroken("day_in_future", "Pick a day that has already come")
+    if not sub.starts <= on <= sub.ends:
+        raise RuleBroken("outside_plan", f"{sub.plan.name} runs {_day(sub.starts)} to {_day(sub.ends)}. Pick a day inside it.")
+    if sub.is_frozen(on):
+        raise RuleBroken("frozen", "This plan is frozen on that day. Unfreeze it first.")
+    if sub.sessions_left() == 0:
+        raise RuleBroken("no_sessions_left", f"All {sub.sessions} sessions are used. Sell a new plan for more.")
+    if member.gym.pt_needs_membership and not membership_on(member, on):
+        raise RuleBroken("membership_needed", f"{member.name} has no membership on {_day(on)}. Renew it before the next session.")
+    if sub.pt_sessions.filter(local_date=on, voided=False).exists():
+        raise RuleBroken("session_already_marked", f"{member.name}'s session on {_day(on)} is already marked")
+    trainer = by if by.role == GymRole.TRAINER else sub.trainer
+    return PTSession.objects.create(gym=member.gym, subscription=sub, member=member, trainer=trainer, local_date=on, marked_by=by,
+                                     body_parts=list(body_parts), notes=notes.strip())
+
+
+@transaction.atomic
+def note_session(s: PTSession, body_parts=None, notes=None) -> PTSession:
+    """Change what a session worked and its notes; whatever is left out stays. A removed session stays as it was."""
+    s = PTSession.objects.select_for_update().get(pk=s.pk)
+    if s.voided:
+        raise RuleBroken("voided", "This session is removed. Mark it again to add what they worked.")
+    if body_parts is not None:
+        s.body_parts = list(body_parts)
+    if notes is not None:
+        s.notes = notes.strip()
+    s.save(update_fields=["body_parts", "notes", "updated_at"])
+    return s
+
+
+@transaction.atomic
+def void_session(s: PTSession, reason: str, by) -> PTSession:
+    """A session marked by mistake: the plan gets it back. Admins remove any; others only one they marked today."""
+    s = PTSession.objects.select_for_update().select_related("gym").get(pk=s.pk)
+    if s.voided:
+        raise RuleBroken("voided", "This session is already removed")
+    if by.role != GymRole.ADMIN and (s.marked_by_id != by.id or clock.local(s.gym, s.marked_at).date() != clock.today(s.gym)):
+        raise RuleBroken("not_yours", "You can remove a session you marked today. Ask an admin to remove this one.")
+    s.voided, s.void_reason, s.voided_by, s.voided_at = True, reason, by, timezone.now()
+    s.save(update_fields=["voided", "void_reason", "voided_by", "voided_at", "updated_at"])
+    return s
 
 
 def next_code(gym):

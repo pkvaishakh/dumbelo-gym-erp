@@ -19,6 +19,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // An app, not a web page: no pinch or double-tap zoom (Providers blocks the pinch iOS allows anyway). Text is 16 px
+  // and up. The landing page lets people zoom again.
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: "#f3f5ef",

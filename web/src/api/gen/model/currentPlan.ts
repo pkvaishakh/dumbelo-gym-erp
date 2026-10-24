@@ -5,10 +5,15 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { PlanKindEnum } from './planKindEnum';
 
+/**
+ * The plan that lets the member in: their membership, or personal training at a gym that sells it alone.
+ */
 export interface CurrentPlan {
   id: number;
   name: string;
+  kind: PlanKindEnum;
   starts: string;
   ends: string;
   /** @nullable */

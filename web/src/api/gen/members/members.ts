@@ -34,11 +34,13 @@ import type {
   Member,
   MemberRequest,
   MembersListParams,
+  MembersTodayRetrieveParams,
   Note,
   NoteRequest,
   PaginatedMemberList,
   PatchedMemberRequest,
-  SetLoginRequest
+  SetLoginRequest,
+  TrainerToday
 } from '.././model';
 
 import { apiFetch } from '../../../lib/api';
@@ -944,4 +946,120 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * A trainer's day: their own check-in, their members by status and who of them came in today, and their
+personal training with the sessions left and whether today's is marked.
+ */
+export type membersTodayRetrieveResponse200 = {
+  data: TrainerToday
+  status: 200
+}
     
+export type membersTodayRetrieveResponseSuccess = (membersTodayRetrieveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type membersTodayRetrieveResponse = (membersTodayRetrieveResponseSuccess)
+
+export const getMembersTodayRetrieveUrl = (params?: MembersTodayRetrieveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/members/today/?${stringifiedParams}` : `/api/members/today/`
+}
+
+export const membersTodayRetrieve = async (params?: MembersTodayRetrieveParams, options?: RequestInit): Promise<membersTodayRetrieveResponse> => {
+  
+  return apiFetch<membersTodayRetrieveResponse>(getMembersTodayRetrieveUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getMembersTodayRetrieveQueryKey = (params?: MembersTodayRetrieveParams,) => {
+    return [
+    `/api/members/today/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getMembersTodayRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof membersTodayRetrieve>>, TError = unknown>(params?: MembersTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersTodayRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMembersTodayRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof membersTodayRetrieve>>> = ({ signal }) => membersTodayRetrieve(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof membersTodayRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MembersTodayRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof membersTodayRetrieve>>>
+export type MembersTodayRetrieveQueryError = unknown
+
+
+export function useMembersTodayRetrieve<TData = Awaited<ReturnType<typeof membersTodayRetrieve>>, TError = unknown>(
+ params: undefined |  MembersTodayRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersTodayRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof membersTodayRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof membersTodayRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMembersTodayRetrieve<TData = Awaited<ReturnType<typeof membersTodayRetrieve>>, TError = unknown>(
+ params?: MembersTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersTodayRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof membersTodayRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof membersTodayRetrieve>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMembersTodayRetrieve<TData = Awaited<ReturnType<typeof membersTodayRetrieve>>, TError = unknown>(
+ params?: MembersTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersTodayRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMembersTodayRetrieve<TData = Awaited<ReturnType<typeof membersTodayRetrieve>>, TError = unknown>(
+ params?: MembersTodayRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof membersTodayRetrieve>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMembersTodayRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

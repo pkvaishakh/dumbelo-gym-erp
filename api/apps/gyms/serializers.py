@@ -86,14 +86,14 @@ class BranchSerializer(serializers.ModelSerializer):
 
 
 class GymSettingsSerializer(serializers.ModelSerializer):
-    """The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
-    set. Its message switches are /api/gym/messages/."""
+    """The gym as Dumbelo set it up (name, slug, time zone), and what its admins set: how long its plans' months
+    run, and whether personal training needs a membership. Its message switches are /api/gym/messages/."""
 
     MAX_MONTH_DAYS = 60
 
     class Meta:
         model = Gym
-        fields = ["name", "slug", "timezone", "month_days"]
+        fields = ["name", "slug", "timezone", "month_days", "pt_needs_membership"]
         read_only_fields = ["name", "slug", "timezone"]
 
     def validate_month_days(self, n):
