@@ -23,17 +23,17 @@ cd api; .venv\Scripts\activate; python manage.py runserver      # http://localho
 cd web; npm run dev                                              # http://localhost:3000
 ```
 First time: see README.md (venv, `pip install -r requirements-dev.txt`, `migrate`, `seed_demo`, `npm install`).
-Demo logins, password `dumbelo-demo`: meera@ (admin), arjun@ / kavya@ (receptionists), neha@ (trainer)
-`@dumbelo.demo`, member `9800000001`, Dumbelo admin (the Console) dumbelo@. `python manage.py seed_demo --reset` rebuilds the demo gym.
+Demo logins (usernames), password `dumbelo-demo`: meera (admin), arjun / kavya (receptionists), neha (trainer),
+member aarav.reddy, Dumbelo admin (the Console) dumbelo.admin. `python manage.py seed_demo --reset` rebuilds the demo gym.
 
 ## The four roles (one role per person per gym; full rules in `docs/decisions.md`)
 
 | Role | Can | Can't |
 |---|---|---|
 | Admin | Everything in every branch: plans, offers, staff, branches, reports, expenses, recurring bills, payroll, cash and bank, correct/void payments, refunds, settle cash counts, reconcile, tasks | Remove the account owner |
-| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, payments and expenses one day at a time (and add expenses), their branches' cash in hand (read-only) and counting it at close, their tasks | Revenue totals, reports, staff data, the bank, expenses over longer spans, edit expenses, make offers, correct/void, refunds, move money, settle a count |
-| Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in | See any amount |
-| Member | Their own membership and visits, self check-in by wall QR | See anyone else |
+| Receptionist | In their branches: add members, sell plans, record payments, apply fixed offers, check people in, payments and expenses one day at a time (and add expenses), their branches' cash in hand (read-only) and counting it at close, their tasks, their own salary and check-ins | Revenue totals, reports, staff data, the bank, expenses over longer spans, edit expenses, make offers, correct/void, refunds, move money, settle a count |
+| Trainer | Their own members' status and phone, "payment due" (no amount), their tasks, check in, their own salary and check-ins | See any amount but their own pay |
+| Member | Their own membership, plans, payments and visits, self check-in by wall QR | See anyone else |
 
 Dumbelo support: read-only, only while an admin-granted window is open, and logged.
 Dumbelo admins (`is_superuser`): the Console (`/console`, `/api/platform/`): gyms, their admins, prices, Dumbelo
@@ -66,6 +66,9 @@ The venv is already on `PATH`. To run the app: `cd api && python manage.py runse
 
 ## Rules that hold everywhere
 
+- **Logins**: one per person across every gym, signed in by username. Email and phone are contact details
+  that several logins may share: never find or link a login by them. A gym changes a login only while it is that
+  gym's alone (`accounts.services.shared_beyond`).
 - **Tenancy**: every request inside a gym carries `X-Gym: <slug>`. Every gym-owned query filters by the gym, and
   by the caller's branches where branches matter. A gym you have no role in answers 404, never 403.
 - **Roles are enforced by the API.** The web hides what a role can't use, but security lives in `roles = {...}`

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.members",
     "apps.attendance",
     "apps.tasks",
+    "apps.workouts",
     "apps.expenses",
     "apps.payroll",
     "apps.finance",
@@ -98,7 +99,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CACHES = {"default": env.cache("CACHE_URL", default="locmemcache://")}
 
 AUTH_USER_MODEL = "accounts.User"
-AUTHENTICATION_BACKENDS = ["apps.accounts.backends.EmailOrPhoneBackend"]
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.UsernameBackend"]
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
@@ -133,6 +134,7 @@ REST_FRAMEWORK = {
         "qr": env("THROTTLE_QR", default="20/min"),
         "device": env("THROTTLE_DEVICE", default="600/min"),
         "lead": env("THROTTLE_LEAD", default="10/hour"),  # the landing page's demo form, per address
+        "username": env("THROTTLE_USERNAME", default="60/min"),  # the username check, per signed-in person
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.core.errors.exception_handler",
@@ -160,6 +162,7 @@ SPECTACULAR_SETTINGS = {
         "ServerStateEnum": "apps.platform.server.STATES",
         "JobRunStateEnum": "apps.platform.serializers.JobRunSerializer.STATES",
         "JobTriggerEnum": "apps.core.models.JobRun.TRIGGERS",
+        "PlanKindEnum": "apps.members.models.Plan.KINDS",
         "SalaryItemKindEnum": "apps.payroll.models.SalaryItem.KINDS",
         "PayslipLineKindEnum": "apps.payroll.models.PayslipLine.KINDS",
         "PayslipStatusEnum": "apps.payroll.models.Payslip.STATUSES",

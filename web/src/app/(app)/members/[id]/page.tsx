@@ -1,7 +1,7 @@
 "use client";
 import {
-  BellRing, CalendarCheck, CalendarClock, CalendarCog, ChevronRight, CircleCheck, Dumbbell, HandHeart, IdCard, IndianRupee, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, PartyPopper, Pause, Pencil,
-  PenLine, Phone, Play, ReceiptText, Snowflake, StickyNote, Target, Trash2, Undo2, UserRound,
+  BellRing, CalendarCheck, CalendarClock, ChevronRight, CircleCheck, Dumbbell, HandHeart, IdCard, IndianRupee, KeyRound, Mail, MapPin, MessageCircle, MoreHorizontal, PartyPopper, Pause, Pencil,
+  PenLine, Phone, Play, ReceiptText, Snowflake, StickyNote, Target, Trash2, Undo2,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -10,19 +10,23 @@ import { useState } from "react";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useMembersRetrieve } from "@/api/gen/members/members";
 import { useMessagesList } from "@/api/gen/messages/messages";
-import type { CurrentPlan, Member, Note, Payment, Subscription } from "@/api/gen/model";
+import type { CurrentPlan, LoginSet, Member, Note, Payment, Subscription } from "@/api/gen/model";
 import { usePaymentsList } from "@/api/gen/payments/payments";
 import { useStaffList } from "@/api/gen/staff/staff";
 import { useSubscriptionsList, useSubscriptionsRetrieve } from "@/api/gen/subscriptions/subscriptions";
 import { DetailBar } from "@/components/shell";
-import { Details, ErrorText, Field, Icon, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
+import { Bar, Details, ErrorText, Field, Icon, ManageButton, PassActions, Photo, Section, Setting, Sheet, SkeletonRows, Status } from "@/components/ui";
 import { CheckInResult, useCheckIn } from "@/features/checkin";
 import { EditMembershipSheet } from "@/features/plan-correct";
+import { PTCard } from "@/features/pt";
+import { PlanCard } from "@/features/coach-plans";
 import { METHODS } from "@/features/sell";
-import { RefundRows, RefundSheet } from "@/features/refunds";
-import { day, daysLeft, gymToday, isoDate, phone, rupees } from "@/lib/format";
-import { useAction, useGet } from "@/lib/hooks";
-import { type Chat, type ChatFacts, type ChatKind, memberChats, membershipChat, nextPlanChat, receiptChat, whatsappLink } from "@/lib/member-chat";
+import { owedOn, PlanMoney } from "@/features/plan-money";
+import { RefundSheet } from "@/features/refunds";
+import { cleanUsername, ExistingLoginField, type LoginKind, LoginKindChips, UsernameField } from "@/features/username";
+import { day, daysLeft, gymToday, isoDate, phone, planDays, rupees } from "@/lib/format";
+import { fieldError, useAction, useGet } from "@/lib/hooks";
+import { type Chat, type ChatFacts, type ChatKind, memberChats, membershipChat, nextPlanChat, whatsappLink } from "@/lib/member-chat";
 import { useSession } from "@/lib/session";
 import type { TrainerMember } from "@/lib/types";
 
@@ -33,21 +37,23 @@ export default function MemberProfile() {
   const desk = role.role === "admin" || role.role === "receptionist";
   const q = useMembersRetrieve(mid);
   const m = q.data?.data as (Member & Partial<TrainerMember>) | undefined;
-  // The latest few payments, newest first; See All opens the rest on Payments, filtered to this member.
+  // The latest few payments, newest first: WhatsApp's receipt is for the last one that stands, and Refund Money needs one.
+  // Every payment is on Payments (Member actions), filtered to this member.
   const paysQ = usePaymentsList({ member: mid, limit: RECENT }, { query: { enabled: desk } });
   const pays = paysQ.data?.data.results ?? [];
-  const payCount = paysQ.data?.data.count ?? 0;
   // The current plan's price, offer and what's been paid toward it, for the membership card (desk only: amounts).
   const planId = (q.data?.data as Member | undefined)?.plan?.id;
+  const ptId = q.data?.data.pt?.id;
   const subQ = useSubscriptionsRetrieve(planId ?? 0, { query: { enabled: desk && !!planId } });
   // Renewals already sold, waiting for the current plan to end: the newest plans come first, so a few cover them.
   const subsQ = useSubscriptionsList({ member: mid, limit: 5 }, { query: { enabled: desk } });
   const gymDay = gymToday(role.timezone);
-  const queued = (subsQ.data?.data.results ?? []).filter((s) => !s.cancelled && s.id !== planId && (s.starts ?? "") > gymDay).reverse();
-  const visits = useCheckinsList({ member: mid, limit: RECENT });
+  const queued = (subsQ.data?.data.results ?? []).filter((s) => !s.cancelled && s.id !== planId && s.id !== ptId && (s.starts ?? "") > gymDay).reverse();
+  // The last visit: whether they're in today, and for WhatsApp. Every visit is on Visits (Member actions).
+  const visits = useCheckinsList({ member: mid, limit: 1 });
   const notes = useGet<Note[]>(`/api/members/${mid}/notes/`, undefined, role.role !== "member");
   const { checkIn, outcome, busy, close } = useCheckIn();
-  const [sheet, setSheet] = useState<null | "more" | "whatsapp" | { chat: Chat } | "note" | "freeze" | "login" | "edit" | "archive" | "refund" | { void: Payment } | { plan: Subscription }>(null);
+  const [sheet, setSheet] = useState<null | "more" | "whatsapp" | { chat: Chat } | "note" | "freeze" | "login" | "edit" | "archive" | "refund" | { plan: Subscription }>(null);
   const today = isoDate(new Date());
   const inToday = visits.data?.data.results.find((c) => c.local_date === today);
 
@@ -55,21 +61,26 @@ export default function MemberProfile() {
   if (!m) return <div className="rl-app rl-root"><DetailBar title="Member" /><main className="rl-app__main"><SkeletonRows n={4} /></main></div>;
 
   const plan = m.plan as (Partial<CurrentPlan> & { name: string; starts: string; ends: string }) | null | undefined;
-  const ends = plan?.ends ?? m.plan_ends ?? null;
-  const current = desk && plan?.id ? (plan as CurrentPlan) : null;  // the plan the desk can freeze or unfreeze
+  // The plan that lets them in is personal training only at a gym that sells it alone: then there's no membership to show.
+  const ptLetsIn = plan?.kind === "pt";
+  const membership = ptLetsIn ? null : plan;
+  const ends = plan ? membership?.ends ?? null : m.plan_ends ?? null;
+  const current = desk && membership?.id ? (membership as CurrentPlan) : null;  // the plan the desk can freeze or unfreeze
+  const days = membership?.starts && ends ? planDays(membership.starts, ends, gymDay) : null;  // trainers aren't sent the start
   const balance = m.balance_paise ?? 0;
-  const sub = subQ.data?.data;
+  const sub = ptLetsIn ? undefined : subQ.data?.data;
+  const ptSub = ptLetsIn ? subQ.data?.data : (subsQ.data?.data.results ?? []).find((s) => s.id === ptId);
   const digits = m.phone.replace(/\D/g, "").slice(-10);
   // What the WhatsApp messages are filled in from: a payment as a receipt reads it, a queued plan as booked.
   const paid = (p: Payment) => ({
     amount_paise: p.amount_paise, method: METHODS.find((x) => x.value === p.method)?.title ?? p.method, on: p.taken_at,
-    plan: plan && p.subscription === plan.id ? plan.name : queued.find((s) => s.id === p.subscription)?.plan_name,
+    plan: plan && p.subscription === plan.id ? plan.name : m.pt && p.subscription === m.pt.id ? m.pt.name : queued.find((s) => s.id === p.subscription)?.plan_name,
   });
   const booked = (s: Subscription) => ({ name: s.plan_name, starts: s.starts!, ends: s.ends!, price_paise: s.price_paise, paid_paise: s.paid_paise });
   const lastPay = pays.find((p) => !p.voided);
   const facts: ChatFacts = {
     name: m.name, code: m.code, gym: role.gym_name, today: gymDay,
-    plan: plan ? { name: plan.name, starts: plan.starts, ends: plan.ends, frozen_from: plan.frozen_from, frozen_until: plan.frozen_until } : null,
+    plan: membership ? { name: membership.name, starts: membership.starts, ends: membership.ends, frozen_from: membership.frozen_from, frozen_until: membership.frozen_until } : null,
     due: desk ? balance : null, paymentDue: !!m.payment_due, sub: desk ? sub : null, hasLogin: m.has_login,
     lastPayment: desk && lastPay ? paid(lastPay) : null, upcoming: queued.map(booked),
     lastVisit: visits.data?.data.results[0]?.local_date ?? null,
@@ -78,11 +89,11 @@ export default function MemberProfile() {
   const cardChat = membershipChat(chats);
   const startChat = typeof sheet === "object" && sheet && "chat" in sheet ? sheet.chat : null;
   // The balance covers every plan: what's left once the current and booked plans' own dues are taken out is from before.
-  const earlier = Math.max(0, balance - (sub ? owedOn(sub) : 0) - queued.reduce((t, s) => t + owedOn(s), 0));
+  const earlier = Math.max(0, balance - (sub ? owedOn(sub) : 0) - (ptSub ? owedOn(ptSub) : 0) - queued.reduce((t, s) => t + owedOn(s), 0));
 
   return (
     <div className="rl-app rl-root">
-      <DetailBar title="Member" action={desk ? <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="More actions" aria-haspopup="dialog" onClick={() => setSheet("more")}><Icon as={MoreHorizontal} /></button> : undefined} />
+      <DetailBar title="Member" action={role.role !== "member" ? <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="More actions" aria-haspopup="dialog" onClick={() => setSheet("more")}><Icon as={MoreHorizontal} /></button> : undefined} />
       <main className="rl-app__main">
         <div className="rl-identity">
           <Photo name={m.name} size="xl" />
@@ -115,11 +126,12 @@ export default function MemberProfile() {
         <div className="rl-app__cols">
           <div className="rl-app__col">
             <Section title="Membership">
-              {plan || ends ? (
+              {membership || ends ? (
                 <div className={`rl-pass${m.status === "expired" ? " rl-pass--expired" : m.status === "expiring" ? " rl-pass--renew" : ""}`}>
-                  <div className="rl-pass__top"><Status status={m.status} /><span className="rl-pass__plan">{plan?.name ?? "Membership"}</span></div>
+                  <div className="rl-pass__top"><Status status={m.status} /><span className="rl-pass__plan">{membership?.name ?? "Membership"}</span></div>
                   {ends && <p className="rl-figure">{Math.max(0, daysLeft(ends) + 1)} <small>{m.status === "expired" ? "days left" : "days remaining"}</small></p>}
-                  <div className="rl-pass__dates"><span>{plan?.starts ? day(plan.starts) : ""}</span><span>{m.status === "expired" ? "Expired" : "Expires"} {ends ? day(ends) : ""}</span></div>
+                  {days && <Bar used={days.used} total={days.total} label={`${days.used} of ${days.total} days used`} />}
+                  <div className="rl-pass__dates"><span>{membership?.starts ? day(membership.starts) : ""}</span><span>{m.status === "expired" ? "Expired" : "Expires"} {ends ? day(ends) : ""}</span></div>
                   {desk && (sub || earlier > 0) && (
                     <div className="rl-sub">
                       {sub && <PlanMoney sub={sub} />}
@@ -128,16 +140,28 @@ export default function MemberProfile() {
                   )}
                   {!desk && m.payment_due && <div className="rl-sub"><span><strong>Payment due.</strong> The front desk will collect it.</span></div>}
                   {current?.frozen_from && <div className="rl-sub"><span><strong>Frozen</strong> {day(current.frozen_from)} to {current.frozen_until ? day(current.frozen_until) : "further notice"}</span></div>}
-                  {cardChat && (
-                    <div style={{ marginTop: "var(--space-3)" }}>
-                      <button className="rl-button rl-button--secondary rl-button--sm" type="button" aria-haspopup="dialog" onClick={() => setSheet({ chat: cardChat })}>
-                        <Icon as={MessageCircle} size="sm" />Send {cardChat.title}
+                  <PassActions>
+                    {cardChat && (
+                      <button className="rl-button rl-button--soft rl-button--sm" type="button" aria-haspopup="dialog" aria-label={`Send ${cardChat.title} on WhatsApp`} onClick={() => setSheet({ chat: cardChat })}>
+                        <Icon as={MessageCircle} size="sm" />WhatsApp
                       </button>
-                    </div>
-                  )}
+                    )}
+                    {role.role === "admin" && sub && !sub.cancelled && <ManageButton label={`Manage ${sub.plan_name}`} onClick={() => setSheet({ plan: sub })} />}
+                  </PassActions>
                 </div>
-              ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No plan yet.</p></div>}
+              ) : (
+                <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>
+                  {ptLetsIn ? "No membership. Personal training lets them in." : m.pt ? "No membership." : "No plan yet."}
+                  {m.pt && !ptLetsIn && role.pt_needs_membership ? " They need one to check in." : ""}
+                </p></div>
+              )}
             </Section>
+            {m.pt && (
+              <PTCard member={m.id} pt={m.pt} money={desk && ptSub ? <PlanMoney sub={ptSub} /> : undefined} onWhatsApp={() => setSheet("whatsapp")}
+                onManage={role.role === "admin" && ptSub ? () => setSheet({ plan: ptSub }) : undefined} />
+            )}
+            <PlanCard kind="workout" member={m.id} name={m.name} />
+            <PlanCard kind="diet" member={m.id} name={m.name} />
             {queued.length > 0 && (
               <Section title="Up next">
                 <div style={{ display: "grid", gap: "var(--space-3)" }}>
@@ -148,25 +172,23 @@ export default function MemberProfile() {
                         <div className="rl-pass__top">
                           <span className="rl-tag rl-tag--next">{inDays <= 0 ? "Starts today" : inDays === 1 ? "Starts tomorrow" : `Starts in ${inDays} days`}</span>
                           <span className="rl-pass__plan">{s.plan_name}</span>
-                          {role.role === "admin" && (
-                            <button className="rl-pass__link" type="button" aria-haspopup="dialog" aria-label={`Manage ${s.plan_name}`} style={LINK_RESET} onClick={() => setSheet({ plan: s })}>
-                              Manage<ChevronRight className="rl-icon rl-icon--xs" strokeWidth={1.75} aria-hidden />
-                            </button>
-                          )}
                         </div>
                         <div className="rl-pass__dates"><span>{day(s.starts!)}</span><span>Ends {day(s.ends!)}</span></div>
                         <div className="rl-sub"><PlanMoney sub={s} /></div>
-                        <div style={{ marginTop: "var(--space-3)" }}>
-                          <button className="rl-button rl-button--secondary rl-button--sm" type="button" aria-haspopup="dialog" onClick={() => setSheet({ chat: nextPlanChat(facts, [booked(s)]) })}>
-                            <Icon as={MessageCircle} size="sm" />Send on WhatsApp
+                        <PassActions>
+                          <button className="rl-button rl-button--soft rl-button--sm" type="button" aria-haspopup="dialog" aria-label={`Send ${s.plan_name} on WhatsApp`} onClick={() => setSheet({ chat: nextPlanChat(facts, [booked(s)]) })}>
+                            <Icon as={MessageCircle} size="sm" />WhatsApp
                           </button>
-                        </div>
+                          {role.role === "admin" && <ManageButton label={`Manage ${s.plan_name}`} onClick={() => setSheet({ plan: s })} />}
+                        </PassActions>
                       </div>
                     );
                   })}
                 </div>
               </Section>
             )}
+          </div>
+          <div className="rl-app__col">
             <Section title="Details">
               <Details rows={[
                 { icon: Phone, label: "Mobile number", value: phone(m.phone) },
@@ -174,47 +196,8 @@ export default function MemberProfile() {
                 { icon: MapPin, label: "Home branch", value: typeof m.home_branch === "string" ? m.home_branch : role.branches.find((b) => b.id === m.home_branch)?.name },
                 ...(desk ? [{ icon: Dumbbell, label: "Trainer", value: m.trainer_name ?? "Not set" }] : []),
                 { icon: Target, label: "Goal", value: m.goal || "Not set" },
-                ...(desk ? [{ icon: CalendarCheck, label: "Joined", value: m.joined_on ? day(m.joined_on) : "" }, { icon: KeyRound, label: "App login", value: m.has_login ? "Set. Signs in with their mobile number" : "Not set" }] : []),
+                ...(desk ? [{ icon: CalendarCheck, label: "Joined", value: m.joined_on ? day(m.joined_on) : "" }, { icon: KeyRound, label: "App login", value: m.has_login ? `Signs in as @${m.username}` : "Not set" }] : []),
               ].filter((r) => r.value !== undefined)} />
-            </Section>
-          </div>
-          <div className="rl-app__col">
-            {desk && (
-              <Section title="Payments" aside={payCount > 0 ? (
-                <Link className="rl-link rl-link--plain" href={`/collection?member=${mid}`}><span>See All</span></Link>
-              ) : undefined}>
-                {paysQ.isLoading ? <SkeletonRows n={2} /> : pays.length ? (
-                  <><ul className="rl-card rl-mlist rl-mlist--compact">
-                    {pays.map((p, i) => (
-                      <WhatsAppRow key={p.id} first={i === 0} label={`WhatsApp ${m.name} a receipt for ${rupees(p.amount_paise)}`}
-                        onSend={p.voided ? undefined : () => setSheet({ chat: receiptChat(facts, paid(p)) })}>
-                        <button className="rl-mrow" type="button" style={{ borderTop: 0 }} disabled={role.role !== "admin" || p.voided} onClick={() => setSheet({ void: p })}>
-                          <span className="rl-chipicon" aria-hidden="true"><Icon as={UserRound} size="sm" /></span>
-                          <span className="rl-row__title rl-mrow__name" style={p.voided ? { textDecoration: "line-through" } : undefined}>{rupees(p.amount_paise)} by {p.method.toUpperCase()}</span>
-                          <span className="rl-row__meta rl-mrow__meta">{day(p.taken_at)} • {p.taken_by_name}{p.voided ? ` • Voided: ${p.void_reason}` : ""}</span>
-                        </button>
-                      </WhatsAppRow>
-                    ))}
-                  </ul></>
-                ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No payments yet.</p></div>}
-                <RefundRows member={mid} admin={role.role === "admin"} />
-              </Section>
-            )}
-            <Section title="Recent visits" aside={role.role !== "member" && visits.data?.data.count ? (
-              <Link className="rl-link rl-link--plain" href={`/visits?member=${mid}`}><span>See All</span></Link>
-            ) : undefined}>
-              {visits.data?.data.results.length ? (
-                <ul className="rl-card rl-mlist rl-mlist--compact">
-                  {visits.data.data.results.map((c) => (
-                    <li key={c.id}><div className="rl-mrow">
-                      <span className="rl-chipicon" aria-hidden="true"><Icon as={CalendarCheck} size="sm" /></span>
-                      <span className="rl-row__title rl-mrow__name">{c.local_date === today ? "Today" : day(c.local_date)}</span>
-                      <span className="rl-row__meta rl-mrow__meta">{c.branch_name}{c.session ? ` • ${c.session}` : ""}</span>
-                      <span className="rl-mrow__time">{c.time}</span>
-                    </div></li>
-                  ))}
-                </ul>
-              ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>No visits yet.</p></div>}
             </Section>
             {desk && <RemindersCard member={m} />}
             {role.role !== "member" && (
@@ -233,13 +216,18 @@ export default function MemberProfile() {
       <CheckInResult outcome={outcome} onClose={close} />
       <Sheet open={sheet === "more"} onClose={() => setSheet(null)} title="Member actions">
         <ul className="rl-sheet__list">
-          <SheetItem icon={Pencil} label="Edit Details" onClick={() => setSheet("edit")} />
-          <SheetItem icon={StickyNote} label="Add Note" onClick={() => setSheet("note")} />
-          {role.role === "admin" && sub && !sub.cancelled && <SheetItem icon={CalendarCog} label="Edit Membership" onClick={() => setSheet({ plan: sub })} />}
-          {current && (current.frozen_from
-            ? <SheetItem icon={Play} label="Unfreeze Membership" onClick={() => setSheet("freeze")} />
-            : <SheetItem icon={Pause} label="Freeze Membership" onClick={() => setSheet("freeze")} />)}
-          <SheetItem icon={KeyRound} label={m.has_login ? "Reset App Password" : "Set Up App Login"} onClick={() => setSheet("login")} />
+          {desk && <SheetItem icon={ReceiptText} label="Payments" href={`/collection?member=${mid}`} />}
+          <SheetItem icon={CalendarCheck} label="Visits" href={`/visits?member=${mid}`} />
+          {desk && (
+            <>
+              <SheetItem icon={Pencil} label="Edit Details" onClick={() => setSheet("edit")} />
+              <SheetItem icon={StickyNote} label="Add Note" onClick={() => setSheet("note")} />
+              {current && (current.frozen_from
+                ? <SheetItem icon={Play} label="Unfreeze Membership" onClick={() => setSheet("freeze")} />
+                : <SheetItem icon={Pause} label="Freeze Membership" onClick={() => setSheet("freeze")} />)}
+              <SheetItem icon={KeyRound} label={m.has_login ? "Change App Login" : "Set Up App Login"} onClick={() => setSheet("login")} />
+            </>
+          )}
           {role.role === "admin" && pays.length > 0 && <SheetItem icon={Undo2} label="Refund Money" onClick={() => setSheet("refund")} />}
           {role.role === "admin" && <SheetItem icon={Trash2} label="Archive Member" onClick={() => setSheet("archive")} />}
         </ul>
@@ -256,39 +244,12 @@ export default function MemberProfile() {
       {typeof sheet === "object" && sheet && "plan" in sheet && (
         <EditMembershipSheet sub={sheet.plan} branch={typeof m.home_branch === "number" ? m.home_branch : null} onClose={() => setSheet(null)} />
       )}
-      <VoidSheet payment={typeof sheet === "object" && sheet && "void" in sheet ? sheet.void : null} onClose={() => setSheet(null)} />
     </div>
   );
 }
 
-/** How a plan was paid: " by UPI" for one way, " (Cash ₹500 + UPI ₹500)" for a split. */
-function paidBy(sub: Subscription) {
-  const name = (m: string) => METHODS.find((x) => x.value === m)?.title ?? m;
-  if (sub.paid_by.length === 1) return ` by ${name(sub.paid_by[0]!.method)}`;
-  return sub.paid_by.length ? ` (${sub.paid_by.map((p) => `${name(p.method)} ${rupees(p.amount_paise)}`).join(" + ")})` : "";
-}
-
-/** How many payments and visits the profile shows; each See All has the rest. */
+/** How many of the latest payments the profile reads, to find the last one that wasn't voided. */
 const RECENT = 5;
-
-/** What's still to pay on one plan. */
-const owedOn = (sub: Subscription) => Math.max(0, sub.price_paise - sub.paid_paise);
-
-/** A link-styled button (the pass's Manage) without a button's own border and fill. */
-const LINK_RESET = { border: 0, padding: 0, background: "none", fontFamily: "inherit", cursor: "pointer" } as const;
-
-/** One plan's money, for a pass: its price and offer, what's been paid and how, refunds, and what's still due. */
-function PlanMoney({ sub }: { sub: Subscription }) {
-  const due = owedOn(sub);
-  return (
-    <>
-      <span><strong>Price:</strong> {rupees(sub.price_paise)}{sub.offer_name ? ` with ${sub.offer_name} (was ${rupees(sub.list_price_paise)})` : ""}</span>
-      <span><strong>Paid:</strong> {sub.paid_paise ? <>{rupees(sub.paid_paise)}{due ? ` of ${rupees(sub.price_paise)}` : " in full"}{paidBy(sub)}</> : "Nothing yet"}</span>
-      {sub.refunded_paise > 0 && <span><strong>Refunded:</strong> {rupees(sub.refunded_paise)}</span>}
-      {due > 0 && <span><strong>Payment due:</strong> {rupees(due)}</span>}
-    </>
-  );
-}
 
 /** What the gym has messaged this member lately, and whether to go on messaging them. */
 function RemindersCard({ member }: { member: Member }) {
@@ -337,8 +298,10 @@ function RemindersCard({ member }: { member: Member }) {
   );
 }
 
-function SheetItem({ icon, label, onClick }: { icon: typeof Pencil; label: string; onClick: () => void }) {
-  return <li><button className="rl-sheet__item" type="button" onClick={onClick}><span className="rl-chipicon"><Icon as={icon} size="sm" /></span><span className="rl-sheet__text">{label}</span></button></li>;
+/** A row in Member actions: opens a sheet (`onClick`) or another screen (`href`). */
+function SheetItem({ icon, label, onClick, href }: { icon: typeof Pencil; label: string; onClick?: () => void; href?: string }) {
+  const inner = <><span className="rl-chipicon"><Icon as={icon} size="sm" /></span><span className="rl-sheet__text">{label}</span></>;
+  return <li>{href ? <Link className="rl-sheet__item" href={href}>{inner}</Link> : <button className="rl-sheet__item" type="button" onClick={onClick}>{inner}</button>}</li>;
 }
 
 const CHAT_ICON: Record<ChatKind, typeof Pencil> = {
@@ -383,20 +346,6 @@ function WhatsAppSheet({ start, phone: to, chats, optedOut, onClose }: { start: 
   );
 }
 
-/** A list row with a WhatsApp button at its end. The line between rows moves to the item, so it runs under both;
- *  the row inside sets its own line off. */
-function WhatsAppRow({ first, label, onSend, children }: { first: boolean; label: string; onSend?: () => void; children: React.ReactNode }) {
-  return (
-    <li style={{ display: "flex", alignItems: "center", borderTop: first ? undefined : "1px solid var(--line)" }}>
-      <div style={{ flex: "1 1 auto", minWidth: 0 }}>{children}</div>
-      {onSend && (
-        <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label={label} title={label} aria-haspopup="dialog" style={{ marginRight: "var(--space-3)" }} onClick={onSend}>
-          <Icon as={MessageCircle} size="sm" />
-        </button>
-      )}
-    </li>
-  );
-}
 
 function NoteSheet({ open, id, onClose }: { open: boolean; id: number; onClose: () => void }) {
   const [text, setText] = useState("");
@@ -442,30 +391,55 @@ function FreezeSheet({ open, sub, onClose }: { open: boolean; sub: CurrentPlan; 
   );
 }
 
+/** A member's app login: a new one, the one they already have at another gym, or a new password or username for
+ *  the one this gym gave them. A login they share with another gym is theirs to change: the API says so. */
 function LoginSheet({ open, member, onClose }: { open: boolean; member: Member; onClose: () => void }) {
-  const [pw, setPw] = useState("");
-  const [done, setDone] = useState(false);
-  const [err, setErr] = useState<string>();
+  const blank = { username: member.username ?? "", existing: "", pw: "" };
+  const [f, setF] = useState(blank);
+  const [kind, setKind] = useState<LoginKind>("new");
+  const [done, setDone] = useState<LoginSet | null>(null);
+  const [errs, setErrs] = useState<Record<string, string>>({});
   const a = useAction();
+  const linking = !member.has_login && kind === "existing";
+  const renamed = member.has_login && cleanUsername(f.username) !== member.username;
   async function go() {
-    if (pw.length < 6) return setErr("Use at least 6 characters");
-    try { await a.run(`/api/members/${member.id}/set-login/`, { password: pw }); setDone(true); } catch { /* shown */ }
+    const e: Record<string, string> = {};
+    if (linking && !cleanUsername(f.existing)) e.existing_username = "Enter the username they sign in with";
+    if (!linking && (f.pw || !renamed) && f.pw.length < 6) e.password = "Use at least 6 characters";
+    if (member.has_login && !cleanUsername(f.username)) e.username = "Enter their username";
+    setErrs(e);
+    if (Object.keys(e).length) return;
+    const body = linking ? { existing_username: cleanUsername(f.existing) } : { username: cleanUsername(f.username) || undefined, ...(f.pw ? { password: f.pw } : {}) };
+    try { setDone((await a.run<LoginSet>(`/api/members/${member.id}/set-login/`, body))!); } catch { /* shown */ }
   }
+  const close = () => { setDone(null); setF(blank); setErrs({}); a.clearError(); onClose(); };
+  const err = (k: string) => errs[k] || fieldError(a.error, k);
   return (
-    <Sheet open={open} onClose={() => { setDone(false); setPw(""); onClose(); }} title={done ? undefined : "App login"}>
+    <Sheet open={open} onClose={close} title={done ? undefined : "App login"}>
       {done ? (
         <>
-          <div className="rl-confirm"><h2 className="rl-confirm__title">Login is ready</h2><p className="rl-confirm__text">{member.name} signs in with {phone(member.phone)} and the password you set.</p></div>
-          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={() => { setDone(false); setPw(""); onClose(); }}>Done</button></div>
+          <div className="rl-confirm"><h2 className="rl-confirm__title">Login is ready</h2>
+            <p className="rl-confirm__text">{done.linked ? `${member.name} signs in as @${done.username} with their own password, as at their other gym.` : `${member.name} signs in as @${done.username}${f.pw ? " with the password you set" : ""}.`}</p></div>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" onClick={close}>Done</button></div>
         </>
       ) : (
         <>
-          <p className="rl-row__meta">{member.name} signs in to the app with their mobile number, {phone(member.phone)}.</p>
-          <Field label="Password" error={err} hint="Tell them the password. They can't change it themselves yet.">
-            {(fid) => <input className="rl-field__input" id={fid} type="text" autoComplete="new-password" value={pw} onChange={(e) => { setPw(e.target.value); setErr(undefined); }} />}
-          </Field>
-          <ErrorText>{a.error?.message}</ErrorText>
-          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Saving…" : "Set Password"}</button></div>
+          {member.has_login ? <p className="rl-row__meta">{member.name} signs in to the app as @{member.username}.</p> : <LoginKindChips value={kind} onChange={setKind} />}
+          {linking ? (
+            <ExistingLoginField value={f.existing} onChange={(v) => setF({ ...f, existing: v })} error={err("existing_username")} />
+          ) : (
+            <>
+              <UsernameField value={f.username} onChange={(v) => setF({ ...f, username: v })} email={member.email} name={member.name} current={member.username ?? undefined}
+                optional={!member.has_login} error={err("username")} />
+              <Field label={member.has_login ? "New password" : "Password"} optional={renamed} error={err("password")} hint="Tell them the password. They're signed out of the app until they use it.">
+                {(fid) => <input className="rl-field__input" id={fid} type="text" autoComplete="new-password" value={f.pw} onChange={(e) => { setF({ ...f, pw: e.target.value }); setErrs({}); }} />}
+              </Field>
+            </>
+          )}
+          <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
+          <div className="rl-sheet__actions"><button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={go}>
+            {a.busy ? "Saving…" : linking ? "Link Login" : member.has_login ? "Save Login" : "Set Up Login"}
+          </button></div>
         </>
       )}
     </Sheet>
@@ -511,27 +485,6 @@ function ArchiveSheet({ open, member, onClose }: { open: boolean; member: Member
       <div className="rl-sheet__actions">
         <button className="rl-button rl-button--danger rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Archiving…" : "Archive Member"}</button>
         <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={onClose}>Keep Member</button>
-      </div>
-    </Sheet>
-  );
-}
-
-function VoidSheet({ payment, onClose }: { payment: Payment | null; onClose: () => void }) {
-  const [reason, setReason] = useState("");
-  const [err, setErr] = useState<string>();
-  const a = useAction();
-  async function go() {
-    if (!reason.trim()) return setErr("Say why, for the record");
-    try { await a.run(`/api/payments/${payment!.id}/void/`, { reason: reason.trim() }); setReason(""); onClose(); } catch { /* shown */ }
-  }
-  return (
-    <Sheet open={!!payment} onClose={onClose} title="Void this payment?">
-      {payment && <p className="rl-row__meta">{rupees(payment.amount_paise)} by {payment.method.toUpperCase()} on {day(payment.taken_at)}. It stays on record, marked void, and the amount is owed again.</p>}
-      <Field label="Reason" error={err}>{(id) => <input className="rl-field__input" id={id} value={reason} placeholder="Entered twice" onChange={(e) => { setReason(e.target.value); setErr(undefined); }} />}</Field>
-      <ErrorText>{a.error?.message}</ErrorText>
-      <div className="rl-sheet__actions">
-        <button className="rl-button rl-button--danger rl-button--block" type="button" disabled={a.busy} onClick={go}>{a.busy ? "Voiding…" : "Void Payment"}</button>
-        <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={onClose}>Keep Payment</button>
       </div>
     </Sheet>
   );

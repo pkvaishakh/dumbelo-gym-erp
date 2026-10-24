@@ -46,7 +46,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list.
+ * Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+of people who work at their branches (to check them in, or pick a trainer).
  */
 export type staffListResponse200 = {
   data: PaginatedStaffList
@@ -240,7 +241,8 @@ export function useStaffList<TData = Awaited<ReturnType<typeof staffList>>, TErr
 
 
 /**
- * Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list.
+ * Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+of people who work at their branches (to check them in, or pick a trainer).
  */
 export type staffCreateResponse201 = {
   data: Staff
@@ -320,7 +322,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list.
+ * Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+of people who work at their branches (to check them in, or pick a trainer).
  */
 export type staffRetrieveResponse200 = {
   data: Staff
@@ -429,7 +432,8 @@ export function useStaffRetrieve<TData = Awaited<ReturnType<typeof staffRetrieve
 
 
 /**
- * Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list.
+ * Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+of people who work at their branches (to check them in, or pick a trainer).
  */
 export type staffUpdateResponse200 = {
   data: Staff
@@ -510,7 +514,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list.
+ * Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+of people who work at their branches (to check them in, or pick a trainer).
  */
 export type staffPartialUpdateResponse200 = {
   data: Staff
@@ -591,7 +596,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list.
+ * Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+of people who work at their branches (to check them in, or pick a trainer).
  */
 export type staffDestroyResponse204 = {
   data: void

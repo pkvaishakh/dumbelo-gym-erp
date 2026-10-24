@@ -7,14 +7,16 @@
  */
 
 /**
- * Add Admin: their email, and for someone new to Dumbelo, their name and a first password.
+ * Add Admin: the username of someone who already signs in to Dumbelo, or for someone new, their name, a first
+password, and a username (made from their email or name if left out).
  */
 export interface GymAdminAddRequest {
-  /**
-   * @minLength 1
-   * @maxLength 254
-   */
-  email: string;
+  /** @maxLength 60 */
+  existing_username?: string;
+  /** @maxLength 60 */
+  username?: string;
+  /** @maxLength 254 */
+  email?: string;
   /** @maxLength 120 */
   name?: string;
   /** @maxLength 128 */

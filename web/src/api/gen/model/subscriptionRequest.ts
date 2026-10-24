@@ -15,4 +15,9 @@ export interface SubscriptionRequest {
   starts?: string;
   /** Leave out: from the plan's length. Admins only */
   ends?: string;
+  /**
+   * Personal training: who trains them. Left out, the member's trainer; they become the member's trainer
+   * @nullable
+   */
+  trainer?: number | null;
 }

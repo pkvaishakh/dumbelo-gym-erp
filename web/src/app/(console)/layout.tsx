@@ -17,9 +17,12 @@ function Loading() {
 /** The Console: Dumbelo's own side, for Dumbelo admins. The same shell and design system as the gym app. */
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ConsoleProvider fallback={<Loading />}>
-      {children}
-      <ConsoleTabBar />
-    </ConsoleProvider>
+    <>
+      <div className="rl-statusbar" aria-hidden />
+      <ConsoleProvider fallback={<Loading />}>
+        {children}
+        <ConsoleTabBar />
+      </ConsoleProvider>
+    </>
   );
 }

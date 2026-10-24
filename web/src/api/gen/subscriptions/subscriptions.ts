@@ -6,18 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -43,7 +48,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
  * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+their own, cancelled ones left out.
  */
 export type subscriptionsListResponse200 = {
   data: PaginatedSubscriptionList
@@ -87,6 +93,12 @@ export const subscriptionsList = async (params?: SubscriptionsListParams, option
 
 
 
+export const getSubscriptionsListInfiniteQueryKey = (params?: SubscriptionsListParams,) => {
+    return [
+    'infinite', `/api/subscriptions/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
 export const getSubscriptionsListQueryKey = (params?: SubscriptionsListParams,) => {
     return [
     `/api/subscriptions/`, ...(params ? [params]: [])
@@ -94,6 +106,70 @@ export const getSubscriptionsListQueryKey = (params?: SubscriptionsListParams,) 
     }
 
     
+export const getSubscriptionsListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof subscriptionsList>>, SubscriptionsListParams['offset']>, TError = unknown>(params?: SubscriptionsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData, QueryKey, SubscriptionsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSubscriptionsListInfiniteQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof subscriptionsList>>, QueryKey, SubscriptionsListParams['offset']> = ({ signal, pageParam }) => subscriptionsList({...params, 'offset': pageParam || params?.['offset']}, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData, QueryKey, SubscriptionsListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SubscriptionsListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof subscriptionsList>>>
+export type SubscriptionsListInfiniteQueryError = unknown
+
+
+export function useSubscriptionsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof subscriptionsList>>, SubscriptionsListParams['offset']>, TError = unknown>(
+ params: undefined |  SubscriptionsListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData, QueryKey, SubscriptionsListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof subscriptionsList>>,
+          TError,
+          Awaited<ReturnType<typeof subscriptionsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSubscriptionsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof subscriptionsList>>, SubscriptionsListParams['offset']>, TError = unknown>(
+ params?: SubscriptionsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData, QueryKey, SubscriptionsListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof subscriptionsList>>,
+          TError,
+          Awaited<ReturnType<typeof subscriptionsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSubscriptionsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof subscriptionsList>>, SubscriptionsListParams['offset']>, TError = unknown>(
+ params?: SubscriptionsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData, QueryKey, SubscriptionsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useSubscriptionsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof subscriptionsList>>, SubscriptionsListParams['offset']>, TError = unknown>(
+ params?: SubscriptionsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData, QueryKey, SubscriptionsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getSubscriptionsListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
 export const getSubscriptionsListQueryOptions = <TData = Awaited<ReturnType<typeof subscriptionsList>>, TError = unknown>(params?: SubscriptionsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof subscriptionsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
@@ -160,7 +236,8 @@ export function useSubscriptionsList<TData = Awaited<ReturnType<typeof subscript
 
 /**
  * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+their own, cancelled ones left out.
  */
 export type subscriptionsCreateResponse201 = {
   data: Subscription
@@ -241,7 +318,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     /**
  * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+their own, cancelled ones left out.
  */
 export type subscriptionsRetrieveResponse200 = {
   data: Subscription
@@ -351,7 +429,8 @@ export function useSubscriptionsRetrieve<TData = Awaited<ReturnType<typeof subsc
 
 /**
  * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+their own, cancelled ones left out.
  */
 export type subscriptionsCancelCreateResponse200 = {
   data: Subscription

@@ -236,7 +236,7 @@ def test_the_reminder_list_costs_the_same_however_many_rows(w, django_assert_max
 
 def test_the_settings_say_how_dumbelo_set_the_gym_up_and_change_only_the_month(w):
     c = w.client(w.admin)
-    assert c.get(SETTINGS).json() == {"name": w.gym.name, "slug": "iron", "timezone": "Asia/Kolkata", "month_days": 0}
+    assert c.get(SETTINGS).json() == {"name": w.gym.name, "slug": "iron", "timezone": "Asia/Kolkata", "month_days": 0, "pt_needs_membership": True}
     assert c.patch(SETTINGS, {"name": "Not My Gym", "timezone": "Europe/London"}, format="json").status_code == 200
     w.gym.refresh_from_db()
     assert w.gym.name != "Not My Gym" and w.gym.timezone == "Asia/Kolkata"

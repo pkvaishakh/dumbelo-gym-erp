@@ -51,8 +51,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+ * Receptionists and trainers get their own, once approved or paid in part.
  */
 export type payslipsListResponse200 = {
   data: PaginatedPayslipList
@@ -238,8 +237,11 @@ export function usePayslipsList<TData = Awaited<ReturnType<typeof payslipsList>>
 
 
 /**
- * Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+ * Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
  */
 export type payslipsRetrieveResponse200 = {
   data: PayslipDetail
@@ -348,8 +350,11 @@ export function usePayslipsRetrieve<TData = Awaited<ReturnType<typeof payslipsRe
 
 
 /**
- * Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+ * Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
  */
 export type payslipsApproveCreateResponse200 = {
   data: PayslipDetail
@@ -671,8 +676,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+ * Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
  */
 export type payslipsRemoveLineCreateResponse200 = {
   data: PayslipDetail
@@ -753,8 +761,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+ * Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
  */
 export type payslipsReopenCreateResponse200 = {
   data: PayslipDetail

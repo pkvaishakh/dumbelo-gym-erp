@@ -6,8 +6,8 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - SaaS for many gyms in India. Billed monthly: a base fee plus a fee per branch (see Dumbelo billing). Web app /
   PWA only (no native apps yet).
 - MVP in about 3 months with 2–3 developers; pilot at the current client from week 9.
-- One sign-in for every role; the account decides where you land. Staff sign in with email + password;
-  members with their phone number + a password the front desk sets.
+- One sign-in for every role; the account decides where you land. Everyone signs in with a **username** and
+  password. See "Logins" below.
 
 ## Roles
 - Admin, Receptionist, Trainer, Member. No branch manager role. Several admins per gym; one is the account owner
@@ -16,14 +16,27 @@ What was decided, so code and screens stay consistent. Change this file when a d
   checks people in, adds members and sells plans. Expenses work like the day's payments: they see and add their
   branches' expenses one day at a time (today's total is on Home, `GET /api/expenses/today/`), so the desk can
   record cash paid out and square it at close. Only admins see longer spans or edit and remove expenses.
-  One member's payments are the exception: the desk sees all of them (the profile's See All), so it may narrow them
+  One member's payments are the exception: the desk sees all of them (the profile's Member actions, Payments), so it may narrow them
   to any dates. The day's totals stay one day at a time.
   They see their branches' cash in hand, read-only: what each drawer should hold now and today's cash in and out
   (`GET /api/cash/`, on Home and in More), and count it at close. Never the bank: a bank account several branches
   share would show other branches' takings. No revenue totals, reports or staff data, no money moves, refunds or
   settling a count.
-- Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks.
-- Member: their own membership, visits, and self check-in.
+- Receptionists and trainers only reach their own branches: members whose home branch is one of theirs and the
+  staff who work at one of their branches. The desk can't sell a plan to, take money from or check in another
+  branch's member, check in another branch's staff, or give a member a trainer from a branch it doesn't work at;
+  anyone outside answers as if they didn't exist. Members still check in at any branch with its wall QR, and
+  admins reach every branch.
+- Trainer: their own members' status and phone, and "payment due" without amounts. Their tasks. Their Home
+  (`GET /api/members/today/`) shows their own check-in, their members by status and which came in today, and their
+  personal training with today's session done or not. Trainers check themselves in by the wall QR, never members.
+- Receptionists and trainers see their own pay and days (More: My Salary, My Attendance): each month's salary once
+  an admin approves it, or once anything is paid on it (a daily wage paid on a draft), with its breakdown, the
+  payments and the printable slip; and their own check-ins at any branch, ever. A draft isn't shown: it still
+  follows check-ins and the admin's changes. Never anyone else's pay. A trainer's own salary isn't one of the
+  amounts trainers never see: that rule is about members' money.
+- Member: their own membership, visits, and self check-in. My plans (`/membership`: now, up next, ended;
+  cancelled ones left out) and My payments (`/membership/payments`: voided ones and the desk's notes left out), read only.
 - Dumbelo support sees a gym only with the gym's time-limited permission (read-only, logged).
 - Dumbelo admins (`User.is_superuser`) run the business side: gyms, their admin accounts, prices, Dumbelo
   invoices and payments, WhatsApp accounts and templates, when automation runs, and the server's status (health,
@@ -38,11 +51,35 @@ What was decided, so code and screens stay consistent. Change this file when a d
   card built from these. One summary (`/api/platform/summary/`) in a fixed number of queries; days and months are
   Dumbelo's (India). It shows counts and Dumbelo's own money only. Its tabs are Home, Gyms, Server and More; Prices,
   Branch requests, WhatsApp, WhatsApp log and Automation are in More.
-- Staff change their own name, email, mobile number and password (More). A member's details are changed by
-  the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and not for
-  someone who also signs in to another gym (one login covers every gym); for them, this gym can't change their
-  name, email or mobile number either. Any password change signs that person
+- Staff change their own username, name, email, mobile number and password (More). A member's details are
+  changed by the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and
+  not for someone who also belongs to another gym (one login covers every gym); for them, this gym can't change
+  their username, name, email or mobile number either. Any password change signs that person
   out on every other device. Resets are audited; the password never is.
+
+## Logins
+- **One login per person, across every gym.** It is a username and a password. A person's place in each gym is a
+  role there (one role per gym); a member also has a profile in each gym they train at, and a login opens at most
+  one member profile per gym.
+- **Usernames** are unique across Dumbelo and stored lowercase (capitals don't matter when signing in): 3 to 30
+  letters, numbers, full stops and underscores; not starting or ending with a full stop, no two in a row, not only
+  numbers, and not a reserved word (admin, dumbelo, support…). Left empty when a login is made, one is made from
+  the email (before the @) or the name, with a number added when it's taken. The forms check a username as it's
+  typed and offer free ones (`/api/usernames/check/`: staff and Dumbelo admins only, rate limited, since it says
+  whether a username exists).
+- **Email and phone are contact details, not sign-in names.** Several logins may share one (a family's phone). So
+  a login is never found, linked or changed by its email or phone.
+- **Someone who already signs in to Dumbelo** (at another gym) is added by their username: Add Staff, a member's
+  app login and the Console's New Gym and Add Admin all have "Already on Dumbelo". The form shows whose login it
+  is before it's added. Their password, username and details stay theirs. Never a Dumbelo team login.
+- **A gym changes a login only while it is that gym's alone**: not Dumbelo's team, and no role in any other gym,
+  even one switched off for now (it could be switched back on, and the login with it). The desk changes a
+  member's password or username only for a member login this gym made: never for a login that is also staff here,
+  so a receptionist can't reach a trainer's or admin's password through a member profile.
+- Archiving a member switches their login off for that gym (it still opens their other gyms); restoring them
+  switches it back on. Both are audited, however they're done.
+- A gym's member records still allow one member per phone number in a gym, so the desk can't add the same
+  person twice.
 
 ## Money
 - Record payments only (no payment gateway in the MVP). Part payments allowed; never more than what's owed.
@@ -66,14 +103,50 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Plans and offers are one list for the gym, made by admins. Each is given to some branches, or to none, which
   means every branch (including ones opened later). The desk sees and sells only what its branches have; a sale
   checks the plan and the offer against the member's home branch.
-- A plan sold starts the day after the member's last plan ends (the queue of renewals included), or today, unless
-  the desk picks another day; only an admin sets its end date by hand, otherwise it follows the plan's length. A
-  member's plans of one kind never overlap, at sale or when corrected.
+- A plan sold starts the day after the member's last plan of the same kind ends (the queue of renewals included), or
+  today, unless the desk picks another day: personal training runs beside a membership, not after it. Only an admin
+  sets its end date by hand, otherwise it follows the plan's length. A member's plans of one kind never overlap, at
+  sale or when corrected.
 - A plan runs for a number of months. Each gym's admins set how long its month is (Settings): a calendar month
   (from 14 Oct to 13 Nov), or a number of days, 1 to 60, that every plan counts its months in (28 days: a 3-month
   plan runs 84 days, the first day counted). Changing it, or a plan's length, applies to new sales only; it's audited.
 
-## Expenses and payroll (admins only)
+## Personal training
+
+- A plan is a membership or personal training. Personal training is a number of sessions to use within a number of
+  months, with a trainer: picked at sale (they become the member's trainer) or the member's own.
+- Each gym's admins choose (Settings, audited) whether personal training needs a membership. On, the default: it's
+  sold only when a membership covers its first day, and only the membership lets the member in; if the membership
+  lapses, the personal training keeps its dates but check-in and sessions wait for a renewal. Off: a member may have
+  personal training alone, and it lets them in like a membership. The member's status comes from the plan that lets
+  them in; with both running, the membership.
+- Sessions are counted. The trainer marks today's session for their own members; the desk (its branches) and admins
+  may mark an earlier day inside the plan. One a day per plan, never past the sessions bought, never on a
+  frozen day. Personal training with every session used has ended (expiring at 2 or fewer left, or within a week of
+  its last day). A session marked by mistake is removed with a reason (voided, audited, never deleted): by an admin,
+  or by whoever marked it, that same day. Trainers see sessions, never amounts.
+- A session says what they worked (Chest, Back, Legs, Shoulders, Triceps, Biceps, Cardio, or any other the trainer
+  types, several at once) and has notes. Both are optional when marking, and any staff member who can see the
+  session can change them later (audited); its day and plan don't change. The member sees them on their sessions.
+- Correcting a personal training plan to another one takes that plan's sessions, never fewer than already given.
+
+## Workout and diet plans
+
+- Trainers coach with two kinds of plan, which follow the same rules below. A workout plan: a name, an optional goal,
+  and up to 14 days, each with the body parts it works and its exercises (name, sets, reps, load; reps and load as
+  typed, like "30 sec" or "16 kg each"). A diet plan: a name, an optional goal, optional daily targets (calories,
+  protein, carbs, fat) and up to 12 meals (name, when, what's in it, calories). There's no logging meals eaten or
+  workouts done yet: the trainer sets the plan and the member reads it.
+- Plans belong to the gym, not a branch.
+- Trainers and admins write plans. Every staff member sees every plan, so trainers reuse each other's; only a plan's
+  author or an admin edits or archives it, and anyone who writes plans can copy one to make their own. Plans are
+  archived, never deleted, and an archived plan can't be given to more members.
+- A member follows one plan of each kind at a time. Trainers give plans to their own members, admins to anyone;
+  giving a new one ends the current one of that kind, which stays as history (audited, as is taking a member off a
+  plan). The desk sees its branches' members' plans and gives none. A member sees their own plans, with their
+  trainer's note, on Home and in More.
+
+## Expenses and payroll (admins only; staff see their own salary, see Roles)
 - Recurring expenses (rent, utilities, subscriptions) repeat weekly, monthly, every 3 months or yearly from their
   first due date, keeping its day of the month (31st stays the 31st, or the month's last day). Each date is an
   `ExpenseDue`: paid (it becomes an ordinary expense, at whatever the bill came to), skipped, or still due. A due
@@ -157,6 +230,10 @@ What was decided, so code and screens stay consistent. Change this file when a d
   (ZKTeco/eSSL pushing punches to `/api/devices/punch/`).
 - Only the check-in time is recorded. No check-out, no time inside, no "still in the gym".
 - One check-in per person per day. Expired or frozen plans are turned away.
+- The desk corrects a check-in from its sheet on Attendance: Change Time (same day, never later than now; the
+  session follows the new time) or Remove Check-In (the wrong person). Receptionists today only in their branches;
+  earlier days are a record that only admins correct. Both are audited; a removed check-in is gone, so the person
+  can be checked in again.
 - Branch opening hours are named sessions (add, rename, remove). Attendance and counts are grouped by session;
   members, trainers and receptionists are counted separately.
 
@@ -305,6 +382,9 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Backend: Django 5 + DRF + Postgres, JWT (simplejwt), drf-spectacular for OpenAPI. Redis/Celery for jobs (later).
 - Frontend: Next.js 15 App Router, TypeScript, Serwist PWA, the design system's CSS, TanStack Query with an
   orval-generated client, date-fns, lucide icons, html5-qrcode, Vitest/Playwright.
+- A release reaches open apps by itself: built files carry a hash in their name, the service worker takes over as
+  soon as it's downloaded, the app looks for one when it comes back to the screen and every 30 minutes, and then
+  loads the next screen opened afresh (never mid-screen, so a form being filled isn't lost). No "Update" button.
 - Hosting: AWS Mumbai (ap-south-1) for the API and database — App Runner for the API, RDS Postgres,
   ElastiCache Redis, and the Celery worker and beat on ECS Fargate (App Runner runs HTTP services only).
   The web app on Vercel. Every step, and every setting a server needs, is in `docs/deploy.md`.

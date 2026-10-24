@@ -73,7 +73,7 @@ def test_new_gym_owner_can_sign_in(prices, client):
     assert [b["name"] for b in body["branches"]] == ["Kochi"] and body["branch_count"] == 1
     assert "owner_password" not in body
 
-    login = client.post("/api/auth/login/", {"identifier": "anil@pulse.in", "password": "first-pass-123"}, content_type="application/json")
+    login = client.post("/api/auth/login/", {"username": "anil", "password": "first-pass-123"}, content_type="application/json")
     assert login.status_code == 200
     me = client.get("/api/me/", HTTP_AUTHORIZATION="Bearer " + login.json()["access"]).json()
     assert me["roles"][0]["gym"] == "pulse" and me["roles"][0]["role"] == "admin" and me["roles"][0]["is_owner"] is True
@@ -87,7 +87,7 @@ def test_new_gym_owner_can_sign_in(prices, client):
 
 def test_new_gym_can_use_an_existing_login(w):
     c = dumbelo()
-    r = c.post(GYMS, {**NEW_GYM, "owner_email": "ADMIN0@x.in", "owner_name": "", "owner_password": ""}, format="json")
+    r = c.post(GYMS, {**NEW_GYM, "owner_existing_username": "@Admin0", "owner_email": "", "owner_name": "", "owner_password": ""}, format="json")
     assert r.status_code == 201, r.content
     assert r.json()["owner_new_login"] is False and r.json()["owner_name"] == w.admin.user.name
     assert w.admin.user.gym_roles.count() == 2
@@ -104,8 +104,12 @@ def test_new_gym_form_errors(w):
     assert "slug" in r.json()["error"]["fields"]
     r = c.post(GYMS, {**NEW_GYM, "owner_name": "", "owner_password": ""}, format="json")
     assert set(r.json()["error"]["fields"]) == {"owner_name", "owner_password"}  # a new login needs both
-    r = c.post(GYMS, {**NEW_GYM, "owner_email": "ops@dumbelo.com"}, format="json")
-    assert r.status_code == 409 and r.json()["error"]["code"] == "dumbelo_login"
+    r = c.post(GYMS, {**NEW_GYM, "owner_existing_username": "ops"}, format="json")  # Dumbelo's own login
+    assert r.json()["error"]["fields"] == {"owner_existing_username": ["That's a Dumbelo team login. Use the gym admin's own username."]}
+    r = c.post(GYMS, {**NEW_GYM, "owner_existing_username": "nobody.here"}, format="json")
+    assert r.json()["error"]["fields"] == {"owner_existing_username": ["No one signs in with that username"]}
+    r = c.post(GYMS, {**NEW_GYM, "owner_username": "admin0"}, format="json")  # iron's owner has it
+    assert r.json()["error"]["fields"] == {"owner_username": ["That username is taken"]}
     assert not Gym.objects.filter(slug="pulse").exists()
 
 
@@ -222,14 +226,16 @@ def test_admins_list_and_add(w, other):
     assert [(a["email"], a["is_owner"], a["other_gyms"]) for a in rows] == [("admin0@x.in", True, 0)]
     r = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "new@x.in", "name": "Nisha", "password": "first-pass-123"}, format="json")
     assert r.status_code == 201 and r.json()["is_owner"] is False
-    shared = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "admin1@x.in"}, format="json")  # steel's owner, keeps their login
+    shared = c.post(f"{GYMS}{w.gym.id}/admins/", {"existing_username": "admin1"}, format="json")  # steel's owner, keeps their login
     assert shared.status_code == 201 and shared.json()["other_gyms"] == 1
-    again = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "new@x.in"}, format="json")
+    again = c.post(f"{GYMS}{w.gym.id}/admins/", {"existing_username": "new"}, format="json")
     assert again.status_code == 409 and again.json()["error"]["code"] == "already_admin"
-    desk = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "desk0@x.in"}, format="json")
+    desk = c.post(f"{GYMS}{w.gym.id}/admins/", {"existing_username": "desk0"}, format="json")
     assert desk.json()["error"]["code"] == "has_role"
     missing = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "nobody@x.in"}, format="json")
     assert set(missing.json()["error"]["fields"]) == {"name", "password"}
+    unknown = c.post(f"{GYMS}{w.gym.id}/admins/", {"existing_username": "nobody"}, format="json")
+    assert unknown.json()["error"]["fields"] == {"existing_username": ["No one signs in with that username"]}
     assert AuditLog.objects.filter(gym=w.gym, action="admin.added").count() == 2
     assert c.get(f"{GYMS}99999/admins/").status_code == 404
 
@@ -256,7 +262,7 @@ def test_deactivate_reactivate_and_make_owner(w, client):
     second = c.post(f"{GYMS}{w.gym.id}/admins/", {"email": "second@x.in", "name": "Second", "password": "first-pass-123"}, format="json").json()
     r = c.post(f"{GYMS}{w.gym.id}/admins/{second['id']}/deactivate/")
     assert r.status_code == 200 and r.json()["is_active"] is False
-    login = client.post("/api/auth/login/", {"identifier": "second@x.in", "password": "first-pass-123"}, content_type="application/json")
+    login = client.post("/api/auth/login/", {"username": "second", "password": "first-pass-123"}, content_type="application/json")
     c2 = APIClient()
     c2.credentials(HTTP_AUTHORIZATION="Bearer " + login.json()["access"], HTTP_X_GYM="iron")
     assert c2.get("/api/members/").status_code == 404  # deactivated: the gym is closed to them
@@ -269,7 +275,7 @@ def test_deactivate_reactivate_and_make_owner(w, client):
     assert not w.admin.is_owner and w.admin.is_active  # the old owner stays an admin
     assert c.post(f"{GYMS}{w.gym.id}/admins/{w.admin.id}/deactivate/").status_code == 200  # no longer the owner
     made = AuditLog.objects.get(action="admin.made_owner")
-    assert made.gym == w.gym and made.before == {"owner": "admin0@x.in"} and made.after == {"owner": "second@x.in"}
+    assert made.gym == w.gym and made.before == {"owner": "admin0"} and made.after == {"owner": "second"}
     assert set(AuditLog.objects.filter(gym=w.gym).values_list("action", flat=True)) == {
         "admin.added", "admin.deactivated", "admin.reactivated", "admin.made_owner",
     }
@@ -280,7 +286,7 @@ def test_reset_an_admins_password(w, client):
     url = f"{GYMS}{w.gym.id}/admins/{w.admin.id}/reset-password/"
     assert c.post(url, {"password": "123"}, format="json").status_code == 400
     assert c.post(url, {"password": "brand-new-pass-9"}, format="json").status_code == 204
-    ok = client.post("/api/auth/login/", {"identifier": "admin0@x.in", "password": "brand-new-pass-9"}, content_type="application/json")
+    ok = client.post("/api/auth/login/", {"username": "admin0", "password": "brand-new-pass-9"}, content_type="application/json")
     assert ok.status_code == 200
     row = AuditLog.objects.get(action="admin.password_reset")
     assert row.gym == w.gym and "brand-new-pass-9" not in str(row.before) + str(row.after)

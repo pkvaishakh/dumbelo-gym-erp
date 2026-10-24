@@ -8,12 +8,21 @@
 import type { RoleEnum } from './roleEnum';
 
 /**
- * A trainer, receptionist or admin. Creating one creates their login (email + a first password they change).
+ * A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+and details stay theirs.
  */
 export interface Staff {
   readonly id: number;
+  /**
+   * How they sign in. Left out on Add Staff, one is made from the email or name
+   * @maxLength 60
+   */
+  username?: string;
+  /** @maxLength 120 */
   name: string;
-  email: string;
+  /** @nullable */
+  email?: string | null;
   /** @nullable */
   phone?: string | null;
   role: RoleEnum;

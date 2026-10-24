@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { DESCRIPTION, TITLE } from "@/features/landing/content";
 import { Landing } from "@/features/landing/Landing";
@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image", title: TITLE, description: "Gym management software made for India: members, payments, check-ins and WhatsApp reminders in one app." },
 };
+
+// A web page, unlike the app: people may zoom it.
+export const viewport: Viewport = { maximumScale: 5, userScalable: true };
 
 export default function Index() {
   return <Landing />;

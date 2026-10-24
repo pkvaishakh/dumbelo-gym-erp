@@ -8,9 +8,11 @@ from dataclasses import dataclass
 from datetime import time
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from apps.accounts import usernames
 from apps.accounts.services import set_password
 from apps.billing.services import open_plan
 from apps.core.errors import RuleBroken
@@ -29,22 +31,35 @@ class NewGym:
     new_login: bool  # False: the owner already signed in to Dumbelo (another gym) and keeps their password
 
 
-def find_login(email: str):
-    return User.objects.filter(email__iexact=email.strip()).first()
+def find_login(username: str):
+    return User.objects.filter(username=usernames.clean(username)).first() if username else None
 
 
-def _login_for(email: str, name: str, password: str | None) -> tuple[User, bool]:
-    """The person's login: the one they already have, or a new one with the first password they were told."""
-    user = find_login(email)
-    if user is not None:
+def _login_for(*, existing_username: str = "", username: str = "", email: str = "", name: str = "",
+               password: str | None = None) -> tuple[User, bool]:
+    """The person's login: the one they already have (by its username), or a new one with the username given (or
+    made from their email or name) and the first password they were told."""
+    if existing_username:
+        user = find_login(existing_username)
+        if user is None:
+            raise RuleBroken("no_login", f"No one signs in with @{usernames.clean(existing_username)}")
         if user.is_staff:  # Dumbelo's team sees inside gyms only through a support window
-            raise RuleBroken("dumbelo_login", "That email is a Dumbelo team login. Use the gym admin's own email.")
+            raise RuleBroken("dumbelo_login", "That's a Dumbelo team login. Use the gym admin's own username.")
         return user, False
     if not name.strip():
         raise RuleBroken("name_needed", "They don't sign in to Dumbelo yet, so enter their name")
     if not password:
         raise RuleBroken("password_needed", "They don't sign in to Dumbelo yet, so set a first password for them")
-    return User.objects.create_user(email=email.strip(), password=password, name=name.strip()), True
+    if username:
+        try:
+            username = usernames.validate(username)
+        except DjangoValidationError as e:
+            raise RuleBroken("username", e.messages[0])
+    try:
+        with transaction.atomic():
+            return User.objects.create_user(username=username or None, email=email.strip() or None, password=password, name=name.strip()), True
+    except IntegrityError:
+        raise RuleBroken("username", "That username was just taken. Pick another.")
 
 
 def check_timezone(name: str) -> str:
@@ -54,10 +69,11 @@ def check_timezone(name: str) -> str:
 
 
 @transaction.atomic
-def create_gym(*, name: str, slug: str, timezone_name: str, branch: str, owner_email: str, owner_name: str = "",
-               owner_password: str | None = None, billing_email: str = "") -> NewGym:
-    """A new gym on trial: its first branch, open all day until its admin sets the hours, its owner admin, and its
-    Dumbelo plan on today's prices with room for that one branch."""
+def create_gym(*, name: str, slug: str, timezone_name: str, branch: str, owner_existing_username: str = "",
+               owner_username: str = "", owner_email: str = "", owner_name: str = "", owner_password: str | None = None,
+               billing_email: str = "") -> NewGym:
+    """A new gym on trial: its first branch, open all day until its admin sets the hours, its owner admin (the login
+    they already have, or a new one), and its Dumbelo plan on today's prices with room for that one branch."""
     check_timezone(timezone_name)
     try:
         with transaction.atomic():
@@ -67,7 +83,11 @@ def create_gym(*, name: str, slug: str, timezone_name: str, branch: str, owner_e
     first = Branch.objects.create(gym=gym, name=branch.strip())
     BranchSession.objects.create(branch=first, name=FIRST_SESSION[0], starts=FIRST_SESSION[1], ends=FIRST_SESSION[2])
     open_plan(gym)
-    user, new = _login_for(owner_email, owner_name, owner_password)
+    user, new = _login_for(existing_username=owner_existing_username, username=owner_username, email=owner_email,
+                           name=owner_name, password=owner_password)
+    if not gym.billing_email and user.email:
+        gym.billing_email = user.email
+        gym.save(update_fields=["billing_email"])
     owner = GymRole.objects.create(user=user, gym=gym, role=GymRole.ADMIN, is_owner=True)
     return NewGym(gym, owner, new)
 
@@ -102,9 +122,11 @@ def _set_status(gym: Gym, status: str, reason: str) -> Gym:
 
 
 @transaction.atomic
-def add_admin(gym: Gym, *, email: str, name: str, password: str | None = None) -> tuple[GymRole, bool]:
-    """Give someone an admin login to the gym. An admin who was deactivated is turned back on instead."""
-    user, new = _login_for(email, name, password)
+def add_admin(gym: Gym, *, existing_username: str = "", username: str = "", email: str = "", name: str = "",
+              password: str | None = None) -> tuple[GymRole, bool]:
+    """Give someone an admin login to the gym: the one they already have, or a new one. An admin who was
+    deactivated is turned back on instead."""
+    user, new = _login_for(existing_username=existing_username, username=username, email=email, name=name, password=password)
     role = GymRole.objects.filter(user=user, gym=gym).first()
     if role is None:
         return GymRole.objects.create(user=user, gym=gym, role=GymRole.ADMIN), new

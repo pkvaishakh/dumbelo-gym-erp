@@ -9,6 +9,7 @@ import { useStaffList } from "@/api/gen/staff/staff";
 import { PageBar } from "@/components/shell";
 import { Chips, DayStrip, Empty, ErrorText, Icon, LoadMore, Photo, Section, Seg, Sheet, SkeletonRows, Stat } from "@/components/ui";
 import { CheckInSheet } from "@/features/checkin";
+import { VisitSheet } from "@/features/visit";
 import { isoDate, plural } from "@/lib/format";
 import { paged, pages, useAction, useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -34,6 +35,7 @@ function Attendance() {
   const [session, setSession] = useState("all");
   const [kind, setKind] = useState<"staff" | "trainer" | "receptionist">("staff");
   const [checking, setChecking] = useState(false);
+  const [visit, setVisit] = useState<CheckIn | null>(null);
   const at = { date, ...(branch ? { branch } : {}) };
   // Counts come from the summary; the list below only pages through the rows.
   const summary = useGet<CheckinSummary>("/api/checkins/summary/", at);
@@ -48,7 +50,7 @@ function Attendance() {
 
   return (
     <div className="rl-app rl-root">
-      <PageBar title="Attendance" sub={<>{label} • {branchName}</>} />
+      <PageBar title="Attendance" sub={<>{label} • {branchName}</>} back />
       <main className="rl-app__main">
         <div className="rl-searchbar rl-searchbar--days">
           <DayStrip name="at-day" value={date} onChange={(v) => { setDate(v); setSession("all"); }} />
@@ -86,16 +88,17 @@ function Attendance() {
               <Chips name="at-filter" label="Filter check-ins by session" value={session} onChange={setSession} style={{ marginTop: 0 }}
                 options={[{ value: "all", label: "All", count: memberCount }, ...sessions.map((s) => ({ value: s.session, label: s.session, count: s.member }))]} />
               <div className="rl-listmeta" style={{ marginTop: "var(--space-3)" }}><p role="status">{list.isLoading ? "Loading…" : `Showing ${plural(shown.length, "check-in")}${shown.length < shownCount ? ` of ${shownCount}` : ""}`}</p><p>Latest first</p></div>
-              {list.isLoading ? <SkeletonRows /> : shown.length ? <><VisitList rows={shown} /><LoadMore q={list} /></> : (
+              {list.isLoading ? <SkeletonRows /> : shown.length ? <><VisitList rows={shown} onOpen={setVisit} /><LoadMore q={list} /></> : (
                 <Empty icon={CalendarX} title={isToday ? "No check-ins yet today" : "No check-ins this day"} text="Check-ins from the desk, the wall QR and the turnstile show up here." />
               )}
             </Section>
           </>
         ) : (
-          <StaffPane checkins={staffIn} kind={kind} setKind={setKind} canCheckIn={desk && isToday} loading={staffQ.isLoading} />
+          <StaffPane checkins={staffIn} kind={kind} setKind={setKind} canCheckIn={desk && isToday} loading={staffQ.isLoading} onOpen={setVisit} />
         )}
       </main>
       {desk && <CheckInSheet open={checking && isToday} onClose={() => setChecking(false)} />}
+      {visit && <VisitSheet key={visit.id} visit={visit} dayLabel={label} isToday={isToday} onClose={() => setVisit(null)} />}
     </div>
   );
 }
@@ -126,23 +129,25 @@ function BranchCheckins({ rows }: { rows: NonNullable<CheckinSummary["branches"]
   );
 }
 
-function VisitList({ rows }: { rows: CheckIn[] }) {
+/** The day's check-ins; a row opens its VisitSheet (View Profile, and for the desk Change Time and Remove Check-In). */
+function VisitList({ rows, onOpen }: { rows: CheckIn[]; onOpen: (c: CheckIn) => void }) {
   return (
     <ul className="rl-card rl-mlist rl-mlist--compact">
       {rows.map((c) => (
-        <li key={c.id}><a className="rl-mrow" href={c.kind === "member" ? `/members/${c.person_id}` : undefined}>
+        <li key={c.id}><button className="rl-mrow" type="button" aria-haspopup="dialog" onClick={() => onOpen(c)}>
           <Photo name={c.name} />
           <span className="rl-row__title rl-mrow__name">{c.name}</span>
           <span className="rl-row__meta rl-mrow__meta">{[c.code, c.session, c.source === "device" ? "Turnstile" : c.source === "qr" ? "Wall QR" : "Desk"].filter(Boolean).join(" • ")}</span>
           <span className="rl-mrow__time">{c.time}</span>
-        </a></li>
+        </button></li>
       ))}
     </ul>
   );
 }
 
-function StaffPane({ checkins, kind, setKind, canCheckIn, loading }: {
+function StaffPane({ checkins, kind, setKind, canCheckIn, loading, onOpen }: {
   checkins: CheckIn[]; kind: "staff" | "trainer" | "receptionist"; setKind: (k: "staff" | "trainer" | "receptionist") => void; canCheckIn: boolean; loading: boolean;
+  onOpen: (c: CheckIn) => void;
 }) {
   const { branch } = useSession();
   const staffQ = useStaffList({ is_active: true, limit: 100, ...(branch ? { branches: [branch] } : {}) });
@@ -168,15 +173,20 @@ function StaffPane({ checkins, kind, setKind, canCheckIn, loading }: {
           <ul className="rl-card rl-mlist rl-mlist--compact" style={{ marginTop: "var(--space-3)" }}>
             {shown.map((s) => {
               const c = byId.get(s.id);
+              const who = <>
+                <Photo name={s.name} />
+                <span className="rl-row__title rl-mrow__name">{s.name}</span>
+                <span className="rl-row__meta rl-mrow__meta">{s.role === "trainer" ? "Trainer" : "Receptionist"}{s.shift ? ` • ${s.shift} shift` : ""}{c?.session ? ` • ${c.session}` : ""}</span>
+              </>;
+              // Checked in: the row opens the check-in's sheet. Not yet: the row holds the Check In button instead.
               return (
-                <li key={s.id}><div className="rl-mrow">
-                  <Photo name={s.name} />
-                  <span className="rl-row__title rl-mrow__name">{s.name}</span>
-                  <span className="rl-row__meta rl-mrow__meta">{s.role === "trainer" ? "Trainer" : "Receptionist"}{s.shift ? ` • ${s.shift} shift` : ""}{c?.session ? ` • ${c.session}` : ""}</span>
-                  {c ? <span className="rl-mrow__time">{c.time}</span> : canCheckIn ? (
+                <li key={s.id}>{c ? (
+                  <button className="rl-mrow" type="button" aria-haspopup="dialog" onClick={() => onOpen(c)}>{who}<span className="rl-mrow__time">{c.time}</span></button>
+                ) : (
+                  <div className="rl-mrow">{who}{canCheckIn ? (
                     <button className="rl-button rl-button--secondary rl-button--sm" type="button" onClick={() => setTarget(s)}>Check In</button>
-                  ) : <span className="rl-status rl-status--off">Not in</span>}
-                </div></li>
+                  ) : <span className="rl-status rl-status--off">Not in</span>}</div>
+                )}</li>
               );
             })}
           </ul>

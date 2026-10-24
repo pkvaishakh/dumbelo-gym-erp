@@ -26,12 +26,15 @@ def test_staff_edit_their_own_details(w):
     assert w.admin.user.email == "Meera@new.in"
 
 
-def test_email_and_phone_must_be_free(w):
+def test_email_and_phone_may_be_shared_but_the_username_must_be_free(w):
     w.desk.user.phone = "+919811122233"
     w.desk.user.save()
-    r = w.client(w.admin).patch("/api/me/", {"email": w.desk.user.email.upper(), "phone": "9811122233"}, format="json")
-    assert r.status_code == 400
-    assert set(r.json()["error"]["fields"]) == {"email", "phone"}
+    r = w.client(w.admin).patch("/api/me/", {"email": w.desk.user.email, "phone": "9811122233"}, format="json")
+    assert r.status_code == 200, r.content  # contact details: a family can share one phone
+    r = w.client(w.admin).patch("/api/me/", {"username": w.desk.user.username.upper()}, format="json")
+    assert r.json()["error"]["fields"]["username"] == ["That username is taken"]
+    r = w.client(w.admin).patch("/api/me/", {"username": "@Meera.Iyer"}, format="json")
+    assert r.status_code == 200 and r.json()["username"] == "meera.iyer"
     r = w.client(w.admin).patch("/api/me/", {"phone": "12345"}, format="json")
     assert r.json()["error"]["fields"]["phone"] == ["Enter a 10-digit mobile number"]
 

@@ -33,14 +33,18 @@ class BranchViewSet(GymViewMixin, viewsets.ModelViewSet):
 
 
 class StaffViewSet(GymViewMixin, viewsets.ModelViewSet):
-    """Admins, receptionists and trainers of the gym. Only admins manage staff; staff can read the list."""
+    """Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+    of people who work at their branches (to check them in, or pick a trainer)."""
 
     serializer_class = StaffSerializer
     roles = {"list": STAFF, "retrieve": STAFF, "*": ADMIN}
     filterset_fields = ["role", "is_active", "branches"]
 
     def get_queryset(self):
-        return GymRole.objects.filter(gym=self.gym, role__in=GymRole.STAFF_ROLES).select_related("user").prefetch_related("branches").order_by("role", "user__name")
+        qs = GymRole.objects.filter(gym=self.gym, role__in=GymRole.STAFF_ROLES)
+        if (ids := self.me.branch_ids()) is not None:
+            qs = qs.filter(pk__in=GymRole.objects.filter(branches__in=ids).values("pk"))
+        return qs.select_related("user").prefetch_related("branches").order_by("role", "user__name")
 
     def perform_update(self, serializer):
         before = {"role": serializer.instance.role, "is_active": serializer.instance.is_active}
@@ -102,8 +106,8 @@ class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMod
 
 class GymSettingsView(GymViewMixin, APIView):
     """The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
-    run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
-    switches are `/api/gym/messages/`."""
+    run and whether personal training needs a membership, which admins change here (audited; plans already sold keep
+    their dates). Admins only. The gym's message switches are `/api/gym/messages/`."""
 
     roles = {"*": ADMIN}
 
@@ -115,8 +119,9 @@ class GymSettingsView(GymViewMixin, APIView):
     def patch(self, request):
         s = GymSettingsSerializer(self.gym, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
-        before = {"month_days": self.gym.month_days}
+        was = {f: getattr(self.gym, f) for f in ("month_days", "pt_needs_membership")}
         gym = s.save()
-        if before["month_days"] != gym.month_days:
-            record(request, "gym.settings_changed", gym, before, {"month_days": gym.month_days})
+        changed = [f for f in was if getattr(gym, f) != was[f]]
+        if changed:
+            record(request, "gym.settings_changed", gym, {f: was[f] for f in changed}, {f: getattr(gym, f) for f in changed})
         return Response(GymSettingsSerializer(gym).data)

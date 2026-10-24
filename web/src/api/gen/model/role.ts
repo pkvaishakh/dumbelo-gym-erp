@@ -23,6 +23,8 @@ export interface Role {
   readonly timezone: string;
   /** How long a plan's month runs: 0 for calendar months, else that many days */
   readonly month_days: number;
+  /** Personal training is sold only on top of a membership */
+  readonly pt_needs_membership: boolean;
   role: RoleEnum;
   /** The admin who handles Dumbelo billing; other admins can't remove them */
   is_owner?: boolean;

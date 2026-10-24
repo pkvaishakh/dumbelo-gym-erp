@@ -28,10 +28,20 @@ export function planEnd(starts: string, months: number | undefined, monthDays: n
 export function gymToday(timeZone: string, now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
+/** A moment's time of day in the gym's time zone, as a time input holds it ("06:05"): a check-in's Change Time. */
+export function gymClock(iso: string, timeZone: string) {
+  return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
+}
 export const ago = (iso: string) => formatDistanceToNowStrict(parseISO(iso), { addSuffix: true });
 /** When a device last spoke to us: "2 hours ago", or "Never" for one that never has. */
 export const seen = (iso: string | null | undefined) => (iso ? ago(iso) : "Never");
 export const daysLeft = (iso: string) => differenceInCalendarDays(parseISO(iso), new Date());
+/** A plan's days, its first and last both counted: how many have gone before `today` and how many are left with it. */
+export function planDays(starts: string, ends: string, today: string) {
+  const total = differenceInCalendarDays(parseISO(ends), parseISO(starts)) + 1;
+  const used = Math.min(total, Math.max(0, differenceInCalendarDays(parseISO(today), parseISO(starts))));
+  return { total, used, left: total - used };
+}
 /** The clock time something runs out: "6:00 PM" today, "6:00 PM on 18 Oct" any other day. */
 export function until(iso: string, now = new Date()) {
   const end = parseISO(iso);

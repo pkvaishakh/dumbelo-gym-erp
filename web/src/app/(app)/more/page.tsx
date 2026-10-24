@@ -1,17 +1,18 @@
 "use client";
 import {
-  Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, KeyRound, Landmark, LifeBuoy, LogOut, MessageCircle, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, UserRound, Users, Wallet,
+  AtSign, Apple, Banknote, BadgeIndianRupee, Building2, Calculator, CalendarCheck, CalendarClock, ClipboardList, Dumbbell, ListChecks, KeyRound, Landmark, LifeBuoy, LogOut, MessageCircle, Pencil, QrCode, Receipt, Repeat, ScanLine, ShieldCheck, SlidersHorizontal, Tag, Ticket, UserRound, Users, Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
 import { useAccountsOverviewRetrieve } from "@/api/gen/accounts/accounts";
 import { useCashList } from "@/api/gen/cash/cash";
+import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
 import { PageBar } from "@/components/shell";
 import { Details, Icon, MenuRow, Section } from "@/components/ui";
 import { AccountSheet, PasswordSheet } from "@/features/account";
 import { PausedNotice } from "@/features/paused";
-import { phone, plural, rupees } from "@/lib/format";
+import { gymToday, phone, plural, rupees } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import type { Collection, Summary } from "@/lib/types";
@@ -28,6 +29,9 @@ export default function MorePage() {
   const funds = useAccountsOverviewRetrieve({ query: { enabled: admin } }).data?.data.totals;
   const drawers = useCashList(undefined, { query: { enabled: desk } }).data?.data;
   const cashIn = drawers?.filter((d) => d.balance_paise !== null).reduce((t, d) => t + (d.balance_paise ?? 0), 0);
+  const worker = desk || r === "trainer"; // their own pay and days: admins have Payroll and Attendance
+  const today = gymToday(role.timezone);
+  const days = useCheckinsList({ mine: true, from: `${today.slice(0, 8)}01`, to: today, limit: 1 }, { query: { enabled: worker } }).data?.data.count;
   const [sheet, setSheet] = useState<"details" | "password" | null>(null);
   const staff = r !== "member"; // a member's details are changed by the desk
   return (
@@ -48,6 +52,8 @@ export default function MorePage() {
                 <MenuRow icon={Dumbbell} title="Trainers" href="/staff?role=trainer" />
                 <MenuRow icon={UserRound} title="Receptionists" href="/staff?role=receptionist" />
                 <MenuRow icon={ClipboardList} title="Tasks" href="/tasks" />
+                <MenuRow icon={ListChecks} title="Workout plans" href="/workouts" />
+                <MenuRow icon={Apple} title="Diet plans" href="/diets" />
               </ul>
             </Section>
             <Section title="Money">
@@ -84,6 +90,8 @@ export default function MorePage() {
               <MenuRow icon={Calculator} title="Cash in hand" href="/cash" value={cashIn !== undefined ? rupees(cashIn) : undefined} />
               <MenuRow icon={ClipboardList} title="My Tasks" href="/tasks" />
               <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
+              <MenuRow icon={ListChecks} title="Workout plans" href="/workouts" />
+              <MenuRow icon={Apple} title="Diet plans" href="/diets" />
             </ul>
           </Section>
         )}
@@ -92,7 +100,17 @@ export default function MorePage() {
             <ul className="rl-card rl-remind">
               <MenuRow icon={Users} title="My Members" href="/members" />
               <MenuRow icon={ClipboardList} title="My Tasks" href="/tasks" />
+              <MenuRow icon={ListChecks} title="Workout plans" href="/workouts" />
+              <MenuRow icon={Apple} title="Diet plans" href="/diets" />
               <MenuRow icon={QrCode} title="Check in with the wall QR" href="/checkin" />
+            </ul>
+          </Section>
+        )}
+        {worker && (
+          <Section title="Your pay and attendance">
+            <ul className="rl-card rl-remind">
+              <MenuRow icon={CalendarCheck} title="My Attendance" href="/visits" value={days !== undefined ? `${plural(days, "day")} this month` : undefined} />
+              <MenuRow icon={Banknote} title="My Salary" href="/salary" />
             </ul>
           </Section>
         )}
@@ -101,12 +119,17 @@ export default function MorePage() {
             <ul className="rl-card rl-remind">
               <MenuRow icon={QrCode} title="Check In" href="/checkin" />
               <MenuRow icon={CalendarCheck} title="Visits" href="/visits" />
+              <MenuRow icon={Ticket} title="My plans" href="/membership" />
+              <MenuRow icon={Receipt} title="My payments" href="/membership/payments" />
+              <MenuRow icon={Dumbbell} title="Workout plan" href="/workout" />
+              <MenuRow icon={Apple} title="Diet plan" href="/diet" />
             </ul>
           </Section>
         )}
         <Section title="Account Details">
           <Details rows={[
             { icon: UserRound, label: "Name", value: me.name },
+            { icon: AtSign, label: "Username", value: `@${me.username}` },
             ...(me.email ? [{ icon: UserRound, label: "Email", value: me.email }] : []),
             { icon: UserRound, label: "Mobile number", value: phone(me.phone) },
             { icon: Building2, label: "Gym", value: role.gym_name },

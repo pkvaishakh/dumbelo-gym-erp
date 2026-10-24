@@ -22,6 +22,8 @@ class Gym(TimeStamped):
     status_changed_at = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=40, default="Asia/Kolkata")
     month_days = models.PositiveSmallIntegerField(default=0, help_text="How long a plan's month runs: 0 for calendar months, else that many days (28, 30)")
+    pt_needs_membership = models.BooleanField(default=True, help_text="Personal training is sold only on top of a membership, "
+                                                                      "and only a membership lets a member in. Off: personal training alone does too")
     billing_email = models.EmailField(blank=True)
 
     def __str__(self):

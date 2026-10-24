@@ -14,7 +14,7 @@ branch?: number;
  */
 date?: string;
 /**
- * With member or staff: YYYY-MM-DD, the first day
+ * With member, staff or mine: YYYY-MM-DD, the first day
  */
 from?: string;
 kind?: CheckinsListKind;
@@ -27,6 +27,10 @@ limit?: number;
  */
 member?: number;
 /**
+ * Staff: your own check-ins at any branch, any day
+ */
+mine?: boolean;
+/**
  * The initial index from which to return the results.
  */
 offset?: number;
@@ -38,7 +42,7 @@ session?: string;
 source?: string;
 staff?: number;
 /**
- * With member or staff: YYYY-MM-DD, the last day
+ * With member, staff or mine: YYYY-MM-DD, the last day
  */
 to?: string;
 };

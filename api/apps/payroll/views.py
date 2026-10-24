@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from apps.audit.models import record
 from apps.core import clock
 from apps.core.params import int_param
-from apps.core.tenancy import ADMIN, GymViewMixin
+from apps.core.tenancy import ADMIN, GymViewMixin, STAFF
 from apps.gyms.models import GymRole
 
 from . import services
@@ -68,16 +68,20 @@ PayrollSummary = inline_serializer("PayrollSummary", {
 
 
 @extend_schema_view(
-    list=extend_schema(parameters=[OpenApiParameter("month", str, description="YYYY-MM; every month when missing"),
+    list=extend_schema(description="Receptionists and trainers get their own, once approved or paid in part.",
+                       parameters=[OpenApiParameter("month", str, description="YYYY-MM; every month when missing"),
                                    OpenApiParameter("owed", bool, description="Only approved salaries not yet paid in full")]),
     summary=extend_schema(parameters=[OpenApiParameter("month", str, description="YYYY-MM; this month when missing"), OpenApiParameter("branch", int)],
                           responses=PayrollSummary),
 )
 class PayslipViewSet(GymViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-    deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history."""
+    """Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+    approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
 
-    roles = {"*": ADMIN}
+    Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+    a draft still follows check-ins and the admin's changes, so it isn't their pay yet."""
+
+    roles = {"list": STAFF, "retrieve": STAFF, "*": ADMIN}
     filterset_fields = ["staff", "status", "branch"]
 
     def get_serializer_class(self):
@@ -85,6 +89,8 @@ class PayslipViewSet(GymViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMi
 
     def get_queryset(self):
         qs = Payslip.objects.filter(gym=self.gym).select_related("staff__user", "branch").with_paid()
+        if self.me.role in (GymRole.RECEPTIONIST, GymRole.TRAINER):
+            qs = qs.filter(staff=self.me).filter(Q(status=Payslip.APPROVED) | Q(paid_total__gt=0))
         if self.action == "list":
             if self.request.query_params.get("month"):
                 qs = qs.filter(month=_month(self.request, self.gym))

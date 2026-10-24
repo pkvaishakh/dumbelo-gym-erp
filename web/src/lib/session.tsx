@@ -43,8 +43,8 @@ export function useWho() {
   return w;
 }
 
-export async function signIn(identifier: string, password: string) {
-  const t = await api<{ access: string; refresh: string }>("/api/auth/login/", { method: "POST", json: { identifier, password } });
+export async function signIn(username: string, password: string) {
+  const t = await api<{ access: string; refresh: string }>("/api/auth/login/", { method: "POST", json: { username: username.trim().replace(/^@+/, ""), password } });
   tokens.set(t.access, t.refresh);
 }
 

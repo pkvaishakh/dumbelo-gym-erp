@@ -8,9 +8,11 @@ import { phone } from "@/lib/format";
 import { fieldError, useAction } from "@/lib/hooks";
 import { useWho } from "@/lib/session";
 
+import { cleanUsername, UsernameField } from "./username";
+
 export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { me } = useWho();
-  const fresh = () => ({ name: me.name, email: me.email ?? "", phone: me.phone ? phone(me.phone) : "" });
+  const fresh = () => ({ name: me.name, username: me.username, email: me.email ?? "", phone: me.phone ? phone(me.phone) : "" });
   const [f, setF] = useState(fresh);
   const [was, setWas] = useState(false);
   if (open !== was) { // start from what's saved each time the sheet opens
@@ -19,13 +21,15 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
   }
   const a = useAction();
   async function save() {
-    try { await a.run("/api/me/", { name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim() || null }, { method: "PATCH", refresh: ["/api/me/"] }); onClose(); } catch { /* shown */ }
+    const body = { name: f.name.trim(), username: cleanUsername(f.username), email: f.email.trim() || null, phone: f.phone.trim() || null };
+    try { await a.run("/api/me/", body, { method: "PATCH", refresh: ["/api/me/"] }); onClose(); } catch { /* shown */ }
   }
   return (
     <Sheet open={open} onClose={onClose} title="Edit Details">
       <form className="rl-form" noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
         <Field label="Name" error={fieldError(a.error, "name")}>{(id) => <input className="rl-field__input" id={id} autoComplete="name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
-        <Field label="Email" hint="You sign in with this email." error={fieldError(a.error, "email")}>
+        <UsernameField value={f.username} onChange={(v) => setF({ ...f, username: v })} current={me.username} self optional={false} error={fieldError(a.error, "username")} />
+        <Field label="Email" optional error={fieldError(a.error, "email")}>
           {(id) => <input className="rl-field__input" id={id} type="email" autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />}
         </Field>
         <Field label="Mobile number" optional error={fieldError(a.error, "phone")}>

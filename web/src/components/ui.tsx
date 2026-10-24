@@ -1,6 +1,6 @@
 "use client";
 /* Small building blocks that render the Dumbelo design system's markup (src/styles/dumbelo.css). */
-import { AlertCircle, CalendarDays, Check, ChevronRight, Plus, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, CalendarCog, CalendarDays, Check, ChevronRight, Plus, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 
@@ -28,6 +28,28 @@ export function Photo({ name, size }: { name: string; size?: "lg" | "xl" }) {
 export function Status({ status }: { status: string }) {
   const cls = status === "none" ? "off" : status;
   return <span className={`rl-status rl-status--${cls}`}>{STATUS_LABEL[status] ?? status}</span>;
+}
+
+/** The design's progress bar (rl-bar): how much of something is used, read out as `label`. */
+export function Bar({ used, total, label }: { used: number; total: number; label: string }) {
+  const v = Math.min(1, Math.max(0, used / Math.max(1, total)));
+  return <span className="rl-bar" role="img" aria-label={label}><span className="rl-bar__fill" style={{ ["--v" as string]: v }} /></span>;
+}
+
+/** The small buttons at the foot of a pass, side by side in equal widths that fill it (an icon-only one, rl-button--icon,
+ *  stays square); Manage comes last. Nothing when none are given. */
+export function PassActions({ children }: { children: React.ReactNode }) {
+  if (!(Array.isArray(children) ? children.some(Boolean) : children)) return null;
+  return <div className="rl-pass-actions">{children}</div>;
+}
+
+/** A pass's Manage button: it opens the admin's Edit Membership sheet for that plan. */
+export function ManageButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button className="rl-button rl-button--sm" type="button" aria-haspopup="dialog" aria-label={label} onClick={onClick}>
+      <Icon as={CalendarCog} size="sm" />Manage
+    </button>
+  );
 }
 
 export function TaskStatus({ status, overdue }: { status: string; overdue?: boolean }) {
@@ -197,8 +219,35 @@ export function Choices<T extends string | number>({ name, value, onChange, opti
   );
 }
 
-export function Sheet({ open, onClose, title, children, closable = true }: {
-  open: boolean; onClose: () => void; title?: string; children: React.ReactNode; closable?: boolean;
+/** Keeps an open sheet inside the part of the screen the phone keyboard leaves. Safari doesn't shrink the page for
+ *  the keyboard, it pans it, which slid a bottom sheet's head and search off the top. The visual viewport is what's
+ *  actually on screen: the sheet sits on its bottom edge (`--sheet-top` + `--sheet-vh`, see globals.css) and is
+ *  sized to its height. */
+function useAboveKeyboard(ref: React.RefObject<HTMLDivElement | null>, open: boolean) {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = ref.current;
+    if (!open || !vv || !el) return;
+    const fit = () => {
+      el.style.setProperty("--sheet-vh", `${vv.height}px`);
+      el.style.setProperty("--sheet-top", `${vv.offsetTop}px`);
+    };
+    fit();
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    return () => {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+      el.style.removeProperty("--sheet-vh");
+      el.style.removeProperty("--sheet-top");
+    };
+  }, [ref, open]);
+}
+
+/** `instant` opens it in place instead of sliding up: for a sheet that focuses a field as it opens. Safari pans the
+ *  page to a field the keyboard would cover, and a field still sliding up from below the screen is one. */
+export function Sheet({ open, onClose, title, children, closable = true, instant }: {
+  open: boolean; onClose: () => void; title?: string; children: React.ReactNode; closable?: boolean; instant?: boolean;
 }) {
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -209,16 +258,18 @@ export function Sheet({ open, onClose, title, children, closable = true }: {
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
+    if (ref.current) ref.current.scrollTop = 0;
+    ref.current?.focus({ preventScroll: true });  // it is still sliding up: scrolling to it would pan the page
     // Escape closes only the top sheet: a sheet opened from inside this one (a check-in result) goes first.
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && closable && !ref.current?.querySelector(".rl-sheet.is-open")) closeRef.current(); };
     document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("keydown", onKey); prev?.focus?.(); };
+    return () => { document.removeEventListener("keydown", onKey); prev?.focus?.({ preventScroll: true }); };
   }, [open, closable]);
+  useAboveKeyboard(ref, open);
   return (
     <>
       <div className={`rl-scrim${open ? " is-open" : ""}`} onClick={closable ? onClose : undefined} />
-      <div ref={ref} tabIndex={-1} className={`rl-sheet${open ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-labelledby={title ? id : undefined} aria-hidden={!open}>
+      <div ref={ref} tabIndex={-1} className={`rl-sheet${open ? " is-open" : ""}`} style={open && instant ? { transition: "none" } : undefined} role="dialog" aria-modal="true" aria-labelledby={title ? id : undefined} aria-hidden={!open}>
         <span className="rl-sheet__grab" aria-hidden="true" />
         {title ? (
           <div className="rl-sheet__head">

@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PasswordRequest {
-  /** @minLength 6 */
-  password: string;
+export interface CheckedIn {
+  /** 6:05 AM, in the gym's time zone */
+  time: string;
+  branch_name: string;
 }

@@ -7,6 +7,7 @@ import { useStaffList } from "@/api/gen/staff/staff";
 import { TaskBar } from "@/components/shell";
 import { Chips, Choices, ErrorText, Field, Photo, Seg, Sheet, Status, Confirm } from "@/components/ui";
 import { ActionBar, METHODS, PlanPicker, usePriceOf, type Method } from "@/features/sell";
+import { cleanUsername, ExistingLoginField, UsernameField } from "@/features/username";
 import { day, rupees, toPaise } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -17,7 +18,8 @@ export default function AddMember() {
   const router = useRouter();
   const { role, branch } = useSession();
   const [step, setStep] = useState(1);
-  const [f, setF] = useState({ name: "", phone: "", email: "", goal: "", home_branch: branch ?? role.branches[0]?.id ?? 0, trainer: null as number | null, password: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", goal: "", home_branch: branch ?? role.branches[0]?.id ?? 0, trainer: null as number | null, password: "", username: "", existing_username: "" });
+  const [login, setLogin] = useState<"later" | "new" | "existing">("later");
   const [plan, setPlan] = useState<number | null>(null);
   const [offer, setOffer] = useState<number | null>(null);
   const [mode, setMode] = useState<"full" | "part" | "later">("full");
@@ -35,7 +37,8 @@ export default function AddMember() {
     if (step === 1) {
       if (!f.name.trim()) e.name = "Enter the member’s full name";
       if (f.phone.replace(/\D/g, "").length !== 10) e.phone = "Enter a 10-digit mobile number";
-      if (f.password && f.password.length < 6) e.password = "Use at least 6 characters, or leave it empty";
+      if (login === "new" && f.password.length < 6) e.password = "Use at least 6 characters";
+      if (login === "existing" && !cleanUsername(f.existing_username)) e.existing_username = "Enter the username they sign in with";
     }
     if (step === 2 && !plan) e.plan = "Choose a plan";
     if (step === 3 && mode === "part" && (paid <= 0 || paid >= price.total)) e.amount = `Enter less than ${rupees(price.total)}, or choose Full amount`;
@@ -49,12 +52,15 @@ export default function AddMember() {
     try {
       const m = await a.run<Member>("/api/members/", {
         name: f.name.trim(), phone: f.phone, email: f.email.trim(), goal: f.goal, home_branch: f.home_branch, trainer: f.trainer,
-        first_plan: plan, offer, ...(paid ? { paid_paise: paid, method } : {}), ...(f.password ? { password: f.password } : {}),
+        first_plan: plan, offer, ...(paid ? { paid_paise: paid, method } : {}),
+        ...(login === "new" ? { password: f.password, username: cleanUsername(f.username) || undefined } : {}),
+        ...(login === "existing" ? { existing_username: cleanUsername(f.existing_username) } : {}),
       });
       setMade(m!);
     } catch (err) {
       const fields = (err as { fields?: Record<string, string[]> }).fields;
-      if (fields?.phone || fields?.name) { setStep(1); setErrs({ phone: fields.phone?.[0] ?? "", name: fields.name?.[0] ?? "" }); }
+      const first = ["phone", "name", "username", "existing_username", "password"].filter((k) => fields?.[k]);
+      if (first.length) { setStep(1); setErrs(Object.fromEntries(first.map((k) => [k, fields![k][0]]))); }
     }
   }
 
@@ -68,7 +74,7 @@ export default function AddMember() {
           {step === 1 && (
             <>
               <Field label="Full name" error={errs.name}>{(id) => <input className="rl-field__input" id={id} autoComplete="off" autoCapitalize="words" enterKeyHint="next" placeholder="As on their ID" value={f.name} onChange={set("name")} />}</Field>
-              <Field label="Mobile number" prefix="+91" error={errs.phone} hint="They sign in to the app with this number.">{(id) => <input className="rl-field__input" id={id} type="tel" inputMode="numeric" autoComplete="off" enterKeyHint="next" placeholder="10-digit number" value={f.phone} onChange={set("phone")} />}</Field>
+              <Field label="Mobile number" prefix="+91" error={errs.phone} hint="For reminders and for the desk to find them.">{(id) => <input className="rl-field__input" id={id} type="tel" inputMode="numeric" autoComplete="off" enterKeyHint="next" placeholder="10-digit number" value={f.phone} onChange={set("phone")} />}</Field>
               <Field label="Email" optional>{(id) => <input className="rl-field__input" id={id} type="email" inputMode="email" autoCapitalize="none" placeholder="name@example.com" value={f.email} onChange={set("email")} />}</Field>
               {role.branches.length > 1 && (
                 <Field label="Home branch">{(id) => (
@@ -86,7 +92,20 @@ export default function AddMember() {
               <fieldset className="rl-fieldset"><legend>Goal <span className="rl-optional">(optional)</span></legend>
                 <Chips name="goal" label="Goal" scroll={false} value={f.goal} onChange={(v) => setF({ ...f, goal: v === f.goal ? "" : v })} options={GOALS.map((g) => ({ value: g, label: g }))} />
               </fieldset>
-              <Field label="App password" optional error={errs.password} hint="Set one now and they can check in from their phone. You can also do this later.">{(id) => <input className="rl-field__input" id={id} type="text" autoComplete="new-password" value={f.password} onChange={set("password")} />}</Field>
+              <fieldset className="rl-fieldset"><legend>App login <span className="rl-optional">(optional)</span></legend>
+                <Chips name="login" label="App login" scroll={false} value={login} onChange={setLogin}
+                  options={[{ value: "later", label: "Later" }, { value: "new", label: "New login" }, { value: "existing", label: "Already on Dumbelo" }]} />
+                <p className="rl-field__hint">With a login they can check in from their phone and see their plan.</p>
+              </fieldset>
+              {login === "new" && (
+                <>
+                  <UsernameField value={f.username} onChange={(v) => { setF({ ...f, username: v }); setErrs({ ...errs, username: "" }); }} email={f.email} name={f.name} error={errs.username || undefined} />
+                  <Field label="App password" error={errs.password || undefined} hint="Tell them the password. You can reset it later.">{(id) => <input className="rl-field__input" id={id} type="text" autoComplete="new-password" value={f.password} onChange={set("password")} />}</Field>
+                </>
+              )}
+              {login === "existing" && (
+                <ExistingLoginField value={f.existing_username} onChange={(v) => { setF({ ...f, existing_username: v }); setErrs({ ...errs, existing_username: "" }); }} error={errs.existing_username || undefined} />
+              )}
             </>
           )}
           {step === 2 && (
@@ -124,14 +143,15 @@ export default function AddMember() {
       <Sheet open={!!made} onClose={() => router.push(`/members/${made!.id}`)} closable={false}>
         {made && (
           <>
-            <Confirm title={`${made.name} is now a member`} text={made.balance_paise ? `${rupees(made.balance_paise)} is still due.` : "Fully paid. They can check in now."} />
+            <Confirm title={`${made.name} is now a member`}
+              text={`${made.balance_paise ? `${rupees(made.balance_paise)} is still due.` : "Fully paid. They can check in now."}${made.username ? ` They sign in to the app as @${made.username}.` : ""}`} />
             <div className="rl-idcard">
               <div className="rl-idcard__who"><Photo name={made.name} size="lg" /><span><span className="rl-row__title">{made.name}</span><span className="rl-row__meta">{made.code}</span><Status status={made.status} /></span></div>
               {made.plan && <dl className="rl-facts"><dt>Plan</dt><dd>{String((made.plan as { name: string }).name)}</dd><dt>Valid until</dt><dd>{day(String((made.plan as { ends: string }).ends))}</dd></dl>}
             </div>
             <div className="rl-sheet__actions">
               <button className="rl-button rl-button--block" type="button" onClick={() => router.push(`/members/${made.id}`)}>View Member</button>
-              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => { setMade(null); setStep(1); setPlan(null); setOffer(null); setF({ ...f, name: "", phone: "", email: "", goal: "", password: "", trainer: null }); }}>Add Another</button>
+              <button className="rl-button rl-button--secondary rl-button--block" type="button" onClick={() => { setMade(null); setStep(1); setPlan(null); setOffer(null); setF({ ...f, name: "", phone: "", email: "", goal: "", password: "", username: "", existing_username: "", trainer: null }); setLogin("later"); }}>Add Another</button>
             </div>
           </>
         )}

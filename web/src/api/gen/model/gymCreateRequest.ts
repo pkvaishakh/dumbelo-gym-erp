@@ -33,15 +33,25 @@ export interface GymCreateRequest {
    */
   branch: string;
   /**
+   * The owner already signs in to Dumbelo (another gym): their username
+   * @maxLength 60
+   */
+  owner_existing_username?: string;
+  /**
+   * A new login's username; made from the email or name if left out
+   * @maxLength 60
+   */
+  owner_username?: string;
+  /**
    * Needed for a new login
    * @maxLength 120
    */
   owner_name?: string;
   /**
-   * @minLength 1
+   * For contact, and invoices unless billing_email is given
    * @maxLength 254
    */
-  owner_email: string;
+  owner_email?: string;
   /**
    * Needed for a new login
    * @maxLength 128

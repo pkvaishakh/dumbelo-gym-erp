@@ -93,7 +93,8 @@ export function PageBar({ title, sub, back, action }: { title: string; sub?: Rea
   return (
     <header className="rl-appbar rl-appbar--scroll"><div className="rl-appbar__in">
       {back && (
-        <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="Back" onClick={() => (back === true ? router.back() : router.push(back))}>
+        <button className="rl-iconbtn rl-iconbtn--plain" type="button" aria-label="Back"
+          onClick={() => (back !== true ? router.push(back) : window.history.length > 1 ? router.back() : router.push("/home"))}>  {/* opened straight from a link: nowhere to go back to, so Home */}
           <Icon as={ArrowLeft} />
         </button>
       )}
@@ -235,31 +236,34 @@ function CreateSheet({ open, onClose, onCheckIn }: { open: boolean; onClose: () 
   );
   return (
     <Sheet open={open} onClose={onClose} title="Create">
-      <p className="rl-sheet__label" style={{ marginTop: "var(--space-1)" }}>Members</p>
-      <ul className="rl-sheet__list">
-        {item("Add Member", UserPlus, "/members/new")}
-        {item("New Subscription", Ticket, "/subscriptions/new")}
-        {item("Collect Payment", Wallet, "/payments/new")}
-        {item("Mark Attendance", ClipboardCheck, onCheckIn)}
-      </ul>
-      {role.role === "admin" && (
-        <>
-          <p className="rl-sheet__label">Staff and expenses</p>
+      {/* An admin's two groups sit side by side on a wide screen, so the sheet fits without scrolling. */}
+      <div className={`rl-create${role.role === "admin" ? " rl-create--two" : ""}`}>
+        <div>
+          <p className="rl-sheet__label" style={{ marginTop: "var(--space-1)" }}>Members</p>
           <ul className="rl-sheet__list">
-            {item("Add Trainer", UserPlus, "/staff/new?role=trainer")}
-            {item("Add Receptionist", UserPlus, "/staff/new?role=receptionist")}
-            {item("Assign Task", ClipboardList, "/tasks?new=1")}
-            {item("Add Expense", Receipt, "/expenses/new")}
-            {item("Add Recurring Expense", Repeat, "/expenses/recurring/new")}
+            {item("Add Member", UserPlus, "/members/new")}
+            {item("New Subscription", Ticket, "/subscriptions/new")}
+            {item("Collect Payment", Wallet, "/payments/new")}
+            {item("Mark Attendance", ClipboardCheck, onCheckIn)}
           </ul>
-        </>
-      )}
-      {role.role === "receptionist" && (
-        <>
-          <p className="rl-sheet__label">Expenses</p>
-          <ul className="rl-sheet__list">{item("Add Expense", Receipt, "/expenses/new")}</ul>
-        </>
-      )}
+        </div>
+        {role.role === "admin" && (
+          <div>
+            <p className="rl-sheet__label">Tasks and expenses</p>
+            <ul className="rl-sheet__list">
+              {item("Assign Task", ClipboardList, "/tasks?new=1")}
+              {item("Add Expense", Receipt, "/expenses/new")}
+              {item("Add Recurring Expense", Repeat, "/expenses/recurring/new")}
+            </ul>
+          </div>
+        )}
+        {role.role === "receptionist" && (
+          <div>
+            <p className="rl-sheet__label">Expenses</p>
+            <ul className="rl-sheet__list">{item("Add Expense", Receipt, "/expenses/new")}</ul>
+          </div>
+        )}
+      </div>
     </Sheet>
   );
 }

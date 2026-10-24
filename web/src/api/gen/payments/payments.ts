@@ -51,7 +51,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void.
+ * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+lists their own, any dates, voided ones and the desk's notes left out.
  */
 export type paymentsListResponse200 = {
   data: PaginatedPaymentList
@@ -237,7 +238,8 @@ export function usePaymentsList<TData = Awaited<ReturnType<typeof paymentsList>>
 
 
 /**
- * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void.
+ * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+lists their own, any dates, voided ones and the desk's notes left out.
  */
 export type paymentsCreateResponse201 = {
   data: Payment
@@ -317,7 +319,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void.
+ * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+lists their own, any dates, voided ones and the desk's notes left out.
  */
 export type paymentsRetrieveResponse200 = {
   data: Payment
@@ -426,7 +429,8 @@ export function usePaymentsRetrieve<TData = Awaited<ReturnType<typeof paymentsRe
 
 
 /**
- * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void.
+ * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+lists their own, any dates, voided ones and the desk's notes left out.
  */
 export type paymentsUpdateResponse200 = {
   data: PaymentCorrect
@@ -507,7 +511,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void.
+ * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+lists their own, any dates, voided ones and the desk's notes left out.
  */
 export type paymentsPartialUpdateResponse200 = {
   data: PaymentCorrect
@@ -588,7 +593,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void.
+ * Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+lists their own, any dates, voided ones and the desk's notes left out.
  */
 export type paymentsVoidCreateResponse200 = {
   data: Payment

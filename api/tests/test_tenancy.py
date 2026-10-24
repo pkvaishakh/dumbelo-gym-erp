@@ -7,7 +7,7 @@ from apps.gyms.models import SupportAccess
 
 
 def test_login_and_me(w, client):
-    r = client.post("/api/auth/login/", {"identifier": "admin0@x.in", "password": "pass12345"}, content_type="application/json")
+    r = client.post("/api/auth/login/", {"username": "Admin0", "password": "pass12345"}, content_type="application/json")
     assert r.status_code == 200
     me = client.get("/api/me/", HTTP_AUTHORIZATION="Bearer " + r.json()["access"]).json()
     assert me["roles"][0]["gym"] == "iron" and me["roles"][0]["role"] == "admin"
@@ -15,7 +15,7 @@ def test_login_and_me(w, client):
 
 
 def test_wrong_password(w, client):
-    r = client.post("/api/auth/login/", {"identifier": "admin0@x.in", "password": "nope"}, content_type="application/json")
+    r = client.post("/api/auth/login/", {"username": "admin0", "password": "nope"}, content_type="application/json")
     assert r.status_code == 401 and r.json()["error"]["code"] == "login_failed"
 
 
@@ -40,6 +40,44 @@ def test_receptionist_sees_only_their_branch(w):
     assert len(w.client(w.admin).get("/api/members/").json()["results"]) == 2
 
 
+def test_desk_cant_sell_or_take_money_for_another_branchs_member(w):
+    bina = w.new_member("Bina", "9811111111", w.b)
+    c = w.client(w.desk)
+    assert c.get(f"/api/members/{bina.id}/").status_code == 404
+    r = c.post("/api/subscriptions/", {"member": bina.id, "plan": w.monthly.id}, format="json")
+    assert r.status_code == 400 and "member" in r.json()["error"]["fields"]
+    r = c.post("/api/payments/", {"member": bina.id, "amount_paise": 50000, "method": "cash"}, format="json")
+    assert r.status_code == 400 and "member" in r.json()["error"]["fields"]
+    parts = [{"method": "cash", "amount_paise": 100}, {"method": "upi", "amount_paise": 100}]
+    r = c.post("/api/payments/split/", {"member": bina.id, "parts": parts}, format="json")
+    assert r.status_code == 400 and "member" in r.json()["error"]["fields"]
+    assert not bina.payments.exists() and not bina.subscriptions.exists()
+    # their own branch's member still works, and admins reach every branch
+    assert c.post("/api/subscriptions/", {"member": w.member.id, "plan": w.monthly.id}, format="json").status_code == 201
+    assert w.client(w.admin).post("/api/subscriptions/", {"member": bina.id, "plan": w.monthly.id}, format="json").status_code == 201
+
+
+def test_staff_see_only_the_people_at_their_branches(w):
+    trainer_b = w.role("trainerb@x.in", "trainer", [w.b])
+    names = lambda role: {s["name"] for s in w.client(role).get("/api/staff/").json()["results"]}  # noqa: E731
+    assert names(w.desk) == names(w.trainer) == {"Desk0", "Trainer0"}
+    assert names(w.desk_b) == {"Deskb0", "Trainerb"}
+    assert names(w.admin) == {"Admin0", "Desk0", "Deskb0", "Trainer0", "Trainerb"}
+    assert w.client(w.desk).get(f"/api/staff/{trainer_b.id}/").status_code == 404
+
+
+def test_desk_picks_only_a_trainer_at_its_branches(w):
+    trainer_b = w.role("trainerb@x.in", "trainer", [w.b])
+    pt = w.monthly.__class__.objects.create(gym=w.gym, name="PT 8", kind="pt", months=1, sessions=8, price_paise=400000)
+    c = w.client(w.desk)
+    r = c.post("/api/subscriptions/", {"member": w.member.id, "plan": pt.id, "trainer": trainer_b.id}, format="json")
+    assert r.status_code == 400 and "trainer" in r.json()["error"]["fields"]
+    r = c.patch(f"/api/members/{w.member.id}/", {"trainer": trainer_b.id}, format="json")
+    assert r.status_code == 400 and "trainer" in r.json()["error"]["fields"]
+    assert c.patch(f"/api/members/{w.member.id}/", {"trainer": w.trainer.id}, format="json").status_code == 200
+    assert w.client(w.admin).patch(f"/api/members/{w.member.id}/", {"trainer": trainer_b.id}, format="json").status_code == 200
+
+
 
 def test_members_filter_by_current_plan(w):
     from apps.members.models import Plan
@@ -55,6 +93,20 @@ def test_members_filter_by_current_plan(w):
     assert names(f"/api/members/?plan={annual.id}&status=due") == ["Bina"]
     assert names(f"/api/members/?plan={annual.id}&status=active") == []
     assert names(f"/api/members/?plan={annual.id}&branch={w.b.id}") == []
+
+def test_members_sorted_by_name_or_newest(w):
+    from apps.members.models import Member
+
+    for name, phone, joined in (("Zoya", "9811111121", 2), ("Bina", "9811111122", 30), ("Chetan", "9811111123", 2)):
+        m = w.new_member(name, phone, w.a)
+        Member.objects.filter(pk=m.pk).update(joined_on=w.today - timedelta(days=joined))
+    Member.objects.filter(pk=w.member.pk).update(joined_on=w.today)
+    c = w.client(w.admin)
+    names = lambda url: [m["name"] for m in c.get(url).json()["results"]]  # noqa: E731
+    assert names("/api/members/") == ["Asha", "Bina", "Chetan", "Zoya"]
+    assert names("/api/members/?sort=newest") == ["Asha", "Chetan", "Zoya", "Bina"]  # same day: the one added last first
+    assert names("/api/members/?sort=newest&status=none") == ["Chetan", "Zoya", "Bina"]  # the status filter keeps the order
+
 
 def test_trainer_sees_own_members_without_amounts(w):
     rows = w.client(w.trainer).get("/api/members/").json()["results"]
@@ -78,10 +130,12 @@ def test_member_sees_only_self(w):
     assert c.post("/api/payments/", {}).status_code == 403
 
 
-def test_member_can_sign_in_with_phone(w, client):
-    w.client(w.desk).post(f"/api/members/{w.member.id}/set-login/", {"password": "secret1"}, format="json")
-    r = client.post("/api/auth/login/", {"identifier": "98000 00001", "password": "secret1"}, content_type="application/json")
-    assert r.status_code == 200
+def test_member_signs_in_with_their_username_not_their_phone(w, client):
+    r = w.client(w.desk).post(f"/api/members/{w.member.id}/set-login/", {"password": "secret1"}, format="json")
+    assert r.json() == {"username": "asha", "name": "Asha", "linked": False}  # made from their name
+    login = lambda name: client.post("/api/auth/login/", {"username": name, "password": "secret1"}, content_type="application/json")
+    assert login("@Asha").status_code == 200
+    assert login("98000 00001").status_code == 401  # a phone is contact only: families share them
 
 
 def test_only_admin_manages_staff(w):
@@ -118,6 +172,39 @@ def test_member_sees_own_plan_and_balance(w):
     me = c.get("/api/members/").json()["results"][0]
     assert me["plan"]["name"] == "Monthly" and me["balance_paise"] == 0
     assert c.get(f"/api/checkins/?member={w.member.id}").status_code == 200
+
+
+def test_member_sees_own_plans_and_payments_only(w):
+    from apps.members.models import Payment, Subscription
+    from apps.members.services import sell, take_payment
+
+    other = w.new_member("Bina", "9811111111", w.a)
+    take_payment(other, 50000, "cash", by=w.desk, subscription=sell(other, w.monthly, by=w.desk))
+    mine = Subscription.objects.get(member=w.member)
+    renewal = sell(w.member, w.monthly, by=w.desk)  # starts after the current plan: up next
+    take_payment(w.member, 10000, "cash", by=w.desk, note="Owner's friend, gave discount")
+    Payment.objects.filter(member=w.member, amount_paise=10000).update(voided=True, void_reason="Entered twice")
+    dropped = sell(w.member, w.monthly, by=w.desk)
+    dropped.cancelled = True
+    dropped.save(update_fields=["cancelled"])
+    c = w.member_client()
+
+    assert c.get(f"/api/subscriptions/?member={other.id}").json()["results"] == []  # another member's id finds nothing
+    plans = c.get("/api/subscriptions/").json()["results"]
+    assert [p["id"] for p in plans] == [renewal.id, mine.id]  # newest first, the cancelled one left out
+    assert plans[1]["plan_name"] == "Monthly" and plans[1]["paid_paise"] == 150000
+    assert c.get(f"/api/subscriptions/{other.subscriptions.get().id}/").status_code == 404
+
+    pays = c.get("/api/payments/").json()["results"]
+    assert len(pays) == 1 and pays[0]["amount_paise"] == 150000 and pays[0]["plan_name"] == "Monthly"  # the voided one left out
+    assert "note" not in pays[0] and "void_reason" not in pays[0]
+    assert c.get("/api/payments/?from=2020-01-01").status_code == 200  # any dates: they're all their own
+
+    # Reading only: the desk's money and every change stay the desk's.
+    assert c.get("/api/payments/collection/").status_code == 403
+    assert c.post(f"/api/subscriptions/{mine.id}/freeze/", {"until": str(w.today)}, format="json").status_code == 403
+    assert c.post(f"/api/payments/{pays[0]['id']}/void/", {"reason": "x"}, format="json").status_code == 403
+    assert c.post("/api/subscriptions/", {"member": w.member.id, "plan": w.monthly.id}, format="json").status_code == 403
 
 
 def test_trainer_attention_filter(w):

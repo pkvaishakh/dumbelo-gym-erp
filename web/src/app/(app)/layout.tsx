@@ -31,8 +31,11 @@ function Frame({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider fallback={<Loading />}>
-      <Frame>{children}</Frame>
-    </SessionProvider>
+    <>
+      <div className="rl-statusbar" aria-hidden />
+      <SessionProvider fallback={<Loading />}>
+        <Frame>{children}</Frame>
+      </SessionProvider>
+    </>
   );
 }

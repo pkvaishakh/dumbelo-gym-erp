@@ -1,9 +1,9 @@
 """Fill an empty database with the demo gym from the prototype: `python manage.py seed_demo` (add --reset to start over).
 
-Every demo login uses the password `dumbelo-demo`:
-  meera@dumbelo.demo (admin, account owner)   arjun@ / kavya@ (receptionists)   neha@ / neeraj@ / alex@ / imran@ (trainers)
-  members sign in with their phone, e.g. 9800000001
-  dumbelo@dumbelo.demo (a Dumbelo admin: the Console at /console, no role in the gym)
+Every demo login signs in by username, with the password `dumbelo-demo`:
+  meera (admin, account owner)   arjun / kavya (receptionists)   neha / neeraj / alex / imran (trainers)
+  the first ten members, e.g. aarav.reddy
+  dumbelo.admin (a Dumbelo admin: the Console at /console, no role in the gym)
 """
 import random
 from datetime import date, datetime, time, timedelta
@@ -27,7 +27,7 @@ from apps.expenses.services import pay_due, sync_dues
 from apps.gyms.models import Branch, BranchSession, Gym, GymRole
 from apps.members.models import Member, Offer, Plan, Refund
 from apps.members.serializers import set_login
-from apps.members.services import sell, take_payment
+from apps.members.services import mark_session, sell, take_payment
 from apps.messages.models import Message, WhatsAppAccount, WhatsAppTemplate
 from apps.messages.meta import NO_ANSWER
 from apps.messages.services import send_due
@@ -35,6 +35,8 @@ from apps.payroll import services as payroll
 from apps.payroll.models import Payslip, PayslipLine, SalaryItem, SalaryPayment, SalaryRule
 from apps.reminders.services import queue_for
 from apps.tasks.models import Task, TaskUpdate
+from apps.workouts.models import DietAssignment, DietPlan, WorkoutAssignment, WorkoutPlan
+from apps.workouts.services import assign_plan
 
 User = get_user_model()
 PASSWORD = "dumbelo-demo"
@@ -103,7 +105,7 @@ class Command(BaseCommand):
 
         staff = {}
         for i, (name, key, role, where, shift, spec) in enumerate(STAFF):
-            user = User.objects.filter(email=f"{key}@dumbelo.demo").first() or User.objects.create_user(email=f"{key}@dumbelo.demo", password=PASSWORD, name=name, phone=f"97000000{i:02d}")
+            user = User.objects.filter(username=key).first() or User.objects.create_user(username=key, email=f"{key}@dumbelo.demo", password=PASSWORD, name=name, phone=f"97000000{i:02d}")
             r = GymRole.objects.create(user=user, gym=gym, role=role, is_owner=key == "meera", shift=shift, specialities=spec, day_off="Sunday" if role != GymRole.ADMIN else "", device_user_id=str(900 + i))
             r.branches.set([branches[w] for w in where])
             staff[key] = r
@@ -112,7 +114,7 @@ class Command(BaseCommand):
         trainers_at = {b: [r for r in staff.values() if r.role == GymRole.TRAINER and branches[b] in r.branches.all()] for b in branches}
 
         plans = [Plan.objects.create(gym=gym, name=n, months=m, price_paise=p * 100, includes="Gym floor, lockers" + (", diet plan" if m >= 6 else "")) for n, m, p in PLANS]
-        Plan.objects.create(gym=gym, name="Personal training · 12 sessions", kind=Plan.PT, months=3, sessions=12, price_paise=6000 * 100, includes="12 one-on-one sessions")
+        pt = Plan.objects.create(gym=gym, name="Personal training · 12 sessions", kind=Plan.PT, months=3, sessions=12, price_paise=6000 * 100, includes="12 one-on-one sessions")
         diwali = Offer.objects.create(gym=gym, name="Diwali 15% off", percent_off=15, starts=today - timedelta(days=10), ends=today + timedelta(days=20))
         diwali.plans.set(plans[1:])
         Offer.objects.create(gym=gym, name="₹500 off for students", amount_off_paise=50000, starts=today - timedelta(days=60), ends=today + timedelta(days=120))
@@ -152,6 +154,21 @@ class Command(BaseCommand):
             if i < 10:
                 set_login(m, PASSWORD)
             people.append(m)
+
+        # personal training on top of some running memberships, with their trainer, and the sessions given so far
+        for m in people[4::6]:
+            membership = m.subscriptions.get()
+            if m.trainer is None or membership.ends < today or membership.frozen_from:
+                continue
+            starts = max(membership.starts, today - timedelta(days=rnd.randint(7, 30)))
+            sub = sell(m, pt, by=desk[m.home_branch.name], starts=starts)
+            p = take_payment(m, sub.price_paise, "upi", by=desk[m.home_branch.name], subscription=sub)
+            p.taken_at = datetime.combine(starts, time(rnd.randint(7, 19), 30), tzinfo=clock.tz(gym))
+            p.save(update_fields=["taken_at"])
+            day, given = starts, 0
+            while day < today and given < sub.sessions:
+                mark_session(sub, by=m.trainer, on=day)
+                day, given = day + timedelta(days=rnd.choice([2, 3])), given + 1
 
         # a few payments taken today, for the desk's collection
         for m in people[2::10][:4]:
@@ -200,6 +217,7 @@ class Command(BaseCommand):
             if status == Task.DONE:
                 TaskUpdate.objects.create(task=t, author=staff[who], kind=TaskUpdate.STATUS, text="Marked done")
 
+        self._workouts(gym, staff, people)
         self._bills(gym, branches, meera, today, rnd)
         self._payroll(gym, staff, branches, meera, today)
         Expense.objects.create(gym=gym, branch=branches["Whitefield"], category="equipment", amount_paise=42000 * 100, method="card", paid_to="Cult Equipment", note="2 adjustable benches", spent_on=today,
@@ -216,8 +234,62 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Demo gym ready: {len(branches)} branches, {len(staff)} staff, {len(people)} members, "
             f"{CheckIn.objects.filter(gym=gym).count()} check-ins, {Message.objects.filter(gym=gym).count()} reminders sent. "
-            f"Sign in as meera@dumbelo.demo / {PASSWORD} (X-Gym: dumbelo-fitness)."
+            f"Sign in as meera / {PASSWORD} (X-Gym: dumbelo-fitness)."
         ))
+
+    def _workouts(self, gym, staff, people):
+        """A few trainers' workout plans, and every second member with a trainer on one, given by their trainer."""
+        ex = lambda name, sets, reps, load="": {"name": name, "sets": sets, "reps": reps, "load": load}  # noqa: E731
+        plans = [
+            ("Beginner full body", "First 8 weeks, 3 days a week", "neha", [
+                {"title": "Day 1: Push", "body_parts": ["Chest", "Shoulders", "Triceps"], "exercises": [
+                    ex("Bench Press", 3, "10", "30 kg"), ex("Shoulder Press", 3, "10", "8 kg each"), ex("Tricep Pushdown", 3, "12", "15 kg")]},
+                {"title": "Day 2: Pull", "body_parts": ["Back", "Biceps"], "exercises": [
+                    ex("Lat Pulldown", 3, "10", "35 kg"), ex("Seated Row", 3, "10", "30 kg"), ex("Dumbbell Curl", 3, "12", "6 kg each")]},
+                {"title": "Day 3: Legs", "body_parts": ["Legs", "Cardio"], "exercises": [
+                    ex("Goblet Squat", 3, "12", "12 kg"), ex("Leg Press", 3, "12", "60 kg"), ex("Treadmill walk", 1, "15 min")]},
+            ]),
+            ("Fat loss circuit", "4 days a week, short rests", "neha", [
+                {"title": "Day 1: Upper", "body_parts": ["Chest", "Back"], "exercises": [
+                    ex("Push-ups", 3, "15", "Bodyweight"), ex("Dumbbell Row", 3, "12", "10 kg"), ex("Battle ropes", 3, "30 sec")]},
+                {"title": "Day 2: Lower", "body_parts": ["Legs"], "exercises": [
+                    ex("Walking Lunge", 3, "20 steps", "Bodyweight"), ex("Kettlebell Swing", 3, "15", "12 kg"), ex("Cycling", 1, "20 min")]},
+            ]),
+            ("Mobility and core", "For stiff backs and desk jobs", "alex", [
+                {"title": "Every session", "body_parts": ["Back", "Core"], "exercises": [
+                    ex("Cat-cow", 2, "10"), ex("Dead bug", 3, "10 each side"), ex("Plank", 3, "45 sec"), ex("Hip flexor stretch", 2, "30 sec each")]},
+            ]),
+        ]
+        made = [WorkoutPlan.objects.create(gym=gym, name=n, goal=g, created_by=staff[who], days=days) for n, g, who, days in plans]
+        for i, m in enumerate(p for p in people if p.trainer):
+            if i % 2 == 0:
+                assign_plan(made[(i // 2) % len(made)], m, by=m.trainer, note="Start light, then add weight each week" if i == 0 else "")
+        self._diets(gym, staff, people)
+
+    def _diets(self, gym, staff, people):
+        """Two diet plans, and every third member with a trainer on one, given by their trainer."""
+        meal = lambda name, time, food, kcal: {"name": name, "time": time, "food": food, "kcal": kcal}  # noqa: E731
+        diets = [
+            ("Lean veg 1,800", "Fat loss, vegetarian", "neha", 1800, 110, 200, 55, [
+                meal("Breakfast", "7:30 AM", "Vegetable poha with peanuts, a glass of milk", 400),
+                meal("Mid-morning", "11 AM", "A fruit and a handful of roasted chana", 180),
+                meal("Lunch", "1:30 PM", "2 rotis, dal, paneer bhurji, salad", 550),
+                meal("Evening", "After the workout", "Whey in water, or curd with a banana", 220),
+                meal("Dinner", "8:30 PM", "Brown rice, rajma, sauteed vegetables", 450),
+            ]),
+            ("Muscle gain 2,800", "Gaining size, eats eggs and chicken", "imran", 2800, 170, 330, 80, [
+                meal("Breakfast", "7 AM", "4 egg omelette, 3 slices of brown bread, a banana", 650),
+                meal("Lunch", "1 PM", "Rice, grilled chicken or paneer, dal, salad", 800),
+                meal("Pre-workout", "5 PM", "Peanut butter toast and black coffee", 350),
+                meal("Post-workout", "7 PM", "Whey with milk, a handful of dates", 400),
+                meal("Dinner", "9 PM", "3 rotis, chicken curry, vegetables", 600),
+            ]),
+        ]
+        made = [DietPlan.objects.create(gym=gym, name=n, goal=g, created_by=staff[who], kcal=k, protein_g=pr, carbs_g=c, fat_g=f, meals=m)
+                for n, g, who, k, pr, c, f, m in diets]
+        for i, m in enumerate(p for p in people if p.trainer):
+            if i % 3 == 0:
+                assign_plan(made[(i // 3) % len(made)], m, by=m.trainer, note="Drink 3 litres of water a day" if i == 0 else "")
 
     def _failed_messages(self, gym, day):
         """Two of yesterday's reminders that didn't reach the phone, for More → Messages: one Meta turned away (an
@@ -228,8 +300,8 @@ class Command(BaseCommand):
 
     def _dumbelo_admin(self):
         """Dumbelo's own login for the Console. Kept across --reset: it belongs to no gym."""
-        if not User.objects.filter(email="dumbelo@dumbelo.demo").exists():
-            User.objects.create_superuser(email="dumbelo@dumbelo.demo", password=PASSWORD, name="Dumbelo Admin")
+        if not User.objects.filter(username="dumbelo.admin").exists():
+            User.objects.create_superuser(username="dumbelo.admin", email="dumbelo@dumbelo.demo", password=PASSWORD, name="Dumbelo Admin")
 
     def _prices(self):
         """Dumbelo's prices, kept across --reset like the Dumbelo admin: they belong to no gym."""
@@ -255,7 +327,7 @@ class Command(BaseCommand):
     def _dumbelo_invoices(self, gym, today):
         """Three months of Dumbelo invoices: the first two paid by bank transfer, this month's half paid, and the
         machine setup for the turnstiles waiting for the next invoice."""
-        ops = User.objects.get(email="dumbelo@dumbelo.demo")
+        ops = User.objects.get(username="dumbelo.admin")
         this_month = today.replace(day=1)
         for back in (2, 1, 0):
             inv = invoicing.write_invoice(gym, clock.add_months(this_month, -back))
@@ -347,7 +419,7 @@ class Command(BaseCommand):
 
     def _wipe(self, gym):
         from apps.audit.models import AuditLog
-        from apps.members.models import Payment, Subscription
+        from apps.members.models import Payment, PTSession, Subscription
 
         AuditLog.objects.filter(gym=gym).delete()
         TaskUpdate.objects.filter(task__gym=gym).delete()
@@ -367,6 +439,11 @@ class Command(BaseCommand):
         Payment.objects.filter(gym=gym).delete()
         MoneyMove.objects.filter(gym=gym).delete()
         Account.objects.filter(gym=gym).delete()  # the branches they serve go with them
+        WorkoutAssignment.objects.filter(gym=gym).delete()
+        WorkoutPlan.objects.filter(gym=gym).delete()
+        DietAssignment.objects.filter(gym=gym).delete()
+        DietPlan.objects.filter(gym=gym).delete()
+        PTSession.objects.filter(gym=gym).delete()
         Subscription.objects.filter(member__gym=gym).delete()
         Member.objects.filter(gym=gym).delete()
         InvoicePayment.objects.filter(gym=gym).delete()

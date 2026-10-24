@@ -1,5 +1,5 @@
 "use client";
-import { Banknote, Minus, Plus, Printer } from "lucide-react";
+import { Minus, Plus, Printer } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -9,12 +9,11 @@ import { usePayslipsRetrieve } from "@/api/gen/payslips/payslips";
 import { DetailBar } from "@/components/shell";
 import { Chips, ErrorText, Field, Icon, Photo, Section, Sheet, SkeletonRows } from "@/components/ui";
 import { PaySheet, PayslipStatus } from "@/features/money-out";
-import { Breakdown } from "@/features/payroll";
-import { day, LINE_KIND, monthLabel, PAY_METHOD, rupees, toPaise } from "@/lib/format";
+import { Breakdown, SalaryPayments, STAFF_ROLE, TakeHome } from "@/features/payroll";
+import { LINE_KIND, monthLabel, rupees, toPaise } from "@/lib/format";
 import { useAction } from "@/lib/hooks";
 
 const REFRESH = ["/api/payslips/", "/api/reports/"];
-const ROLE: Record<string, string> = { admin: "Admin", receptionist: "Receptionist", trainer: "Trainer" };
 
 export default function PayslipRecord() {
   const { id } = useParams<{ id: string }>();
@@ -35,13 +34,9 @@ export default function PayslipRecord() {
         <div className="rl-identity">
           <Photo name={s.staff_name} size="xl" />
           <div className="rl-identity__text"><h2 className="rl-identity__name">{s.staff_name}</h2>
-            <p className="rl-identity__meta" style={{ margin: 0 }}><span>{ROLE[s.staff_role] ?? s.staff_role} • {monthLabel(s.month)}</span><PayslipStatus status={s.status} payment={s.payment_status} /></p></div>
+            <p className="rl-identity__meta" style={{ margin: 0 }}><span>{STAFF_ROLE[s.staff_role] ?? s.staff_role} • {monthLabel(s.month)}</span><PayslipStatus status={s.status} payment={s.payment_status} /></p></div>
         </div>
-        <section className="rl-section" aria-label="Take-home pay"><div className="rl-pass">
-          <div className="rl-pass__top"><span className="rl-pass__plan">Take-home pay</span></div>
-          <p className="rl-figure">{rupees(s.net_paise)}</p>
-          <div className="rl-pass__dates"><span>{rupees(s.paid_paise)} paid</span><span>{s.owed_paise ? `${rupees(s.owed_paise)} to pay` : "Nothing left to pay"}</span></div>
-        </div></section>
+        <TakeHome s={s} />
         <Breakdown s={s} />
         {draft && (
           <Section title="This month">
@@ -71,17 +66,7 @@ export default function PayslipRecord() {
           {draft && s.pay_type !== "daily" && <p className="rl-field__hint">Approve the salary to pay it. A draft keeps following check-ins until then.</p>}
         </Section>
         <Section title="Payments">
-          {s.payments.length ? (
-            <ul className="rl-card rl-activity">
-              {s.payments.map((p) => (
-                <li key={p.id}><div className="rl-activity__row">
-                  <span className="rl-chipicon" aria-hidden="true"><Icon as={Banknote} size="sm" /></span>
-                  <span className="rl-activity__text"><span className="rl-row__title">{day(p.paid_on)}</span><span className="rl-row__meta">{PAY_METHOD[p.method]} • By {p.paid_by_name}{p.note ? ` • ${p.note}` : ""}</span></span>
-                  <span className="rl-activity__amount">{rupees(p.amount_paise)}</span>
-                </div></li>
-              ))}
-            </ul>
-          ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>Nothing paid yet.</p></div>}
+          <SalaryPayments s={s} />
           <p className="rl-listmore"><Link className="rl-link" href={`/staff/${s.staff}`}><span>{s.staff_name}&apos;s salary and history</span></Link></p>
         </Section>
       </main>

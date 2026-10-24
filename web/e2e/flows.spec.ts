@@ -2,14 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function signIn(page: Page, who: string) {
   await page.goto("/login");
-  await page.getByLabel("Mobile number or email").fill(who);
+  await page.getByLabel("Username").fill(who);
   await page.getByLabel("Password", { exact: true }).fill("dumbelo-demo");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL("**/home");
 }
 
 test("admin: home figures, a member's profile, and assigning a task", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await expect(page.getByRole("heading", { name: /Good (morning|afternoon|evening), Meera/ })).toBeVisible();
   await expect(page.getByText("Outstanding dues")).toBeVisible();
   await expect(page.getByText("Check-ins today").first()).toBeVisible();
@@ -31,7 +31,7 @@ test("admin: home figures, a member's profile, and assigning a task", async ({ p
 });
 
 test("admin: add a member with a plan and part payment", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/members/new");
   const phone = "9" + String(Date.now()).slice(-9);
   await page.getByLabel("Full name").fill("Test Member");
@@ -47,7 +47,7 @@ test("admin: add a member with a plan and part payment", async ({ page }) => {
 });
 
 test("receptionist: check a member in from home, once a day", async ({ page }) => {
-  await signIn(page, "arjun@dumbelo.demo");
+  await signIn(page, "arjun");
   await page.getByRole("button", { name: /Check In Member/ }).click();
   const search = page.getByLabel("Search members to check in");
   await search.fill("RF-10");
@@ -60,8 +60,11 @@ test("receptionist: check a member in from home, once a day", async ({ page }) =
   await expect(search).toBeFocused();  // the check-in sheet stays open, ready for the next member
 });
 
-test("trainer: sees own members without amounts", async ({ page }) => {
-  await signIn(page, "neha@dumbelo.demo");
+test("trainer: home shows their day, and own members without amounts", async ({ page }) => {
+  await signIn(page, "neha");
+  await expect(page.getByRole("heading", { name: "Your members in today" })).toBeVisible();
+  await expect(page.getByText(/^Of your \d+ members?$/)).toBeVisible();
+  await expect(page.getByText(/₹/)).toHaveCount(0);
   await page.goto("/members");
   await expect(page.getByRole("heading", { name: "My Members" })).toBeVisible();
   await page.locator("a.rl-mrow").first().click();
@@ -69,8 +72,111 @@ test("trainer: sees own members without amounts", async ({ page }) => {
   await expect(page.getByText(/₹/)).toHaveCount(0);
 });
 
+test("trainer: marks today's personal training session with what they worked, edits it and removes it", async ({ page }) => {
+  await signIn(page, "neha");
+  // Her Home lists her personal training clients. One session a day: pick one whose session today isn't marked
+  // yet and whose plan hasn't ended.
+  const clients = page.locator("section", { has: page.getByRole("heading", { name: "Personal training" }) });
+  await clients.locator("a.rl-mrow").filter({ hasNotText: "Done today" }).filter({ hasNotText: "Expired" }).first().click();
+  await expect(page.getByRole("button", { name: "Mark Session" })).toBeVisible();
+  const left = Number(await page.locator(".rl-pass .rl-figure").last().innerText().then((t) => t.split(" ")[0]));
+  await page.getByRole("button", { name: "Mark Session" }).click();
+  const sheet = page.locator(".rl-sheet");
+  await sheet.getByRole("checkbox", { name: "Chest" }).check();
+  await sheet.getByRole("checkbox", { name: "Biceps" }).check();
+  await sheet.getByLabel("Notes").fill("Bench press 40 kg, 3 sets of 8");
+  await sheet.getByRole("button", { name: "Mark Session" }).click();
+  await expect(page.locator(".rl-pass .rl-figure").last()).toHaveText(new RegExp(`^${left - 1} `));
+  // The plan in full from the eye on its card: what they've worked, every session given. The newest is first;
+  // earlier runs leave removed ones below it.
+  await page.getByRole("link", { name: "View Details" }).click();
+  await expect(page.getByRole("heading", { name: "Worked most" })).toBeVisible();
+  await expect(page.getByText(/^Chest \d+$/)).toBeVisible();
+  await page.getByRole("button", { name: /^Today/ }).first().click();
+  await expect(sheet.getByText("Chest and Biceps")).toBeVisible();
+  await expect(sheet.getByText("Bench press 40 kg, 3 sets of 8")).toBeVisible();
+  await sheet.getByRole("button", { name: "Edit Session" }).click();
+  await sheet.getByLabel("Another part").fill("Abs");
+  await sheet.getByRole("button", { name: "Add", exact: true }).click();
+  await sheet.getByRole("button", { name: "Save Changes" }).click();
+  await expect(sheet.getByText("Chest, Biceps and Abs")).toBeVisible();
+  await sheet.getByRole("button", { name: "Remove Session" }).click();
+  await page.getByLabel("Reason").fill("Marked by mistake");
+  await sheet.getByRole("button", { name: "Remove Session" }).click();
+  await expect(page.locator(".rl-pass .rl-figure").last()).toHaveText(new RegExp(`^${left} `));
+  await expect(page.getByText(/₹/)).toHaveCount(0);
+});
+
+test("trainer writes a workout plan and gives it to a member, who sees it", async ({ page }) => {
+  const name = `Push pull ${Date.now() % 100000}`;  // a new plan each run, so giving it never repeats one
+  await signIn(page, "neha");
+  await page.goto("/workouts");
+  // The + sits under the dev server's own corner button, so follow its link rather than tapping it.
+  await expect(page.getByRole("link", { name: "New Plan" }).first()).toHaveAttribute("href", "/workouts/new");
+  await page.goto("/workouts/new");
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Title").fill("Push day");
+  await page.getByRole("checkbox", { name: "Chest" }).check();
+  await page.getByLabel("Day 1, exercise 1").fill("Bench Press");
+  await page.getByLabel("Reps").fill("8");
+  await page.getByLabel("Load").fill("40 kg");
+  await page.getByRole("button", { name: "Save Plan" }).click();
+  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+  await expect(page.getByText("3 sets × 8 reps")).toBeVisible();
+  // Give it to Aarav, one of Neha's members.
+  await page.getByRole("button", { name: "Assign to Member" }).click();
+  await page.getByLabel("Find the member").fill("Aarav");
+  await page.locator(".rl-sheet .rl-result").filter({ hasText: "Aarav Reddy" }).click();
+  await page.getByLabel("Note for them").fill("Start light");
+  await page.locator(".rl-sheet").getByRole("button", { name: "Assign Plan" }).click();
+  await expect(page.getByText(/1 member on it/)).toBeVisible();
+  // Members filtered by this plan: only Aarav, with the filter showing as a pill above the list.
+  await page.goto(`/members?workout=${page.url().split("/").pop()}`);
+  await expect(page.getByRole("button", { name: `Remove filter Workout: ${name}` })).toBeVisible();
+  await expect(page.locator("a.rl-mrow")).toHaveCount(1);
+  await expect(page.locator("a.rl-mrow")).toContainText("Aarav Reddy");
+
+  // The member's side: sign Neha out of this browser, then in as Aarav.
+  await page.evaluate(() => localStorage.clear());
+  await signIn(page, "aarav.reddy");
+  await page.getByRole("link", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("heading", { name: "Push day" })).toBeVisible();
+  await expect(page.getByText("Bench Press")).toBeVisible();
+  await expect(page.getByText("“Start light”")).toBeVisible();
+});
+
+test("trainer writes a diet plan and gives it to a member from their profile, who sees it", async ({ page }) => {
+  const name = `Lean ${Date.now() % 100000}`;
+  await signIn(page, "neha");
+  await page.goto("/diets/new");
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByLabel("Calories a day, kcal").fill("1800");
+  await page.getByLabel("Protein, g").fill("110");
+  await page.getByLabel("What's in it").first().fill("Oats with banana and milk");  // the first meal, Breakfast
+  await page.getByRole("button", { name: "Save Plan" }).click();
+  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+  await expect(page.getByText("Oats with banana and milk")).toBeVisible();
+  await expect(page.getByText("Protein 110 g")).toBeVisible();
+  // Give it from Aarav's profile this time.
+  await page.goto("/members");
+  await page.locator("a.rl-mrow").filter({ hasText: "Aarav Reddy" }).click();
+  const card = page.locator("section", { has: page.getByRole("heading", { name: "Diet plan" }) });
+  await card.getByRole("button", { name: /Assign Plan|Change Plan/ }).click();
+  const sheet = page.locator(".rl-sheet");
+  await sheet.getByLabel("Find a plan").fill(name);
+  await sheet.getByRole("radio", { name: new RegExp(name) }).check({ force: true });  // the card is the target; its radio is hidden, as in the design
+  await sheet.getByRole("button", { name: "Assign Plan" }).click();
+  await expect(card.getByText(name)).toBeVisible();
+
+  await page.evaluate(() => localStorage.clear());
+  await signIn(page, "aarav.reddy");
+  await page.getByRole("link", { name: new RegExp(name) }).click();
+  await expect(page.getByRole("heading", { name: "Meals" })).toBeVisible();
+  await expect(page.getByText("Oats with banana and milk")).toBeVisible();
+});
+
 test("member: home shows the membership and visits", async ({ page }) => {
-  await signIn(page, "9800000001");
+  await signIn(page, "aarav.reddy");
   await expect(page.locator(".rl-pass")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recent visits" })).toBeVisible();
   await page.goto("/more");
@@ -79,7 +185,7 @@ test("member: home shows the membership and visits", async ({ page }) => {
 });
 
 test("admin: long lists load a page at a time, and the other list screens load", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/members");
   await expect(page.getByText(/^Showing 50 members of \d+$/)).toBeVisible();  // the demo gym has more than one page
   await page.getByRole("button", { name: "Load More" }).click();
@@ -95,7 +201,7 @@ test("admin: long lists load a page at a time, and the other list screens load",
 });
 
 test("admin: pauses and resumes a message, and sees what a member was sent", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/more");
   await page.getByRole("link", { name: "Settings" }).click();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
@@ -122,7 +228,7 @@ test("admin: pauses and resumes a message, and sees what a member was sent", asy
 });
 
 test("admin: work out payroll, approve and pay a salary, then pay a bill from Dues", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/payroll");
   await page.getByRole("button", { name: /^(Update|Work Out) Payroll$/ }).first().click();
   await page.locator("a.rl-mrow", { hasText: "Imran Khan" }).click();
@@ -142,7 +248,7 @@ test("admin: work out payroll, approve and pay a salary, then pay a bill from Du
 });
 
 test("admin: cash and bank, a shared account, and banking a branch's cash", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/more");
   await page.getByRole("link", { name: /Cash and bank/ }).click();
   await expect(page.getByText("Total funds")).toBeVisible();
@@ -185,7 +291,7 @@ test("admin: cash and bank, a shared account, and banking a branch's cash", asyn
 });
 
 test("receptionist counts the cash short, and an admin settles it", async ({ page }) => {
-  await signIn(page, "arjun@dumbelo.demo");
+  await signIn(page, "arjun");
   // Home shows the drawers' cash; More leads to each drawer, then Count Cash.
   await expect(page.getByRole("link", { name: /Cash in hand/ })).toBeVisible();
   await page.goto("/more");
@@ -202,7 +308,7 @@ test("receptionist counts the cash short, and an admin settles it", async ({ pag
 
   await page.getByRole("link", { name: "Done" }).click();
   await page.evaluate(() => localStorage.clear());
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/money");
   await page.getByRole("button", { name: /Indiranagar cash.*₹100 short/ }).click();
   await page.getByLabel("What happened").fill("Change given twice");
@@ -212,7 +318,7 @@ test("receptionist counts the cash short, and an admin settles it", async ({ pag
 });
 
 test("admin: refunds part of a plan, and the member owes nothing because of it", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/members?status=active");
   await page.locator("a.rl-mrow").first().click();
   await page.getByRole("button", { name: "More actions" }).click();
@@ -229,14 +335,14 @@ test("admin: refunds part of a plan, and the member owes nothing because of it",
 });
 
 test("trainer: no cash and bank in More", async ({ page }) => {
-  await signIn(page, "neha@dumbelo.demo");
+  await signIn(page, "neha");
   await page.goto("/more");
   await expect(page.getByRole("heading", { name: "Your work" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Cash and bank/ })).toHaveCount(0);
 });
 
 test("admin: reports by category, yesterday, a custom range over 3 months, and downloads", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" }).click();
   await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
   for (const name of ["Revenue", "Expenses", "Members", "Attendance", "Tasks"]) await expect(page.getByRole("main").getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
@@ -268,7 +374,7 @@ test("admin: reports by category, yesterday, a custom range over 3 months, and d
 });
 
 test("receptionist: no Reports", async ({ page }) => {
-  await signIn(page, "arjun@dumbelo.demo");
+  await signIn(page, "arjun");
   await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Reports" })).toHaveCount(0);
   await page.goto("/reports");
   await expect(page.getByText("Reports are for admins")).toBeVisible();
@@ -276,7 +382,7 @@ test("receptionist: no Reports", async ({ page }) => {
 
 test("dumbelo admin: lands on Console Home, and reaches the gyms that owe, Gyms and Prices", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("Mobile number or email").fill("dumbelo@dumbelo.demo");
+  await page.getByLabel("Username").fill("dumbelo.admin");
   await page.getByLabel("Password", { exact: true }).fill("dumbelo-demo");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL(/\/console$/);
@@ -305,14 +411,14 @@ test("dumbelo admin: lands on Console Home, and reaches the gyms that owe, Gyms 
 
 async function signInToConsole(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Mobile number or email").fill("dumbelo@dumbelo.demo");
+  await page.getByLabel("Username").fill("dumbelo.admin");
   await page.getByLabel("Password", { exact: true }).fill("dumbelo-demo");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL(/\/console$/);
 }
 
 test("admin: More → Messages, with filters, why a message failed, and this billing month on Dumbelo's number", async ({ page }) => {
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/more");
   await page.getByRole("link", { name: "Messages", exact: true }).click();
   await expect(page).toHaveURL(/\/messages$/);
@@ -351,13 +457,13 @@ test("admin: More → Messages, with filters, why a message failed, and this bil
 // fills the plan and asks for room, Dumbelo approves, changes its reminder time and suspends it, and its desk is paused.
 test.describe.serial("dumbelo: from a new gym to a paused one", () => {
   const stamp = Date.now().toString(36);
-  const gym = { name: `E2E Gym ${stamp}`, slug: `e2e-${stamp}`, owner: `owner-${stamp}@dumbelo.demo`, desk: `desk-${stamp}@dumbelo.demo` };
+  const gym = { name: `E2E Gym ${stamp}`, slug: `e2e-${stamp}`, owner: `owner.${stamp}`, desk: `desk.${stamp}` };  // usernames; their emails are only for contact
   const password = "dumbelo-e2e-1";
   let gymUrl = "";
 
-  async function signInAs(page: Page, email: string) {
+  async function signInAs(page: Page, username: string) {
     await page.goto("/login");
-    await page.getByLabel("Mobile number or email").fill(email);
+    await page.getByLabel("Username").fill(username);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign In" }).click();
     await page.waitForURL("**/home");
@@ -369,8 +475,9 @@ test.describe.serial("dumbelo: from a new gym to a paused one", () => {
     await page.getByLabel("Gym name").fill(gym.name);
     await page.getByLabel("Short name").fill(gym.slug);
     await page.getByLabel("First branch").fill("Main");
-    await page.getByLabel("Owner's email").fill(gym.owner);
     await page.getByLabel("Owner's name").fill("Esha Owner");
+    await page.getByLabel("Owner's email").fill(`${gym.owner}@dumbelo.demo`);
+    await page.getByLabel("Username").fill(gym.owner);
     await page.getByLabel("First password").fill(password);
     await page.getByRole("button", { name: "Create Gym" }).click();
     await expect(page.getByText(`${gym.name} is ready`)).toBeVisible();
@@ -392,7 +499,8 @@ test.describe.serial("dumbelo: from a new gym to a paused one", () => {
     await signInAs(page, gym.owner);
     await page.goto("/staff/new?role=receptionist");
     await page.getByLabel("Full name").fill("Dev Desk");
-    await page.getByLabel("Work email").fill(gym.desk);
+    await page.getByLabel("Email").fill(`${gym.desk}@dumbelo.demo`);
+    await page.getByLabel("Username").fill(gym.desk);
     await page.getByLabel("First password").fill(password);
     await page.getByRole("checkbox", { name: "Main" }).check();
     await page.getByRole("button", { name: "Add Receptionist" }).click();
@@ -476,7 +584,7 @@ test("dumbelo admin: records a payment on the demo gym's invoice, and its admin 
   await sheet.getByRole("button", { name: "Done" }).click();
 
   await page.evaluate(() => localStorage.clear()); // sign out of the Console, so the login page asks again
-  await signIn(page, "meera@dumbelo.demo");
+  await signIn(page, "meera");
   await page.goto("/dumbelo-plan");
   await page.locator("a.rl-mrow", { hasText: number }).click();
   await expect(page.getByRole("region", { name: "Invoice total" }).getByText(number, { exact: true })).toBeVisible();

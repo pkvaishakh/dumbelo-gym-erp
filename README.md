@@ -78,22 +78,23 @@ cd api; python manage.py shell
 
 ### Demo logins (password `dumbelo-demo`)
 
-| Who | Sign in with | Role |
+| Who | Username | Role |
 |---|---|---|
-| Meera Iyer | meera@dumbelo.demo | Admin, account owner |
-| Arjun Rao | arjun@dumbelo.demo | Receptionist · Indiranagar, Koramangala |
-| Kavya Nair | kavya@dumbelo.demo | Receptionist · HSR Layout, Whitefield |
-| Neha Sharma | neha@dumbelo.demo | Trainer · Indiranagar |
-| Neeraj, Alex, Imran | neeraj@ / alex@ / imran@dumbelo.demo | Trainers |
-| Aarav Reddy | 9800000001 | Member (first 10 members have logins) |
-| Dumbelo Admin | dumbelo@dumbelo.demo | Dumbelo admin: the Console at `/console` (no role in the gym) |
+| Meera Iyer | meera | Admin, account owner |
+| Arjun Rao | arjun | Receptionist · Indiranagar, Koramangala |
+| Kavya Nair | kavya | Receptionist · HSR Layout, Whitefield |
+| Neha Sharma | neha | Trainer · Indiranagar |
+| Neeraj, Alex, Imran | neeraj / alex / imran | Trainers |
+| Aarav Reddy | aarav.reddy | Member (first 10 members have logins, named from their names) |
+| Dumbelo Admin | dumbelo.admin | Dumbelo admin: the Console at `/console` (no role in the gym) |
 
 `python manage.py seed_demo --reset` rebuilds the demo gym. It also sends yesterday's and today's reminders
 through the fake sender, so the Reminders card on a member's profile has something in it.
 
 ## How the API works
 
-- **Sign in:** `POST /api/auth/login/` with `identifier` (staff email, or a member's 10-digit mobile) and `password`.
+- **Sign in:** `POST /api/auth/login/` with `username` and `password`. One login per person across every gym;
+  email and phone are contact details only (see "Logins" in `docs/decisions.md`).
   Send `Authorization: Bearer <access>`. Refresh at `/api/auth/refresh/`. `GET /api/me/` lists the gyms and branches you can open.
 - **One gym per request:** send `X-Gym: <slug>`. A gym you have no role in answers 404, as if it didn't exist.
 - **Roles:** admin (everything, every branch), receptionist (desk work in their branches, today's collection, fixed
@@ -180,4 +181,4 @@ needs lives in its own environment (Secrets Manager for the four secret ones).
 1. Deploy the pilot: follow `docs/deploy.md`, then onboard the first real gym.
 2. Backups, the monthly restore drill, and `create_gym` for a real gym (session 8 in `ROADMAP.md`).
 3. Turnstile vendor adapter (ZKTeco/eSSL push format), then the pilot at the current client from week 9.
-4. Password reset by the desk for staff, and members changing their own password.
+4. Members changing their own password, and a way to recover a forgotten username or password.

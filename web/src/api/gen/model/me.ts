@@ -9,6 +9,8 @@ import type { Role } from './role';
 
 export interface Me {
   id: number;
+  /** How they sign in */
+  username: string;
   name: string;
   initials: string;
   /** @nullable */

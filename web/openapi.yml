@@ -795,8 +795,9 @@ paths:
       description: |-
         Who came in. Only the time in is recorded — there is no check-out.
 
-        The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-        a mistaken check-in (audited).
+        The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+        their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+        only, admins any day.
       parameters:
       - in: query
         name: branch
@@ -811,7 +812,7 @@ paths:
         name: from
         schema:
           type: string
-        description: 'With member or staff: YYYY-MM-DD, the first day'
+        description: 'With member, staff or mine: YYYY-MM-DD, the first day'
       - in: query
         name: kind
         schema:
@@ -833,6 +834,11 @@ paths:
         schema:
           type: integer
         description: One member's visits, any day
+      - in: query
+        name: mine
+        schema:
+          type: boolean
+        description: 'Staff: your own check-ins at any branch, any day'
       - name: offset
         required: false
         in: query
@@ -860,7 +866,7 @@ paths:
         name: to
         schema:
           type: string
-        description: 'With member or staff: YYYY-MM-DD, the last day'
+        description: 'With member, staff or mine: YYYY-MM-DD, the last day'
       tags:
       - checkins
       security:
@@ -877,8 +883,9 @@ paths:
       description: |-
         Who came in. Only the time in is recorded — there is no check-out.
 
-        The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-        a mistaken check-in (audited).
+        The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+        their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+        only, admins any day.
       tags:
       - checkins
       requestBody:
@@ -903,13 +910,51 @@ paths:
                 $ref: '#/components/schemas/CheckIn'
           description: ''
   /api/checkins/{id}/:
+    patch:
+      operationId: checkins_partial_update
+      description: |-
+        Who came in. Only the time in is recorded — there is no check-out.
+
+        The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+        their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+        only, admins any day.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this check in.
+        required: true
+      tags:
+      - checkins
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCheckInTimeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCheckInTimeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCheckInTimeRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckIn'
+          description: ''
     delete:
       operationId: checkins_destroy
       description: |-
         Who came in. Only the time in is recorded — there is no check-out.
 
-        The desk checks people in; staff see their branches' list; a member sees their own visits; admins can remove
-        a mistaken check-in (audited).
+        The desk checks people in; staff see their branches' list and their own check-ins (`?mine=true`); a member sees
+        their own visits. The desk corrects a check-in's time or removes a mistaken one (audited): receptionists today
+        only, admins any day.
       parameters:
       - in: path
         name: id
@@ -1227,6 +1272,244 @@ paths:
               schema:
                 type: object
                 additionalProperties: {}
+          description: ''
+  /api/diet-assignments/:
+    get:
+      operationId: diet_assignments_list
+      description: Diet plans given to members.
+      parameters:
+      - in: query
+        name: current
+        schema:
+          type: boolean
+        description: Only the plans members are on now
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: plan
+        schema:
+          type: integer
+      tags:
+      - diet-assignments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDietAssignmentList'
+          description: ''
+    post:
+      operationId: diet_assignments_create
+      description: Give a member a plan. The one of this kind they're on now ends.
+      tags:
+      - diet-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DietAssignment'
+          description: ''
+  /api/diet-assignments/{id}/:
+    get:
+      operationId: diet_assignments_retrieve
+      description: Diet plans given to members.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diet assignment.
+        required: true
+      tags:
+      - diet-assignments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DietAssignment'
+          description: ''
+  /api/diet-assignments/{id}/end/:
+    post:
+      operationId: diet_assignments_end_create
+      description: Take a member off this plan, with nothing in its place.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diet assignment.
+        required: true
+      tags:
+      - diet-assignments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DietAssignment'
+          description: ''
+  /api/diet-plans/:
+    get:
+      operationId: diet_plans_list
+      description: 'The gym''s diet plans: the day''s targets, and each meal with
+        what''s in it.'
+      parameters:
+      - in: query
+        name: archived
+        schema:
+          type: boolean
+        description: Archived plans instead of the ones in use
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: mine
+        schema:
+          type: boolean
+        description: Only the plans you wrote
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name or goal
+      tags:
+      - diet-plans
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDietPlanList'
+          description: ''
+    post:
+      operationId: diet_plans_create
+      description: 'The gym''s diet plans: the day''s targets, and each meal with
+        what''s in it.'
+      tags:
+      - diet-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DietPlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DietPlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DietPlanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DietPlan'
+          description: ''
+  /api/diet-plans/{id}/:
+    get:
+      operationId: diet_plans_retrieve
+      description: 'The gym''s diet plans: the day''s targets, and each meal with
+        what''s in it.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diet plan.
+        required: true
+      tags:
+      - diet-plans
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DietPlan'
+          description: ''
+    patch:
+      operationId: diet_plans_partial_update
+      description: 'The gym''s diet plans: the day''s targets, and each meal with
+        what''s in it.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this diet plan.
+        required: true
+      tags:
+      - diet-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDietPlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDietPlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDietPlanRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DietPlan'
           description: ''
   /api/drawer-closes/:
     get:
@@ -1887,8 +2170,8 @@ paths:
       operationId: gym_settings_retrieve
       description: |-
         The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
-        run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
-        switches are `/api/gym/messages/`.
+        run and whether personal training needs a membership, which admins change here (audited; plans already sold keep
+        their dates). Admins only. The gym's message switches are `/api/gym/messages/`.
       tags:
       - gym
       security:
@@ -1904,8 +2187,8 @@ paths:
       operationId: gym_settings_partial_update
       description: |-
         The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
-        run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
-        switches are `/api/gym/messages/`.
+        run and whether personal training needs a membership, which admins change here (audited; plans already sold keep
+        their dates). Admins only. The gym's message switches are `/api/gym/messages/`.
       tags:
       - gym
       requestBody:
@@ -1994,7 +2277,7 @@ paths:
       operationId: me_retrieve
       description: |-
         Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
-        Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+        Staff can change their own username, name, email and mobile number; a member's are changed by the front desk.
 
         This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
         there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
@@ -2013,7 +2296,7 @@ paths:
       operationId: me_partial_update
       description: |-
         Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
-        Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+        Staff can change their own username, name, email and mobile number; a member's are changed by the front desk.
 
         This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
         there carry `gym_status`, so the app can show the paused screen instead of failing on every call.
@@ -2082,6 +2365,12 @@ paths:
         name: branch
         schema:
           type: integer
+      - in: query
+        name: diet
+        schema:
+          type: string
+        description: 'A diet plan''s id: members on it now; any: on one; none: on
+          none'
       - name: limit
         required: false
         in: query
@@ -2098,12 +2387,21 @@ paths:
         name: plan
         schema:
           type: integer
-        description: Members whose current plan is this one
+        description: 'Members whose current plan is this one: their membership or
+          personal training'
       - in: query
         name: q
         schema:
           type: string
         description: Name, member ID or phone
+      - in: query
+        name: sort
+        schema:
+          type: string
+          enum:
+          - name
+          - newest
+        description: 'name (A to Z) when missing; newest: the latest to join first'
       - in: query
         name: status
         schema:
@@ -2121,6 +2419,12 @@ paths:
         name: trainer
         schema:
           type: integer
+      - in: query
+        name: workout
+        schema:
+          type: string
+        description: 'A workout plan''s id: members on it now; any: on one; none:
+          on none'
       tags:
       - members
       security:
@@ -2338,8 +2642,9 @@ paths:
   /api/members/{id}/set-login/:
     post:
       operationId: members_set_login_create
-      description: Set or reset the member's app password. They sign in with their
-        phone number.
+      description: |-
+        The member's app login: a new one (username and password), a new password or username for the one this
+        gym gave them, or the login they already have at another gym (`existing_username`), linked as it is.
       parameters:
       - in: path
         name: id
@@ -2353,19 +2658,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasswordRequest'
+              $ref: '#/components/schemas/SetLoginRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PasswordRequest'
+              $ref: '#/components/schemas/SetLoginRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PasswordRequest'
-        required: true
+              $ref: '#/components/schemas/SetLoginRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSet'
+          description: ''
+  /api/members/today/:
+    get:
+      operationId: members_today_retrieve
+      description: |-
+        A trainer's day: their own check-in, their members by status and who of them came in today, and their
+        personal training with the sessions left and whether today's is marked.
+      parameters:
+      - in: query
+        name: branch
+        schema:
+          type: integer
+      tags:
+      - members
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainerToday'
+          description: ''
   /api/messages/:
     get:
       operationId: messages_list
@@ -2866,8 +3196,9 @@ paths:
   /api/payments/:
     get:
       operationId: payments_list
-      description: Payments recorded at the desk. Receptionists record and see their
-        branches; only admins correct or void.
+      description: |-
+        Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+        lists their own, any dates, voided ones and the desk's notes left out.
       parameters:
       - in: query
         name: branch
@@ -2941,8 +3272,9 @@ paths:
           description: ''
     post:
       operationId: payments_create
-      description: Payments recorded at the desk. Receptionists record and see their
-        branches; only admins correct or void.
+      description: |-
+        Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+        lists their own, any dates, voided ones and the desk's notes left out.
       tags:
       - payments
       requestBody:
@@ -2969,8 +3301,9 @@ paths:
   /api/payments/{id}/:
     get:
       operationId: payments_retrieve
-      description: Payments recorded at the desk. Receptionists record and see their
-        branches; only admins correct or void.
+      description: |-
+        Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+        lists their own, any dates, voided ones and the desk's notes left out.
       parameters:
       - in: path
         name: id
@@ -2991,8 +3324,9 @@ paths:
           description: ''
     put:
       operationId: payments_update
-      description: Payments recorded at the desk. Receptionists record and see their
-        branches; only admins correct or void.
+      description: |-
+        Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+        lists their own, any dates, voided ones and the desk's notes left out.
       parameters:
       - in: path
         name: id
@@ -3025,8 +3359,9 @@ paths:
           description: ''
     patch:
       operationId: payments_partial_update
-      description: Payments recorded at the desk. Receptionists record and see their
-        branches; only admins correct or void.
+      description: |-
+        Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+        lists their own, any dates, voided ones and the desk's notes left out.
       parameters:
       - in: path
         name: id
@@ -3059,8 +3394,9 @@ paths:
   /api/payments/{id}/void/:
     post:
       operationId: payments_void_create
-      description: Payments recorded at the desk. Receptionists record and see their
-        branches; only admins correct or void.
+      description: |-
+        Payments recorded at the desk. Receptionists record and see their branches; only admins correct or void. A member
+        lists their own, any dates, voided ones and the desk's notes left out.
       parameters:
       - in: path
         name: id
@@ -3213,9 +3549,8 @@ paths:
   /api/payslips/:
     get:
       operationId: payslips_list
-      description: |-
-        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+      description: Receptionists and trainers get their own, once approved or paid
+        in part.
       parameters:
       - in: query
         name: branch
@@ -3272,8 +3607,11 @@ paths:
     get:
       operationId: payslips_retrieve
       description: |-
-        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+        Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+        approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+        Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+        a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
       parameters:
       - in: path
         name: id
@@ -3296,8 +3634,11 @@ paths:
     post:
       operationId: payslips_approve_create
       description: |-
-        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+        Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+        approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+        Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+        a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
       parameters:
       - in: path
         name: id
@@ -3425,8 +3766,11 @@ paths:
     post:
       operationId: payslips_remove_line_create
       description: |-
-        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+        Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+        approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+        Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+        a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
       parameters:
       - in: path
         name: id
@@ -3461,8 +3805,11 @@ paths:
     post:
       operationId: payslips_reopen_create
       description: |-
-        Payroll. Admins only. Work out a month (`generate`), check each payslip, add incentives, bonuses and
-        deductions, approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+        Payroll. Admins work out a month (`generate`), check each payslip, add incentives, bonuses and deductions,
+        approve it, and pay it in full or in parts. `?staff=` is one person's salary history.
+
+        Receptionists and trainers read their own payslips (My Salary), once approved or once anything is paid on them:
+        a draft still follows check-ins and the admin's changes, so it isn't their pay yet.
       parameters:
       - in: path
         name: id
@@ -4139,7 +4486,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/GymAdminAddRequest'
-        required: true
       security:
       - jwtAuth: []
       responses:
@@ -5460,6 +5806,172 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConsoleUsage'
           description: ''
+  /api/pt-sessions/:
+    get:
+      operationId: pt_sessions_list
+      description: |-
+        Personal training sessions given, each using one of a plan's sessions. Trainers mark today's for their own
+        members; the desk and admins any day inside the plan, and any of them notes what it worked. A member sees their
+        own. Removed ones stay, marked void.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: subscription
+        schema:
+          type: integer
+      - in: query
+        name: trainer
+        schema:
+          type: integer
+      - in: query
+        name: voided
+        schema:
+          type: boolean
+      tags:
+      - pt-sessions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPTSessionList'
+          description: ''
+    post:
+      operationId: pt_sessions_create
+      description: 'Mark a session given: it uses one of the plan''s sessions. One
+        a day for each plan.'
+      tags:
+      - pt-sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkSessionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkSessionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkSessionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PTSession'
+          description: ''
+  /api/pt-sessions/{id}/:
+    get:
+      operationId: pt_sessions_retrieve
+      description: |-
+        Personal training sessions given, each using one of a plan's sessions. Trainers mark today's for their own
+        members; the desk and admins any day inside the plan, and any of them notes what it worked. A member sees their
+        own. Removed ones stay, marked void.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this pt session.
+        required: true
+      tags:
+      - pt-sessions
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PTSession'
+          description: ''
+    patch:
+      operationId: pt_sessions_partial_update
+      description: Change what a session worked and its notes.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this pt session.
+        required: true
+      tags:
+      - pt-sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionNotesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionNotesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSessionNotesRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PTSession'
+          description: ''
+  /api/pt-sessions/{id}/void/:
+    post:
+      operationId: pt_sessions_void_create
+      description: 'Remove a session marked by mistake: the plan gets it back. Admins
+        remove any; others one they marked today.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this pt session.
+        required: true
+      tags:
+      - pt-sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VoidRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PTSession'
+          description: ''
   /api/recurring-expenses/:
     get:
       operationId: recurring_expenses_list
@@ -6223,8 +6735,9 @@ paths:
   /api/staff/:
     get:
       operationId: staff_list
-      description: Admins, receptionists and trainers of the gym. Only admins manage
-        staff; staff can read the list.
+      description: |-
+        Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+        of people who work at their branches (to check them in, or pick a trainer).
       parameters:
       - in: query
         name: branches
@@ -6277,8 +6790,9 @@ paths:
           description: ''
     post:
       operationId: staff_create
-      description: Admins, receptionists and trainers of the gym. Only admins manage
-        staff; staff can read the list.
+      description: |-
+        Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+        of people who work at their branches (to check them in, or pick a trainer).
       tags:
       - staff
       requestBody:
@@ -6305,8 +6819,9 @@ paths:
   /api/staff/{id}/:
     get:
       operationId: staff_retrieve
-      description: Admins, receptionists and trainers of the gym. Only admins manage
-        staff; staff can read the list.
+      description: |-
+        Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+        of people who work at their branches (to check them in, or pick a trainer).
       parameters:
       - in: path
         name: id
@@ -6327,8 +6842,9 @@ paths:
           description: ''
     put:
       operationId: staff_update
-      description: Admins, receptionists and trainers of the gym. Only admins manage
-        staff; staff can read the list.
+      description: |-
+        Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+        of people who work at their branches (to check them in, or pick a trainer).
       parameters:
       - in: path
         name: id
@@ -6361,8 +6877,9 @@ paths:
           description: ''
     patch:
       operationId: staff_partial_update
-      description: Admins, receptionists and trainers of the gym. Only admins manage
-        staff; staff can read the list.
+      description: |-
+        Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+        of people who work at their branches (to check them in, or pick a trainer).
       parameters:
       - in: path
         name: id
@@ -6394,8 +6911,9 @@ paths:
           description: ''
     delete:
       operationId: staff_destroy
-      description: Admins, receptionists and trainers of the gym. Only admins manage
-        staff; staff can read the list.
+      description: |-
+        Admins, receptionists and trainers of the gym. Only admins manage staff; the desk and trainers read the list
+        of people who work at their branches (to check them in, or pick a trainer).
       parameters:
       - in: path
         name: id
@@ -6446,7 +6964,8 @@ paths:
       operationId: subscriptions_list
       description: |-
         Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+        their own, cancelled ones left out.
       parameters:
       - name: limit
         required: false
@@ -6483,7 +7002,8 @@ paths:
       operationId: subscriptions_create
       description: |-
         Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+        their own, cancelled ones left out.
       tags:
       - subscriptions
       requestBody:
@@ -6512,7 +7032,8 @@ paths:
       operationId: subscriptions_retrieve
       description: |-
         Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+        their own, cancelled ones left out.
       parameters:
       - in: path
         name: id
@@ -6536,7 +7057,8 @@ paths:
       operationId: subscriptions_cancel_create
       description: |-
         Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
-        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
+        plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile). A member lists
+        their own, cancelled ones left out.
       parameters:
       - in: path
         name: id
@@ -7122,6 +7644,276 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/usernames/check/:
+    get:
+      operationId: usernames_check_retrieve
+      description: |-
+        Is this username free? If not, why, and some free ones made from what was typed, the email or the name.
+
+        For gym staff (Add Staff, a member's app login, their own username in More) and Dumbelo admins (the Console).
+        A taken username answers whose it is, so the desk adding someone who already signs in sees it's the right
+        person; never for a Dumbelo team login.
+      parameters:
+      - in: query
+        name: email
+        schema:
+          type: string
+        description: Suggestions start from the part before the @
+      - in: query
+        name: name
+        schema:
+          type: string
+        description: Suggestions start from the name when there's no email
+      - in: query
+        name: username
+        schema:
+          type: string
+        description: What they typed; leave out for suggestions only
+      tags:
+      - usernames
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsernameCheck'
+          description: ''
+  /api/workout-assignments/:
+    get:
+      operationId: workout_assignments_list
+      description: Workout plans given to members.
+      parameters:
+      - in: query
+        name: current
+        schema:
+          type: boolean
+        description: Only the plans members are on now
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: member
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: plan
+        schema:
+          type: integer
+      tags:
+      - workout-assignments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkoutAssignmentList'
+          description: ''
+    post:
+      operationId: workout_assignments_create
+      description: Give a member a plan. The one of this kind they're on now ends.
+      tags:
+      - workout-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutAssignment'
+          description: ''
+  /api/workout-assignments/{id}/:
+    get:
+      operationId: workout_assignments_retrieve
+      description: Workout plans given to members.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this workout assignment.
+        required: true
+      tags:
+      - workout-assignments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutAssignment'
+          description: ''
+  /api/workout-assignments/{id}/end/:
+    post:
+      operationId: workout_assignments_end_create
+      description: Take a member off this plan, with nothing in its place.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this workout assignment.
+        required: true
+      tags:
+      - workout-assignments
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutAssignment'
+          description: ''
+  /api/workout-plans/:
+    get:
+      operationId: workout_plans_list
+      description: 'The gym''s workout plans: days, each with its exercises.'
+      parameters:
+      - in: query
+        name: archived
+        schema:
+          type: boolean
+        description: Archived plans instead of the ones in use
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: mine
+        schema:
+          type: boolean
+        description: Only the plans you wrote
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name or goal
+      tags:
+      - workout-plans
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWorkoutPlanList'
+          description: ''
+    post:
+      operationId: workout_plans_create
+      description: 'The gym''s workout plans: days, each with its exercises.'
+      tags:
+      - workout-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutPlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkoutPlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkoutPlanRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutPlan'
+          description: ''
+  /api/workout-plans/{id}/:
+    get:
+      operationId: workout_plans_retrieve
+      description: 'The gym''s workout plans: days, each with its exercises.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this workout plan.
+        required: true
+      tags:
+      - workout-plans
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutPlan'
+          description: ''
+    patch:
+      operationId: workout_plans_partial_update
+      description: 'The gym''s workout plans: days, each with its exercises.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this workout plan.
+        required: true
+      tags:
+      - workout-plans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkoutPlanRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkoutPlanRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkoutPlanRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutPlan'
+          description: ''
 components:
   schemas:
     Account:
@@ -7324,6 +8116,22 @@ components:
       - out_paise
       - reconciled
       - to
+    AssignRequest:
+      type: object
+      description: |-
+        Who gets which plan. The view narrows both to what the caller may give: the gym's plans of that kind, and a
+        trainer's own members (an admin's: the gym's).
+      properties:
+        plan:
+          type: integer
+        member:
+          type: integer
+        note:
+          type: string
+          maxLength: 300
+      required:
+      - member
+      - plan
     AttendanceBefore:
       type: object
       properties:
@@ -7944,6 +8752,17 @@ components:
         * `admin` - admin
         * `receptionist` - receptionist
         * `trainer` - trainer
+    CheckedIn:
+      type: object
+      properties:
+        time:
+          type: string
+          description: 6:05 AM, in the gym's time zone
+        branch_name:
+          type: string
+      required:
+      - branch_name
+      - time
     ConsoleBranchAsk:
       type: object
       description: 'A request in the Console: whose it is, who decided it and the
@@ -8642,11 +9461,15 @@ components:
           maxLength: 256
     CurrentPlan:
       type: object
+      description: 'The plan that lets the member in: their membership, or personal
+        training at a gym that sells it alone.'
       properties:
         id:
           type: integer
         name:
           type: string
+        kind:
+          $ref: '#/components/schemas/PlanKindEnum'
         starts:
           type: string
           format: date
@@ -8666,6 +9489,7 @@ components:
       - frozen_from
       - frozen_until
       - id
+      - kind
       - name
       - starts
     DaysOpenEnum:
@@ -8837,6 +9661,207 @@ components:
       - name
       - serial
       - token
+    DietAssignment:
+      type: object
+      description: A member's plan with what's in it, so the member's screen draws
+        it from this alone.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        plan:
+          type: integer
+          readOnly: true
+        plan_name:
+          type: string
+          readOnly: true
+        goal:
+          type: string
+          readOnly: true
+        member:
+          type: integer
+          readOnly: true
+        member_name:
+          type: string
+          readOnly: true
+        assigned_by_name:
+          type: string
+          readOnly: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+          description: For the member, like Start light this week
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        current:
+          type: boolean
+          readOnly: true
+        kcal:
+          type: integer
+          readOnly: true
+          nullable: true
+        protein_g:
+          type: integer
+          readOnly: true
+          nullable: true
+        carbs_g:
+          type: integer
+          readOnly: true
+          nullable: true
+        fat_g:
+          type: integer
+          readOnly: true
+          nullable: true
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Meal'
+          readOnly: true
+      required:
+      - assigned_at
+      - assigned_by_name
+      - carbs_g
+      - current
+      - ended_at
+      - fat_g
+      - goal
+      - id
+      - kcal
+      - meals
+      - member
+      - member_name
+      - note
+      - plan
+      - plan_name
+      - protein_g
+    DietPlan:
+      type: object
+      description: |-
+        What every plan shows besides what's in it: who wrote it, how many members are on it, and whether you may
+        change it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        goal:
+          type: string
+          description: Who it's for, like Fat loss for beginners
+          maxLength: 160
+        is_active:
+          type: boolean
+          description: Archived plans can't be given to more members
+        created_by:
+          type: integer
+          readOnly: true
+        created_by_name:
+          type: string
+          readOnly: true
+        members_count:
+          type: integer
+          readOnly: true
+          description: Members on it now
+        can_change:
+          type: boolean
+          readOnly: true
+          description: You wrote it, or you're an admin
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        kcal:
+          type: integer
+          maximum: 6000
+          minimum: 500
+          nullable: true
+          description: Calories a day
+        protein_g:
+          type: integer
+          maximum: 600
+          minimum: 0
+          nullable: true
+        carbs_g:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          nullable: true
+        fat_g:
+          type: integer
+          maximum: 400
+          minimum: 0
+          nullable: true
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Meal'
+      required:
+      - can_change
+      - created_at
+      - created_by
+      - created_by_name
+      - id
+      - meals
+      - members_count
+      - name
+      - updated_at
+    DietPlanRequest:
+      type: object
+      description: |-
+        What every plan shows besides what's in it: who wrote it, how many members are on it, and whether you may
+        change it.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        goal:
+          type: string
+          description: Who it's for, like Fat loss for beginners
+          maxLength: 160
+        is_active:
+          type: boolean
+          description: Archived plans can't be given to more members
+        kcal:
+          type: integer
+          maximum: 6000
+          minimum: 500
+          nullable: true
+          description: Calories a day
+        protein_g:
+          type: integer
+          maximum: 600
+          minimum: 0
+          nullable: true
+        carbs_g:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          nullable: true
+        fat_g:
+          type: integer
+          maximum: 400
+          minimum: 0
+          nullable: true
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealRequest'
+      required:
+      - meals
+      - name
     DoneRequest:
       type: object
       properties:
@@ -8961,6 +9986,49 @@ components:
       required:
       - id
       - kind
+    Exercise:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        sets:
+          type: integer
+          maximum: 20
+          minimum: 1
+          nullable: true
+        reps:
+          type: string
+          description: 8, 8-10 or 30 sec
+          maxLength: 20
+        load:
+          type: string
+          description: 50 kg, 16 kg each or Bodyweight
+          maxLength: 30
+      required:
+      - name
+    ExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        sets:
+          type: integer
+          maximum: 20
+          minimum: 1
+          nullable: true
+        reps:
+          type: string
+          description: 8, 8-10 or 30 sec
+          maxLength: 20
+        load:
+          type: string
+          description: 50 kg, 16 kg each or Bodyweight
+          maxLength: 30
+      required:
+      - name
     Expense:
       type: object
       properties:
@@ -9350,6 +10418,9 @@ components:
         id:
           type: integer
           readOnly: true
+        username:
+          type: string
+          readOnly: true
         name:
           type: string
           readOnly: true
@@ -9380,15 +10451,22 @@ components:
       - name
       - other_gyms
       - phone
+      - username
     GymAdminAddRequest:
       type: object
-      description: 'Add Admin: their email, and for someone new to Dumbelo, their
-        name and a first password.'
+      description: |-
+        Add Admin: the username of someone who already signs in to Dumbelo, or for someone new, their name, a first
+        password, and a username (made from their email or name if left out).
       properties:
+        existing_username:
+          type: string
+          maxLength: 60
+        username:
+          type: string
+          maxLength: 60
         email:
           type: string
           format: email
-          minLength: 1
           maxLength: 254
         name:
           type: string
@@ -9397,8 +10475,6 @@ components:
           type: string
           writeOnly: true
           maxLength: 128
-      required:
-      - email
     GymBranch:
       type: object
       properties:
@@ -9459,6 +10535,16 @@ components:
           minLength: 1
           description: The first branch's name
           maxLength: 80
+        owner_existing_username:
+          type: string
+          description: 'The owner already signs in to Dumbelo (another gym): their
+            username'
+          maxLength: 60
+        owner_username:
+          type: string
+          description: A new login's username; made from the email or name if left
+            out
+          maxLength: 60
         owner_name:
           type: string
           description: Needed for a new login
@@ -9466,7 +10552,7 @@ components:
         owner_email:
           type: string
           format: email
-          minLength: 1
+          description: For contact, and invoices unless billing_email is given
           maxLength: 254
         owner_password:
           type: string
@@ -9481,7 +10567,6 @@ components:
       required:
       - branch
       - name
-      - owner_email
       - slug
     GymDetail:
       type: object
@@ -9526,6 +10611,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owner_username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: How the owner signs in
         owed_paise:
           type: integer
           readOnly: true
@@ -9559,6 +10649,7 @@ components:
       - owed_paise
       - owner_email
       - owner_name
+      - owner_username
       - slug
       - status
       - status_changed_at
@@ -9696,6 +10787,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owner_username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: How the owner signs in
         owed_paise:
           type: integer
           readOnly: true
@@ -9714,14 +10810,15 @@ components:
       - owed_paise
       - owner_email
       - owner_name
+      - owner_username
       - slug
       - status
       - timezone
     GymSettings:
       type: object
       description: |-
-        The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
-        set. Its message switches are /api/gym/messages/.
+        The gym as Dumbelo set it up (name, slug, time zone), and what its admins set: how long its plans' months
+        run, and whether personal training needs a membership. Its message switches are /api/gym/messages/.
       properties:
         name:
           type: string
@@ -9740,6 +10837,11 @@ components:
           minimum: 0
           description: 'How long a plan''s month runs: 0 for calendar months, else
             that many days (28, 30)'
+        pt_needs_membership:
+          type: boolean
+          description: 'Personal training is sold only on top of a membership, and
+            only a membership lets a member in. Off: personal training alone does
+            too'
       required:
       - name
       - slug
@@ -9843,6 +10945,25 @@ components:
         * `failing` - Not working
         * `not_set_up` - Not set up yet
         * `off` - Off
+    InToday:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        time:
+          type: string
+        branch_name:
+          type: string
+      required:
+      - branch_name
+      - code
+      - id
+      - name
+      - time
     InvoiceDetail:
       type: object
       description: One invoice with its lines and payments, as the gym's admins see
@@ -10403,22 +11524,67 @@ components:
     LoginRequest:
       type: object
       properties:
-        identifier:
+        username:
           type: string
           minLength: 1
-          description: Email (staff) or 10-digit mobile number (members)
+          description: Everyone signs in with their username; capitals don't matter
+          maxLength: 60
         password:
           type: string
           writeOnly: true
           minLength: 1
       required:
-      - identifier
       - password
+      - username
+    LoginSet:
+      type: object
+      properties:
+        username:
+          type: string
+          description: How they sign in
+        name:
+          type: string
+          description: 'Whose login it is: for a linked one, the name they gave Dumbelo'
+        linked:
+          type: boolean
+          description: 'It''s the login they already had: they use their own password'
+      required:
+      - linked
+      - name
+      - username
+    MarkSessionRequest:
+      type: object
+      properties:
+        subscription:
+          type: integer
+          description: The personal training plan
+        local_date:
+          type: string
+          format: date
+          description: The day it was given; today when left out. Trainers mark today
+            only
+        body_parts:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+          description: 'What they worked: Chest, Back, Legs, Shoulders, Triceps, Biceps,
+            Cardio, or any other'
+          maxItems: 12
+        notes:
+          type: string
+          maxLength: 500
+      required:
+      - subscription
     Me:
       type: object
       properties:
         id:
           type: integer
+        username:
+          type: string
+          description: How they sign in
         name:
           type: string
         initials:
@@ -10445,11 +11611,61 @@ components:
       - name
       - phone
       - roles
+      - username
+    Meal:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Breakfast, or Pre-workout snack
+          maxLength: 60
+        time:
+          type: string
+          description: 7:30 AM, or After the workout
+          maxLength: 20
+        food:
+          type: string
+          description: 'What''s in it: Oats with banana, or grilled chicken or paneer'
+          maxLength: 300
+        kcal:
+          type: integer
+          maximum: 3000
+          minimum: 0
+          nullable: true
+      required:
+      - food
+      - name
+    MealRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Breakfast, or Pre-workout snack
+          maxLength: 60
+        time:
+          type: string
+          description: 7:30 AM, or After the workout
+          maxLength: 20
+        food:
+          type: string
+          minLength: 1
+          description: 'What''s in it: Oats with banana, or grilled chicken or paneer'
+          maxLength: 300
+        kcal:
+          type: integer
+          maximum: 3000
+          minimum: 0
+          nullable: true
+      required:
+      - food
+      - name
     Member:
       type: object
       description: |-
         What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-        and set the member's app login (their phone + a password).
+        and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+        they already have at another gym (`existing_username`). After that, logins change through set-login.
       properties:
         id:
           type: integer
@@ -10501,9 +11717,20 @@ components:
           - $ref: '#/components/schemas/CurrentPlan'
           nullable: true
           readOnly: true
+        pt:
+          allOf:
+          - $ref: '#/components/schemas/PTPlan'
+          nullable: true
+          readOnly: true
         has_login:
           type: boolean
           readOnly: true
+        username:
+          type: string
+          nullable: true
+          description: How they sign in to the app; null without a login. Set on create
+            only
+          maxLength: 60
       required:
       - balance_paise
       - has_login
@@ -10512,13 +11739,15 @@ components:
       - name
       - phone
       - plan
+      - pt
       - status
       - trainer_name
     MemberRequest:
       type: object
       description: |-
         What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-        and set the member's app login (their phone + a password).
+        and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+        they already have at another gym (`existing_username`). After that, logins change through set-login.
       properties:
         code:
           type: string
@@ -10554,6 +11783,17 @@ components:
           description: This member asked not to be sent reminders
         is_archived:
           type: boolean
+        username:
+          type: string
+          nullable: true
+          description: How they sign in to the app; null without a login. Set on create
+            only
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Their login from another gym, instead of a new one
+          maxLength: 60
         first_plan:
           type: integer
           writeOnly: true
@@ -11137,6 +12377,11 @@ components:
           type: string
           readOnly: true
           nullable: true
+        owner_username:
+          type: string
+          readOnly: true
+          nullable: true
+          description: How the owner signs in
         owed_paise:
           type: integer
           readOnly: true
@@ -11176,6 +12421,7 @@ components:
       - owner_email
       - owner_name
       - owner_new_login
+      - owner_username
       - slug
       - status
       - status_changed_at
@@ -11413,6 +12659,140 @@ components:
       - overdue_invoices
       - overdue_paise
       - owed_paise
+    PTClient:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The member
+        name:
+          type: string
+        code:
+          type: string
+        pt:
+          $ref: '#/components/schemas/PTPlan'
+        marked_today:
+          type: boolean
+          description: Today's session is marked
+      required:
+      - code
+      - id
+      - marked_today
+      - name
+      - pt
+    PTPlan:
+      type: object
+      description: 'A member''s personal training now: its dates, sessions bought
+        and used, and who trains them. No amounts.'
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        starts:
+          type: string
+          format: date
+        ends:
+          type: string
+          format: date
+        sessions:
+          type: integer
+          description: Sessions bought
+        sessions_used:
+          type: integer
+        trainer:
+          type: integer
+          nullable: true
+        trainer_name:
+          type: string
+          nullable: true
+        frozen_from:
+          type: string
+          format: date
+          nullable: true
+        frozen_until:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - ends
+      - frozen_from
+      - frozen_until
+      - id
+      - name
+      - sessions
+      - sessions_used
+      - starts
+      - trainer
+      - trainer_name
+    PTSession:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        member:
+          type: integer
+          readOnly: true
+        member_name:
+          type: string
+          readOnly: true
+        subscription:
+          type: integer
+          readOnly: true
+        plan_name:
+          type: string
+          readOnly: true
+        trainer:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Who trained them
+        trainer_name:
+          type: string
+          readOnly: true
+        local_date:
+          type: string
+          format: date
+          readOnly: true
+          description: The gym's day it was given
+        body_parts:
+          type: array
+          items:
+            type: string
+          readOnly: true
+          description: What they worked
+        notes:
+          type: string
+          readOnly: true
+        marked_by_name:
+          type: string
+          readOnly: true
+        marked_at:
+          type: string
+          format: date-time
+          readOnly: true
+        voided:
+          type: boolean
+          readOnly: true
+        void_reason:
+          type: string
+          readOnly: true
+      required:
+      - body_parts
+      - id
+      - local_date
+      - marked_at
+      - marked_by_name
+      - member
+      - member_name
+      - notes
+      - plan_name
+      - subscription
+      - trainer
+      - trainer_name
+      - void_reason
+      - voided
     PaginatedBranchAskList:
       type: object
       required:
@@ -11620,6 +13000,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Device'
+    PaginatedDietAssignmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DietAssignment'
+    PaginatedDietPlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DietPlan'
     PaginatedDrawerCloseList:
       type: object
       required:
@@ -11827,6 +13253,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Offer'
+    PaginatedPTSessionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PTSession'
     PaginatedPaymentList:
       type: object
       required:
@@ -12103,6 +13552,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WhatsAppTemplate'
+    PaginatedWorkoutAssignmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutAssignment'
+    PaginatedWorkoutPlanList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutPlan'
     PaidBy:
       type: object
       properties:
@@ -12129,14 +13624,6 @@ components:
       required:
       - current_password
       - new_password
-    PasswordRequest:
-      type: object
-      properties:
-        password:
-          type: string
-          minLength: 6
-      required:
-      - password
     PatchedAccountRequest:
       type: object
       properties:
@@ -12212,6 +13699,14 @@ components:
             $ref: '#/components/schemas/SessionRequest'
         is_active:
           type: boolean
+    PatchedCheckInTimeRequest:
+      type: object
+      properties:
+        time:
+          type: string
+          format: time
+          description: The new time on the check-in's own day, in the gym's time zone,
+            e.g. 06:30
     PatchedDeviceEditRequest:
       type: object
       description: Renaming a device or moving it to another branch. The serial belongs
@@ -12223,6 +13718,48 @@ components:
           type: string
           minLength: 1
           maxLength: 60
+    PatchedDietPlanRequest:
+      type: object
+      description: |-
+        What every plan shows besides what's in it: who wrote it, how many members are on it, and whether you may
+        change it.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        goal:
+          type: string
+          description: Who it's for, like Fat loss for beginners
+          maxLength: 160
+        is_active:
+          type: boolean
+          description: Archived plans can't be given to more members
+        kcal:
+          type: integer
+          maximum: 6000
+          minimum: 500
+          nullable: true
+          description: Calories a day
+        protein_g:
+          type: integer
+          maximum: 600
+          minimum: 0
+          nullable: true
+        carbs_g:
+          type: integer
+          maximum: 1000
+          minimum: 0
+          nullable: true
+        fat_g:
+          type: integer
+          maximum: 400
+          minimum: 0
+          nullable: true
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealRequest'
     PatchedExpenseRequest:
       type: object
       properties:
@@ -12263,8 +13800,8 @@ components:
     PatchedGymSettingsRequest:
       type: object
       description: |-
-        The gym as Dumbelo set it up (name, slug, time zone), and how long its plans' months run, which its admins
-        set. Its message switches are /api/gym/messages/.
+        The gym as Dumbelo set it up (name, slug, time zone), and what its admins set: how long its plans' months
+        run, and whether personal training needs a membership. Its message switches are /api/gym/messages/.
       properties:
         month_days:
           type: integer
@@ -12272,6 +13809,11 @@ components:
           minimum: 0
           description: 'How long a plan''s month runs: 0 for calendar months, else
             that many days (28, 30)'
+        pt_needs_membership:
+          type: boolean
+          description: 'Personal training is sold only on top of a membership, and
+            only a membership lets a member in. Off: personal training alone does
+            too'
     PatchedGymTimesRequest:
       type: object
       description: |-
@@ -12296,8 +13838,14 @@ components:
           type: boolean
     PatchedMeEditRequest:
       type: object
-      description: A staff member's own name, sign-in email and mobile number.
+      description: |-
+        A staff member's own username, name, email and mobile number. Email and phone are for contact (others may
+        share them); the username must be free.
       properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 60
         name:
           type: string
           minLength: 1
@@ -12305,7 +13853,7 @@ components:
         email:
           type: string
           format: email
-          minLength: 1
+          nullable: true
           maxLength: 254
         phone:
           type: string
@@ -12315,7 +13863,8 @@ components:
       type: object
       description: |-
         What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-        and set the member's app login (their phone + a password).
+        and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+        they already have at another gym (`existing_username`). After that, logins change through set-login.
       properties:
         code:
           type: string
@@ -12351,6 +13900,17 @@ components:
           description: This member asked not to be sent reminders
         is_archived:
           type: boolean
+        username:
+          type: string
+          nullable: true
+          description: How they sign in to the app; null without a login. Set on create
+            only
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Their login from another gym, instead of a new one
+          maxLength: 60
         first_plan:
           type: integer
           writeOnly: true
@@ -12542,18 +14102,49 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalaryItemRequest'
+    PatchedSessionNotesRequest:
+      type: object
+      description: Change what a session worked and its notes. Its day and plan stay;
+        one marked wrong is removed and marked again.
+      properties:
+        body_parts:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+          description: 'What they worked: Chest, Back, Legs, Shoulders, Triceps, Biceps,
+            Cardio, or any other'
+          maxItems: 12
+        notes:
+          type: string
+          maxLength: 500
     PatchedStaffRequest:
       type: object
-      description: A trainer, receptionist or admin. Creating one creates their login
-        (email + a first password they change).
+      description: |-
+        A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+        or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+        and details stay theirs.
       properties:
+        username:
+          type: string
+          description: How they sign in. Left out on Add Staff, one is made from the
+            email or name
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Add someone who already signs in to Dumbelo (at another gym)
+            by their username
+          maxLength: 60
         name:
           type: string
           minLength: 1
+          maxLength: 120
         email:
           type: string
           format: email
-          minLength: 1
+          nullable: true
         phone:
           type: string
           nullable: true
@@ -12666,6 +14257,27 @@ components:
           allOf:
           - $ref: '#/components/schemas/WhatsappTemplateStatusEnum'
           default: pending
+    PatchedWorkoutPlanRequest:
+      type: object
+      description: |-
+        What every plan shows besides what's in it: who wrote it, how many members are on it, and whether you may
+        change it.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        goal:
+          type: string
+          description: Who it's for, like Fat loss for beginners
+          maxLength: 160
+        is_active:
+          type: boolean
+          description: Archived plans can't be given to more members
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutDayRequest'
     PayDueRequest:
       type: object
       properties:
@@ -14234,6 +15846,10 @@ components:
           readOnly: true
           description: 'How long a plan''s month runs: 0 for calendar months, else
             that many days'
+        pt_needs_membership:
+          type: boolean
+          readOnly: true
+          description: Personal training is sold only on top of a membership
         role:
           $ref: '#/components/schemas/RoleEnum'
         is_owner:
@@ -14251,6 +15867,7 @@ components:
       - gym_name
       - gym_status
       - month_days
+      - pt_needs_membership
       - role
       - timezone
     RoleEnum:
@@ -14563,6 +16180,22 @@ components:
       - ends
       - name
       - starts
+    SetLoginRequest:
+      type: object
+      description: |-
+        A new login (password, and a username or one made up), a new password or username for it, or
+        `existing_username` to link the login they already have at another gym.
+      properties:
+        password:
+          type: string
+          maxLength: 128
+          minLength: 6
+        username:
+          type: string
+          maxLength: 60
+        existing_username:
+          type: string
+          maxLength: 60
     SourceEnum:
       enum:
       - desk
@@ -14575,17 +16208,26 @@ components:
         * `device` - Turnstile or biometric
     Staff:
       type: object
-      description: A trainer, receptionist or admin. Creating one creates their login
-        (email + a first password they change).
+      description: |-
+        A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+        or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+        and details stay theirs.
       properties:
         id:
           type: integer
           readOnly: true
+        username:
+          type: string
+          description: How they sign in. Left out on Add Staff, one is made from the
+            email or name
+          maxLength: 60
         name:
           type: string
+          maxLength: 120
         email:
           type: string
           format: email
+          nullable: true
         phone:
           type: string
           nullable: true
@@ -14617,7 +16259,6 @@ components:
           maxLength: 20
       required:
       - branches
-      - email
       - id
       - is_owner
       - name
@@ -14636,16 +16277,30 @@ components:
       - password
     StaffRequest:
       type: object
-      description: A trainer, receptionist or admin. Creating one creates their login
-        (email + a first password they change).
+      description: |-
+        A trainer, receptionist or admin. Adding one makes their login (a username and a first password they change),
+        or, with `existing_username`, adds someone who already signs in to Dumbelo as they are: their password, name
+        and details stay theirs.
       properties:
+        username:
+          type: string
+          description: How they sign in. Left out on Add Staff, one is made from the
+            email or name
+          maxLength: 60
+        existing_username:
+          type: string
+          writeOnly: true
+          description: Add someone who already signs in to Dumbelo (at another gym)
+            by their username
+          maxLength: 60
         name:
           type: string
           minLength: 1
+          maxLength: 120
         email:
           type: string
           format: email
-          minLength: 1
+          nullable: true
         phone:
           type: string
           nullable: true
@@ -14676,7 +16331,6 @@ components:
           maxLength: 20
       required:
       - branches
-      - email
       - name
       - role
     StateEnum:
@@ -14772,6 +16426,10 @@ components:
         plan_name:
           type: string
           readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/PlanKindEnum'
+          readOnly: true
         offer:
           type: integer
           nullable: true
@@ -14822,11 +16480,30 @@ components:
         cancelled:
           type: boolean
           readOnly: true
+        sessions:
+          type: integer
+          readOnly: true
+          description: 'Personal training: the sessions bought, from the plan at sale.
+            0 for a membership'
+        sessions_used:
+          type: integer
+          readOnly: true
+          default: 0
+          description: Personal training sessions given
+        trainer:
+          type: integer
+          nullable: true
+          description: 'Personal training: who trains them. Left out, the member''s
+            trainer; they become the member''s trainer'
+        trainer_name:
+          type: string
+          readOnly: true
       required:
       - cancelled
       - frozen_from
       - frozen_until
       - id
+      - kind
       - list_price_paise
       - member
       - offer_name
@@ -14836,6 +16513,9 @@ components:
       - plan_name
       - price_paise
       - refunded_paise
+      - sessions
+      - sessions_used
+      - trainer_name
     SubscriptionCorrectRequest:
       type: object
       description: An admin's correction of a plan already sold. Send only what changes,
@@ -14884,6 +16564,11 @@ components:
           type: string
           format: date
           description: 'Leave out: from the plan''s length. Admins only'
+        trainer:
+          type: integer
+          nullable: true
+          description: 'Personal training: who trains them. Left out, the member''s
+            trainer; they become the member''s trainer'
       required:
       - member
       - plan
@@ -15222,6 +16907,37 @@ components:
       required:
       - access
       - refresh
+    TrainerToday:
+      type: object
+      description: A trainer's day on their Home. Never amounts.
+      properties:
+        checked_in:
+          allOf:
+          - $ref: '#/components/schemas/CheckedIn'
+          nullable: true
+          description: The trainer's own check-in today
+        statuses:
+          type: object
+          additionalProperties:
+            type: integer
+          description: 'Their members counted by status: active, expiring, due, frozen,
+            expired, none'
+        in_today:
+          type: array
+          items:
+            $ref: '#/components/schemas/InToday'
+          description: Their members who checked in today, latest first
+        pt:
+          type: array
+          items:
+            $ref: '#/components/schemas/PTClient'
+          description: Their members' personal training running now, fewest sessions
+            left first
+      required:
+      - checked_in
+      - in_today
+      - pt
+      - statuses
     UnreconcileRequest:
       type: object
       properties:
@@ -15256,6 +16972,34 @@ components:
       - category
       - messages
       - rate_paise
+    UsernameCheck:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 'What was typed, as it would be stored: lowercase, no @'
+        available:
+          type: boolean
+        problem:
+          type: string
+          nullable: true
+          description: Why it can't be used, in words for the person typing
+        name:
+          type: string
+          nullable: true
+          description: Whose it is when it's taken, so the desk can see they're adding
+            the right person
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: Free usernames, closest first; empty when it's available
+      required:
+      - available
+      - name
+      - problem
+      - suggestions
+      - username
     VoidRequest:
       type: object
       properties:
@@ -15590,6 +17334,191 @@ components:
         * `rejected` - Rejected
         * `paused` - Paused
         * `disabled` - Disabled
+    WorkoutAssignment:
+      type: object
+      description: A member's plan with what's in it, so the member's screen draws
+        it from this alone.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        plan:
+          type: integer
+          readOnly: true
+        plan_name:
+          type: string
+          readOnly: true
+        goal:
+          type: string
+          readOnly: true
+        member:
+          type: integer
+          readOnly: true
+        member_name:
+          type: string
+          readOnly: true
+        assigned_by_name:
+          type: string
+          readOnly: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+          description: For the member, like Start light this week
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        current:
+          type: boolean
+          readOnly: true
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutDay'
+          readOnly: true
+      required:
+      - assigned_at
+      - assigned_by_name
+      - current
+      - days
+      - ended_at
+      - goal
+      - id
+      - member
+      - member_name
+      - note
+      - plan
+      - plan_name
+    WorkoutDay:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Day 1, or Push day
+          maxLength: 60
+        body_parts:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+          description: 'What they worked: Chest, Back, Legs, Shoulders, Triceps, Biceps,
+            Cardio, or any other'
+          maxItems: 12
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+      required:
+      - exercises
+      - title
+    WorkoutDayRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Day 1, or Push day
+          maxLength: 60
+        body_parts:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 30
+          description: 'What they worked: Chest, Back, Legs, Shoulders, Triceps, Biceps,
+            Cardio, or any other'
+          maxItems: 12
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseRequest'
+      required:
+      - exercises
+      - title
+    WorkoutPlan:
+      type: object
+      description: |-
+        What every plan shows besides what's in it: who wrote it, how many members are on it, and whether you may
+        change it.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        goal:
+          type: string
+          description: Who it's for, like Fat loss for beginners
+          maxLength: 160
+        is_active:
+          type: boolean
+          description: Archived plans can't be given to more members
+        created_by:
+          type: integer
+          readOnly: true
+        created_by_name:
+          type: string
+          readOnly: true
+        members_count:
+          type: integer
+          readOnly: true
+          description: Members on it now
+        can_change:
+          type: boolean
+          readOnly: true
+          description: You wrote it, or you're an admin
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutDay'
+      required:
+      - can_change
+      - created_at
+      - created_by
+      - created_by_name
+      - days
+      - id
+      - members_count
+      - name
+      - updated_at
+    WorkoutPlanRequest:
+      type: object
+      description: |-
+        What every plan shows besides what's in it: who wrote it, how many members are on it, and whether you may
+        change it.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        goal:
+          type: string
+          description: Who it's for, like Fat loss for beginners
+          maxLength: 160
+        is_active:
+          type: boolean
+          description: Archived plans can't be given to more members
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutDayRequest'
+      required:
+      - days
+      - name
   securitySchemes:
     jwtAuth:
       type: http

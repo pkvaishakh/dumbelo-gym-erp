@@ -1,6 +1,6 @@
 "use client";
 import {
-  AlertTriangle, Banknote, CalendarCheck, CalendarX, ChevronRight, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, Receipt, ScanLine,
+  AlertTriangle, Banknote, CalendarCheck, CalendarX, Check, ChevronRight, CircleCheck, ClipboardCheck, HandCoins, IndianRupee, ListChecks, QrCode, Receipt, ReceiptText, ScanLine,
   Ticket, UserPlus, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -10,17 +10,20 @@ import { useBranchesList } from "@/api/gen/branches/branches";
 import { useCashList } from "@/api/gen/cash/cash";
 import { useCheckinsList } from "@/api/gen/checkins/checkins";
 import { useExpensesTodayRetrieve } from "@/api/gen/expenses/expenses";
-import { useMembersList } from "@/api/gen/members/members";
+import { useMembersList, useMembersTodayRetrieve } from "@/api/gen/members/members";
+import type { TrainerToday } from "@/api/gen/model";
 import { useStaffList } from "@/api/gen/staff/staff";
 import { useTasksList } from "@/api/gen/tasks/tasks";
 import { Greeting, HomeBar } from "@/components/shell";
-import { Icon, Photo, Section, SkeletonRows, Stat, Status, TaskStatus } from "@/components/ui";
-import { day, daysLeft, isoDate, plural, rupees, span } from "@/lib/format";
+import { Bar, Icon, PassActions, Photo, Section, SkeletonRows, Status, TaskStatus } from "@/components/ui";
+import { day, gymToday, isoDate, planDays, plural, rupees, span } from "@/lib/format";
 import { useGet } from "@/lib/hooks";
+import { ptState, sessionsUsed } from "@/lib/pt";
 import { useSession } from "@/lib/session";
 import type { BranchDay, CheckinSummary, Collection, MemberSelf, Page, SessionCounts, Summary, TaskCounts, TrainerMember } from "@/lib/types";
 
 import { CheckInSheet } from "./checkin";
+import { MyPlansRows } from "./coach-plans";
 
 export type AttentionRow = { count: number; title: string; meta: string; href: string; dot?: "" | "ring" | "ink" | "muted" };
 
@@ -358,36 +361,138 @@ export function ReceptionHome() {
   );
 }
 
+/** A trainer's own members at a glance, counted as on the admin's Home (active takes in those ending soon or owing):
+ *  active, in today, and expired. */
+function TrainerGlance({ mine }: { mine?: TrainerToday }) {
+  const s = mine?.statuses;
+  const n = (v?: number) => v?.toLocaleString("en-IN") ?? "–";
+  const total = s && Object.values(s).reduce((t, v) => t + v, 0);
+  const cells: { label: string; icon: LucideIcon; value?: number; note: string; href: string; tone?: "danger" }[] = [
+    { label: "Active", icon: Users, value: s && s.active + s.expiring + s.due, note: s ? `${s.frozen} frozen` : " ", href: "/members?status=active" },
+    { label: "In today", icon: CalendarCheck, value: mine?.in_today.length, note: total !== undefined ? `Of your ${plural(total, "member")}` : " ", href: "/attendance" },
+    { label: "Expired", icon: CalendarX, value: s?.expired, note: "Not renewed yet", href: "/members?status=expired", tone: "danger" },
+  ];
+  return (
+    <div className="rl-glance__people">
+      {cells.map((c) => (
+        <Link className="rl-glance__cell rl-pressable" href={c.href} key={c.label}>
+          <span className="rl-glance__label"><Icon as={c.icon} size="sm" />{c.label}</span>
+          <span className={`rl-glance__value${c.tone && c.value ? ` rl-glance__value--${c.tone}` : ""}`}>{n(c.value)}</span>
+          <span className="rl-glance__note">{c.note}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/** The trainer's own check-in: the wall QR until they've checked in, then when and where they did. */
+function TrainerCheckIn({ mine }: { mine: TrainerToday }) {
+  if (mine.checked_in) {
+    return (
+      <div className="rl-card rl-card--pad">
+        <p className="rl-statusline"><Icon as={CircleCheck} size="sm" />You checked in at {mine.checked_in.time}, {mine.checked_in.branch_name}.</p>
+      </div>
+    );
+  }
+  return (
+    <Link className="rl-tile rl-tile--accent rl-pressable" href="/checkin">
+      <Icon as={QrCode} /><span className="rl-tile__text">Check In<span className="rl-tile__hint">Scan the wall QR at the entrance</span></span><Icon as={ChevronRight} size="sm" />
+    </Link>
+  );
+}
+
+/** Their members' personal training, fewest sessions left first. A badge only when it says something: today's
+ *  session done, or the plan ending or over. Tapping one opens the member, where Mark Session is. */
+function PTClients({ rows }: { rows: TrainerToday["pt"] }) {
+  const { role } = useSession();
+  const today = gymToday(role.timezone);
+  return (
+    <ul className="rl-card rl-mlist rl-mlist--compact">
+      {rows.map((c) => {
+        const { left, status } = ptState(c.pt, today);
+        return (
+          <li key={c.id}><Link className="rl-mrow" href={`/members/${c.id}`}>
+            <Photo name={c.name} />
+            <span className="rl-row__title rl-mrow__name">{c.name}</span>
+            <span className="rl-row__meta rl-mrow__meta">{plural(left, "session")} left • Ends {day(c.pt.ends)}</span>
+            {c.marked_today
+              ? <span className="rl-pill rl-pill--soft" style={{ gridArea: "status", justifySelf: "end" }}><Icon as={Check} size="xs" />Done today</span>
+              : status !== "active" && <Status status={status} />}
+          </Link></li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Their members who checked in today, latest first. */
+function InToday({ rows }: { rows: TrainerToday["in_today"] }) {
+  if (!rows.length) return <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>None of your members has checked in yet today.</p></div>;
+  return (
+    <ul className="rl-card rl-mlist rl-mlist--compact">
+      {rows.slice(0, 6).map((m) => (
+        <li key={m.id}><Link className="rl-mrow" href={`/members/${m.id}`}>
+          <Photo name={m.name} />
+          <span className="rl-row__title rl-mrow__name">{m.name}</span>
+          <span className="rl-row__meta rl-mrow__meta">{m.code} • {m.branch_name}</span>
+          <span className="rl-mrow__time">{m.time}</span>
+        </Link></li>
+      ))}
+    </ul>
+  );
+}
+
 export function TrainerHome() {
-  const mine = useMembersList({ limit: 1 });
-  const needy = useMembersList({ status: "attention", limit: 6 });
+  const { branch } = useSession();
+  const q = useMembersTodayRetrieve(branch ? { branch } : undefined);
+  const mine = q.data?.data;
+  const counts = useGet<CheckinSummary>("/api/checkins/summary/", { date: isoDate(new Date()), branch });
+  const needy = useMembersList({ status: "attention", limit: 5, ...(branch ? { branch } : {}) });
   const attention = (needy.data?.data.results ?? []) as unknown as TrainerMember[];
   const attentionCount = needy.data?.data.count ?? 0;
+  const marked = mine?.pt.filter((c) => c.marked_today).length ?? 0;
   return (
     <div className="rl-app rl-root">
       <HomeBar />
       <main className="rl-app__main">
         <Greeting />
-        <Section label="Overview">
-          <div className="rl-kpis rl-kpis--pair">
-            <Stat icon={Users} value={mine.isLoading ? "–" : mine.data?.data.count ?? 0} label="My members" href="/members" />
-            <Stat icon={AlertTriangle} value={needy.isLoading ? "–" : attentionCount} label="Need attention" href="/members?status=attention" />
-          </div>
+        <Section label="Check in">
+          {mine ? <TrainerCheckIn mine={mine} /> : <SkeletonRows n={1} />}
         </Section>
-        <Section title="My tasks" aside={<Link className="rl-link" href="/tasks"><span>View all</span></Link>}><MyTasks /></Section>
-        <Section title="Members to follow up">
-          {needy.isLoading ? <SkeletonRows n={3} /> : attention.length ? (
-            <ul className="rl-card rl-mlist rl-mlist--compact">
-              {attention.map((m) => (
-                <li key={m.id}><Link className="rl-mrow" href={`/members/${m.id}`}>
-                  <Photo name={m.name} />
-                  <span className="rl-row__title rl-mrow__name">{m.name}</span>
-                  <span className="rl-row__meta rl-mrow__meta">{m.code}{m.plan_ends ? ` • Plan ends ${day(m.plan_ends)}` : ""}</span>
-                  <Status status={m.status} />
-                </Link></li>
-              ))}
-            </ul>
-          ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>All your members are active and paid up.</p></div>}
+        <Section label="Today’s overview">
+          <TrainerGlance mine={mine} />
+        </Section>
+        <div className="rl-app__cols">
+          <div className="rl-app__col">
+            {(mine?.pt.length ?? 0) > 0 && (
+              <Section title="Personal training" aside={<p className="rl-section__aside">{marked} of {mine!.pt.length} done today</p>}>
+                <PTClients rows={mine!.pt} />
+              </Section>
+            )}
+            <Section title="Your members in today">
+              {mine ? <InToday rows={mine.in_today} /> : <SkeletonRows n={2} />}
+            </Section>
+          </div>
+          <div className="rl-app__col">
+            <Section title="Follow up" aside={attentionCount > attention.length ? <Link className="rl-link" href="/members?status=attention"><span>See all {attentionCount}</span></Link> : undefined}>
+              {needy.isLoading ? <SkeletonRows n={3} /> : attention.length ? (
+                <ul className="rl-card rl-mlist rl-mlist--compact">
+                  {attention.map((m) => (
+                    <li key={m.id}><Link className="rl-mrow" href={`/members/${m.id}`}>
+                      <Photo name={m.name} />
+                      <span className="rl-row__title rl-mrow__name">{m.name}</span>
+                      <span className="rl-row__meta rl-mrow__meta">{m.plan_ends ? `${m.plan_ends < isoDate(new Date()) ? "Ended" : "Ends"} ${day(m.plan_ends)}` : "No plan yet"}{m.payment_due && m.status !== "due" ? " • Payment due" : ""}</span>
+                      <Status status={m.status} />
+                    </Link></li>
+                  ))}
+                </ul>
+              ) : <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>All your members are active and paid up.</p></div>}
+            </Section>
+            <Section title="My tasks" aside={<Link className="rl-link" href="/tasks"><span>View all</span></Link>}><MyTasks /></Section>
+          </div>
+        </div>
+        <Section title="Check-ins today" aside={<p className="rl-section__aside">By session</p>}>
+          {counts.data ? <SessionsTable sessions={counts.data.sessions} /> : <SkeletonRows n={3} />}
         </Section>
       </main>
     </div>
@@ -412,8 +517,7 @@ export function MemberHome() {
   const inToday = v.find((c) => c.local_date === today);
   const st = streak(v.map((c) => c.local_date));
   const plan = me?.plan;
-  const total = plan ? Math.max(1, (new Date(plan.ends).getTime() - new Date(plan.starts).getTime()) / 864e5 + 1) : 1;
-  const left = plan ? Math.max(0, daysLeft(plan.ends) + 1) : 0;
+  const days = plan ? planDays(plan.starts, plan.ends, today) : null;
   const passCls = me?.status === "expired" ? " rl-pass--expired" : me?.status === "expiring" ? " rl-pass--renew" : "";
   return (
     <div className="rl-app rl-root">
@@ -427,11 +531,21 @@ export function MemberHome() {
                 <span className="rl-pass__top"><Status status={me.status} /><span className="rl-pass__plan">{plan?.name ?? "No plan yet"}</span></span>
                 {plan && (
                   <>
-                    <p className="rl-figure">{me.status === "expired" ? 0 : left} <small>{me.status === "frozen" ? "days left, paused" : "days remaining"}</small></p>
-                    <span className="rl-bar" role="img" aria-label={`${Math.round(total - left)} of ${Math.round(total)} days used`}><span className="rl-bar__fill" style={{ ["--v" as string]: Math.min(1, (total - left) / total) }} /></span>
+                    <p className="rl-figure">{me.status === "expired" || !days ? 0 : days.left} <small>{me.status === "frozen" ? "days left, paused" : "days remaining"}</small></p>
+                    {days && <Bar used={days.used} total={days.total} label={`${days.used} of ${days.total} days used`} />}
                     <span className="rl-pass__dates"><span>{day(plan.starts)}</span><span>{me.status === "expired" ? "Expired" : "Expires"} {day(plan.ends)}</span></span>
                   </>
                 )}
+                {me.pt && (
+                  <div className="rl-sub">
+                    <span><strong>Personal training:</strong> {sessionsUsed(me.pt)}{me.pt.trainer_name ? ` with ${me.pt.trainer_name}` : ""}</span>
+                    <Bar used={me.pt.sessions_used} total={me.pt.sessions} label={sessionsUsed(me.pt)} />
+                  </div>
+                )}
+                <PassActions>
+                  <Link className="rl-button rl-button--soft rl-button--sm" href="/membership"><Icon as={Ticket} size="sm" />My Plans</Link>
+                  <Link className="rl-button rl-button--soft rl-button--sm" href="/membership/payments"><Icon as={ReceiptText} size="sm" />My Payments</Link>
+                </PassActions>
               </div>
               {me.balance_paise > 0 && <p className="rl-field__hint" style={{ marginTop: "var(--space-2)" }}>{rupees(me.balance_paise)} is due. Pay at the front desk.</p>}
             </Section>
@@ -441,11 +555,15 @@ export function MemberHome() {
               ) : me.status === "frozen" ? (
                 <div className="rl-card rl-card--pad"><p className="rl-row__meta" style={{ margin: 0 }}>Your plan is paused{plan?.frozen_until ? ` until ${day(plan.frozen_until)}` : ""}. Ask the front desk to unfreeze it if you&apos;re back early.</p></div>
               ) : inToday ? (
-                <div className="rl-card rl-card--pad"><p className="rl-statusline" style={{ margin: 0 }}>You checked in today at {inToday.time}, {inToday.branch_name}.</p></div>
+                <div className="rl-card rl-card--pad"><p className="rl-statusline" style={{ margin: 0 }}><Icon as={CircleCheck} size="sm" />You checked in today at {inToday.time}, {inToday.branch_name}.</p></div>
               ) : (
-                <Link className="rl-button rl-button--accent rl-button--block" href="/checkin"><Icon as={QrCode} />Check In</Link>
+                // The same tile as the staff's own check-in on Trainer Home: one tap opens the wall QR scanner.
+                <Link className="rl-tile rl-tile--accent rl-pressable" href="/checkin">
+                  <Icon as={QrCode} /><span className="rl-tile__text">Check In<span className="rl-tile__hint">Scan the wall QR at the entrance</span></span><Icon as={ChevronRight} size="sm" />
+                </Link>
               )}
             </Section>
+            <MyPlansRows />
             <Section title="Attendance streak">
               <div className="rl-card rl-card--pad rl-streak">
                 <p className="rl-figure" style={{ margin: 0 }}>{st} 🔥 <small>{st === 1 ? "day" : "days"} in a row</small></p>

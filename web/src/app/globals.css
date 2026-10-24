@@ -2,6 +2,8 @@
 @import "../styles/dumbelo.css";
 
 html, body { margin: 0; }
+/* Taps act at once, never a double-tap zoom; text keeps its size when the phone turns sideways. */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { background: var(--surface); }
 /* The design system's markup expects .rl-root on the page; the whole app is one. */
 .rl-app__main { overflow-x: clip; }
@@ -52,9 +54,38 @@ body { background: var(--surface); }
   .rl-tile--desk { min-height: 88px; flex-direction: row; align-items: center; justify-content: flex-start; padding: var(--space-4); }
 }
 
+/* A pass's everyday actions (WhatsApp, Mark Session): a soft green fill with ink text, below the one volt action on
+   a screen and the ink Manage beside them. Built from design tokens only. */
+.rl-button--soft { background: var(--volt-soft); color: var(--ink); box-shadow: none; }
+.rl-button--soft:active { background: var(--line); }
+/* The buttons at the foot of a pass fill its width in equal shares; an icon-only one stays a square tap target. */
+.rl-pass-actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+.rl-pass-actions > .rl-button { flex: 1 1 0; min-width: 0; }
+.rl-pass-actions > .rl-button--icon { flex: none; width: var(--touch-min); padding: 0; }
+
+/* A field's box draws its own focus ring (:focus-within), so the input inside it skips the app-wide outline: with a
+   ₹ or +91 prefix that outline sat half inside the box as a second, offset ring. Number fields drop the spinner
+   arrows, as the amount box does. */
+.rl-app .rl-field__input:focus-visible, .rl-sheet .rl-field__input:focus-visible, .rl-app .rl-amount input:focus-visible { outline: 0; }
+input[type="number"].rl-field__input { appearance: textfield; -moz-appearance: textfield; }
+input[type="number"].rl-field__input::-webkit-inner-spin-button, input[type="number"].rl-field__input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* An open sheet stays above the phone keyboard and inside what is left of the screen: Sheet's useAboveKeyboard sets
+   both values from the visual viewport (without one, the bottom of the screen and 86% of it, as before). */
+.rl-sheet.is-open { bottom: max(0px, calc(100% - var(--sheet-top, 0px) - var(--sheet-vh, 100%))); max-height: min(86dvh, calc(var(--sheet-vh, 100dvh) * 0.86)); }
+
+/* Create sheet (the + in the tab bar): no scrollbar. On a wide screen an admin's two groups sit side by side, so it
+   fits; on a short screen it still scrolls by touch or wheel. */
+.rl-sheet:has(> .rl-create) { scrollbar-width: none; }
+.rl-sheet:has(> .rl-create)::-webkit-scrollbar { display: none; }
+@media (min-width: 768px) {
+  .rl-create--two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); }
+  .rl-create--two .rl-sheet__label { margin-top: var(--space-1); }
+}
+
 /* Check In Member sheet (Reception Home): the search stays pinned at the top of the sheet while results scroll,
    and the sheet keeps one height so it doesn't jump as results come and go. */
-.rl-checkin-sheet { display: grid; align-content: start; gap: var(--space-3); min-height: 56vh; min-height: 56dvh; }
+.rl-checkin-sheet { display: grid; align-content: start; gap: var(--space-3); min-height: 56vh; min-height: min(56dvh, calc(var(--sheet-vh, 100dvh) * 0.56)); }
 .rl-sheet .rl-checkin-sheet .rl-searchbar { top: calc(var(--space-2) * -1); margin: 0 calc(var(--space-4) * -1); padding: var(--space-2) var(--space-4); background: var(--ground); box-shadow: none; }
 .rl-checkin-sheet .rl-section { margin: 0; }
 .rl-checkin__hint { margin: 0; padding: 0 var(--space-1); }
@@ -80,3 +111,29 @@ body { background: var(--surface); }
 [data-rscreen="reports"] .rl-facts dd { white-space: nowrap; }
 /* The custom days sit side by side from 390px; at 360px a date field needs the whole width. */
 [data-rscreen="reports"] .rl-pair { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+/* A 12-hour time picked from a list (Add or Edit Branch's Opens and Closes): the design's .rl-mini time input as a
+   select, so every phone shows "5:30 AM" whatever its own clock setting. Same box, line and focus as .rl-mini input. */
+.rl-mini__pick { position: relative; display: block; min-width: 0; }
+.rl-mini__pick select {
+  width: 100%; height: 48px; box-sizing: border-box; margin: 0; padding: 0 36px 0 var(--space-3);
+  border: 0; border-radius: var(--radius-sm); outline: 0; background: var(--ground); box-shadow: inset 0 0 0 1px var(--field-line);
+  color: var(--ink); font: inherit; font-size: 16px; line-height: 24px; font-weight: 600; cursor: pointer;
+  appearance: none; -webkit-appearance: none; transition: box-shadow 160ms ease;
+}
+.rl-session__times .rl-mini__pick select { background: var(--surface); }
+.rl-app .rl-mini__pick select:focus-visible { box-shadow: inset 0 0 0 2px var(--ink), var(--shadow-focus); }
+.rl-mini__pick select.is-invalid { box-shadow: inset 0 0 0 2px var(--danger); }
+.rl-mini__pick .rl-icon { position: absolute; top: 50%; right: var(--space-3); transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+.rl-session__times .rl-mini > span:first-child { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink); }
+.rl-mini__pick select.is-empty { color: var(--ink-muted); font-weight: 400; }
+
+/* A sheet opened from inside the app bar or a sticky bar (Reports' branch chip) is stacked within that bar, which sits
+   under the tab bar; while it is open, lift the bar above the tab bar so the whole sheet shows. */
+:is(.rl-appbar, .rl-searchbar):has(.rl-sheet.is-open) { z-index: 50; }
+
+/* A solid strip under the phone's status bar, pinned to the top. Without a fixed bar at the top edge, Safari on iOS 26
+   blurs the page under the status bar, smudging the title of screens whose header scrolls away (PageBar). Above the
+   app bars, under the scrim and sheets; no height where there is no status bar. */
+.rl-statusbar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; height: env(safe-area-inset-top); background: var(--surface); pointer-events: none; }
+@media print { .rl-statusbar { display: none; } }

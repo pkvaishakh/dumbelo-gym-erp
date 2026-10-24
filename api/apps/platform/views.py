@@ -70,10 +70,12 @@ class GymViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMi
         s.is_valid(raise_exception=True)
         v = s.validated_data
         made = services.create_gym(
-            name=v["name"], slug=v["slug"], timezone_name=v["timezone"], branch=v["branch"], owner_email=v["owner_email"],
-            owner_name=v.get("owner_name", ""), owner_password=v.get("owner_password") or None, billing_email=v.get("billing_email", ""),
+            name=v["name"], slug=v["slug"], timezone_name=v["timezone"], branch=v["branch"],
+            owner_existing_username=v.get("owner_existing_username", ""), owner_username=v.get("owner_username", ""),
+            owner_email=v.get("owner_email", ""), owner_name=v.get("owner_name", ""), owner_password=v.get("owner_password") or None,
+            billing_email=v.get("billing_email", ""),
         )
-        record(request, "gym.created", made.gym, None, {"slug": made.gym.slug, "owner": made.owner.user.email, "new_login": made.new_login}, gym=made.gym)
+        record(request, "gym.created", made.gym, None, {"slug": made.gym.slug, "owner": made.owner.user.username, "new_login": made.new_login}, gym=made.gym)
         return Response(NewGymSerializer(self._detail(made.gym, owner_new_login=made.new_login)).data, status=201)
 
     @extend_schema(request=GymEditSerializer, responses=GymDetailSerializer)
@@ -142,8 +144,9 @@ class GymAdminViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.CreateMode
         s = GymAdminAddSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         v = s.validated_data
-        role, new = services.add_admin(self.gym, email=v["email"], name=v.get("name", ""), password=v.get("password") or None)
-        record(request, "admin.added", role, None, {"email": role.user.email, "new_login": new}, gym=self.gym)
+        role, new = services.add_admin(self.gym, existing_username=v.get("existing_username", ""), username=v.get("username", ""),
+                                       email=v.get("email", ""), name=v.get("name", ""), password=v.get("password") or None)
+        record(request, "admin.added", role, None, {"username": role.user.username, "new_login": new}, gym=self.gym)
         return Response(self._row(role), status=201)
 
     @extend_schema(request=StaffPasswordSerializer, responses={204: None})
@@ -177,7 +180,7 @@ class GymAdminViewSet(DumbeloViewMixin, mixins.ListModelMixin, mixins.CreateMode
         """Make this admin the account owner: they handle Dumbelo billing. The old owner stays an admin."""
         role = self.get_object()
         before = services.make_owner(role)
-        record(request, "admin.made_owner", role, {"owner": before.user.email if before else None}, {"owner": role.user.email}, gym=self.gym)
+        record(request, "admin.made_owner", role, {"owner": before.user.username if before else None}, {"owner": role.user.username}, gym=self.gym)
         return Response(self._row(role))
 
 

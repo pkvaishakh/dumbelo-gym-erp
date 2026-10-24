@@ -1,4 +1,6 @@
 /** Shapes of endpoints the OpenAPI schema leaves loose. Keep in step with the views in api/apps. */
+import type { PlanKindEnum, PTPlan } from "@/api/gen/model";
+
 export type SessionCounts = { session: string; member: number; trainer: number; receptionist: number; admin: number };
 
 export type Summary = {
@@ -30,11 +32,11 @@ export type Collection = { date: string; from: string; to: string; total_paise: 
 
 export type TrainerMember = {
   id: number; code: string; name: string; phone: string; goal: string; home_branch: string;
-  status: string; payment_due: boolean; plan_ends: string | null;
+  status: string; payment_due: boolean; plan_ends: string | null; pt: PTPlan | null;
 };
 
 export type MemberSelf = TrainerMember & {
-  plan: { name: string; starts: string; ends: string; frozen_until: string | null } | null;
+  plan: { name: string; kind: PlanKindEnum; starts: string; ends: string; frozen_until: string | null } | null;
   balance_paise: number; trainer_name: string | null; joined_on: string;
 };
 

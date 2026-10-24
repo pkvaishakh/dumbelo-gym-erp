@@ -67,10 +67,10 @@ export function backTo(router: { back: () => void; replace: (href: string) => vo
   else router.replace(fallback);
 }
 
-/** "3 months", or a personal training plan's "12 sessions". */
+/** "3 months", or a personal training plan's "12 sessions in 3 months". */
 export function planLength(p: Plan) {
-  if (p.kind === "pt") return `${p.sessions} sessions`;
-  return plural(p.months ?? 0, "month");
+  const months = plural(p.months ?? 0, "month");
+  return p.kind === "pt" ? `${plural(p.sessions ?? 0, "session")} in ${months}` : months;
 }
 
 export function offerApplies(o: Offer, plan: Plan | undefined) {

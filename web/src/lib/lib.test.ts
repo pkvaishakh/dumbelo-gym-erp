@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { branchesOf, countDifference, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, planEnd, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, took, trend, until } from "./format";
+import { branchesOf, countDifference, gymClock, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, planDays, planEnd, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, took, trend, until } from "./format";
 import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
+import { addPart, BODY_PARTS, partChoices, partCounts, partsLabel, ptPace, ptState, sessionsUsed } from "./pt";
 import { keyUrl } from "./query";
 
 describe("money", () => {
@@ -47,6 +48,11 @@ describe("the gym's day", () => {
     const lateUtc = new Date("2026-10-18T20:00:00Z"); // 1:30 AM on the 19th in India
     expect(gymToday("Asia/Kolkata", lateUtc)).toBe("2026-10-19");
     expect(gymToday("UTC", lateUtc)).toBe("2026-10-18");
+  });
+
+  it("tells a time of day in the gym's time zone, for a time input", () => {
+    expect(gymClock("2026-10-18T20:05:00Z", "Asia/Kolkata")).toBe("01:35");
+    expect(gymClock("2026-10-18T00:35:00Z", "Asia/Kolkata")).toBe("06:05");
   });
 });
 
@@ -216,5 +222,57 @@ describe("how long a job took", () => {
     expect(took(12.4)).toBe("12 seconds");
     expect(took(60)).toBe("1 min");
     expect(took(185.2)).toBe("3 min 5 s");
+  });
+});
+
+describe("personal training", () => {
+  const pt = { starts: "2026-10-01", ends: "2026-12-31", sessions: 12, sessions_used: 4 };
+  it("counts the sessions left and says how many are used", () => {
+    expect(ptState(pt, "2026-10-24")).toEqual({ left: 8, over: false, status: "active" });
+    expect(sessionsUsed(pt)).toBe("4 of 12 sessions used");
+  });
+  it("is expiring near its last day or its last two sessions, as the API says", () => {
+    expect(ptState(pt, "2026-12-24").status).toBe("expiring");
+    expect(ptState({ ...pt, sessions_used: 10 }, "2026-10-24").status).toBe("expiring");
+  });
+  it("has ended past its last day or with every session used", () => {
+    expect(ptState(pt, "2027-01-01")).toMatchObject({ over: true, status: "expired" });
+    expect(ptState({ ...pt, sessions_used: 12 }, "2026-10-24")).toEqual({ left: 0, over: true, status: "expired" });
+  });
+  it("shows as frozen while a freeze runs", () => {
+    expect(ptState({ ...pt, frozen_from: "2026-10-20", frozen_until: "2026-10-30" }, "2026-10-24").status).toBe("frozen");
+    expect(ptState({ ...pt, frozen_from: "2026-10-20", frozen_until: "2026-10-22" }, "2026-10-24").status).toBe("active");
+  });
+  it("adds each body part once, the usual ones spelt one way, as the API does", () => {
+    expect(addPart(["Chest"], " chest ")).toEqual(["Chest"]);
+    expect(addPart(["Chest"], "  core   work ")).toEqual(["Chest", "core work"]);
+    expect(addPart(["Chest"], "TRICEPS")).toEqual(["Chest", "Triceps"]);
+    expect(addPart(["Chest"], "  ")).toEqual(["Chest"]);
+  });
+  it("offers the usual body parts first, then the plan's own", () => {
+    expect(partChoices(["Abs", "Chest"], ["abs", "Forearms"])).toEqual([...BODY_PARTS, "Abs", "Forearms"]);
+    expect(partsLabel(["Chest", "Back", "Cardio"])).toBe("Chest, Back and Cardio");
+    expect(partsLabel(["Legs"])).toBe("Legs");
+  });
+  it("counts the body parts worked, most first", () => {
+    const sessions = [{ body_parts: ["Legs", "Abs"] }, { body_parts: ["Chest", "Legs"] }, { body_parts: ["Chest", "Back"] }, { body_parts: [] }];
+    expect(partCounts(sessions)).toEqual([{ part: "Chest", count: 2 }, { part: "Legs", count: 2 }, { part: "Back", count: 1 }, { part: "Abs", count: 1 }]);
+  });
+  it("works out the pace so far and how long is left", () => {
+    // 14 days gone with 4 used: 2 a week. 28 days left: 4 weeks.
+    expect(ptPace({ starts: "2026-10-01", ends: "2026-11-11", sessions: 12, sessions_used: 4 }, "2026-10-15")).toEqual({ soFar: "2", toGo: "4 weeks" });
+    expect(ptPace({ starts: "2026-10-01", ends: "2026-11-11", sessions: 12, sessions_used: 3 }, "2026-11-05")).toEqual({ soFar: "0.6", toGo: "7 days" });
+    expect(ptPace({ starts: "2026-10-01", ends: "2026-11-11", sessions: 4, sessions_used: 4 }, "2026-10-15").toGo).toBeNull();
+  });
+});
+
+describe("a plan's days", () => {
+  it("counts the first and last day, today among the days left", () => {
+    expect(planDays("2026-07-29", "2026-10-27", "2026-10-04")).toEqual({ total: 91, used: 67, left: 24 });
+    expect(planDays("2026-10-01", "2026-10-31", "2026-10-01")).toEqual({ total: 31, used: 0, left: 31 });
+  });
+  it("stays inside the plan before it starts and after it ends", () => {
+    expect(planDays("2026-11-01", "2026-11-30", "2026-10-24")).toEqual({ total: 30, used: 0, left: 30 });
+    expect(planDays("2026-09-01", "2026-09-30", "2026-10-24")).toEqual({ total: 30, used: 30, left: 0 });
   });
 });
