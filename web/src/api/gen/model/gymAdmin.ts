@@ -11,6 +11,7 @@
  */
 export interface GymAdmin {
   readonly id: number;
+  readonly username: string;
   readonly name: string;
   /** @nullable */
   readonly email: string | null;

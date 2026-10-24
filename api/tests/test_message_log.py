@@ -47,8 +47,9 @@ def test_the_log_shows_how_each_message_went_but_never_who_or_what(w, other, sha
         sent(w, own if n % 2 else shared_number, n)
         sent(other, shared_number, n, status=Message.FAILED, error="Message undeliverable (code 131026)", error_code="131026")
 
+    console = dumbelo()
     with django_assert_max_num_queries(3):
-        r = dumbelo().get(LOG)
+        r = console.get(LOG)
 
     body = r.json()
     assert body["count"] == 12 and len({m["gym"] for m in body["results"]}) == 2

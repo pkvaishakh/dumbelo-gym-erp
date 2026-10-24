@@ -3,13 +3,14 @@ import hashlib
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from drf_spectacular.utils import extend_schema, extend_schema_field
+from django.db import IntegrityError, transaction
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -19,12 +20,12 @@ from apps.core.errors import RuleBroken
 from apps.core.dumbelo import is_dumbelo_admin
 from apps.gyms.models import Gym, GymRole
 
-from . import services
-from .models import User, normalize_phone
+from . import services, usernames
+from .models import User, normalize_email, normalize_phone
 
 
 class LoginSerializer(serializers.Serializer):
-    identifier = serializers.CharField(help_text="Email (staff) or 10-digit mobile number (members)")
+    username = serializers.CharField(max_length=60, help_text="Everyone signs in with their username; capitals don't matter")
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
 
 
@@ -34,15 +35,15 @@ class TokensSerializer(serializers.Serializer):
 
 
 class AccountThrottle(SimpleRateThrottle):
-    """Sign-in tries per email or phone, so guessing one account's password is slow wherever it comes from."""
+    """Sign-in tries per username, so guessing one account's password is slow wherever it comes from."""
 
     scope = "login"
 
     def get_cache_key(self, request, view):
-        ident = str(request.data.get("identifier", "")).strip().lower()
+        ident = usernames.clean(str(request.data.get("username", "")))
         if not ident:
             return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
-        # Hashed: a safe cache key whatever was typed, and no emails or phone numbers sitting in the cache.
+        # Hashed: a safe cache key whatever was typed, and no usernames sitting in the cache.
         return self.cache_format % {"scope": self.scope, "ident": hashlib.sha256(ident.encode()).hexdigest()}
 
 
@@ -63,9 +64,9 @@ class LoginView(APIView):
     def post(self, request):
         data = LoginSerializer(data=request.data)
         data.is_valid(raise_exception=True)
-        user = authenticate(request, identifier=data.validated_data["identifier"], password=data.validated_data["password"])
+        user = authenticate(request, username=data.validated_data["username"], password=data.validated_data["password"])
         if not user:
-            return Response({"error": {"code": "login_failed", "message": "That email, number or password is wrong"}}, status=401)
+            return Response({"error": {"code": "login_failed", "message": "That username or password is wrong"}}, status=401)
         token = RefreshToken.for_user(user)
         return Response({"access": str(token.access_token), "refresh": str(token)})
 
@@ -120,6 +121,7 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class MeSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+    username = serializers.CharField(help_text="How they sign in")
     name = serializers.CharField()
     initials = serializers.CharField()
     email = serializers.EmailField(allow_null=True)
@@ -129,15 +131,23 @@ class MeSerializer(serializers.Serializer):
 
 
 class MeEditSerializer(serializers.ModelSerializer):
-    """A staff member's own name, sign-in email and mobile number."""
+    """A staff member's own username, name, email and mobile number. Email and phone are for contact (others may
+    share them); the username must be free."""
 
+    username = serializers.CharField(max_length=60)
     name = serializers.CharField(max_length=120)
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(max_length=254, required=False, allow_null=True, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ["name", "email", "phone"]
+        fields = ["username", "name", "email", "phone"]
+
+    def validate_username(self, value):
+        try:
+            return usernames.validate(value, exclude=self.instance)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages[0])
 
     def validate_name(self, value):
         if not value.strip():
@@ -145,19 +155,13 @@ class MeEditSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate_email(self, value):
-        value = User.objects.normalize_email(value)
-        if User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk).exists():
-            raise serializers.ValidationError("Someone else signs in with this email")
-        return value
+        return normalize_email(value)
 
     def validate_phone(self, value):
         try:
-            value = normalize_phone(value)
+            return normalize_phone(value)
         except DjangoValidationError as e:
             raise serializers.ValidationError(e.messages[0])
-        if value and User.objects.filter(phone=value).exclude(pk=self.instance.pk).exists():
-            raise serializers.ValidationError("Someone else has this mobile number")
-        return value
 
 
 class PasswordChangeSerializer(serializers.Serializer):
@@ -174,13 +178,13 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 def me_data(u):
     roles = GymRole.objects.filter(user=u, is_active=True).select_related("gym")
-    return MeSerializer({"id": u.id, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles,
+    return MeSerializer({"id": u.id, "username": u.username, "name": u.name, "initials": u.initials, "email": u.email, "phone": u.phone, "roles": roles,
                          "is_dumbelo_admin": is_dumbelo_admin(u)}).data
 
 
 class MeView(APIView):
     """Who is signed in, and which gyms and branches they can open. The app picks a gym and sends it as X-Gym.
-    Staff can change their own name, email and mobile number; a member's details are changed by the front desk.
+    Staff can change their own username, name, email and mobile number; a member's are changed by the front desk.
 
     This is about the person, not a gym, so it answers whatever X-Gym says, suspended gyms included: their roles
     there carry `gym_status`, so the app can show the paused screen instead of failing on every call."""
@@ -191,12 +195,17 @@ class MeView(APIView):
 
     @extend_schema(request=MeEditSerializer, responses=MeSerializer)
     def patch(self, request):
-        if not request.user.email:  # members sign in with the phone number the desk keeps on their profile
-            raise RuleBroken("details_by_desk", "Ask the front desk to change your details")
-        edit = MeEditSerializer(request.user, data=request.data, partial=True)
+        u = request.user
+        if not (u.is_superuser or GymRole.objects.filter(user=u, role__in=GymRole.STAFF_ROLES).exists()):
+            raise RuleBroken("details_by_desk", "Ask the front desk to change your details")  # a member's are the desk's
+        edit = MeEditSerializer(u, data=request.data, partial=True)
         edit.is_valid(raise_exception=True)
-        edit.save()
-        return Response(me_data(request.user))
+        try:
+            with transaction.atomic():
+                edit.save()
+        except IntegrityError:  # someone took the username between the check and the save
+            raise serializers.ValidationError({"username": ["That username was just taken. Pick another."]})
+        return Response(me_data(u))
 
 
 class PasswordView(APIView):
@@ -210,3 +219,52 @@ class PasswordView(APIView):
         data.is_valid(raise_exception=True)
         v = data.validated_data
         return Response(services.change_own_password(request.user, v["current_password"], v["new_password"]))
+
+
+class UsernameCheckSerializer(serializers.Serializer):
+    username = serializers.CharField(help_text="What was typed, as it would be stored: lowercase, no @")
+    available = serializers.BooleanField()
+    problem = serializers.CharField(allow_null=True, help_text="Why it can't be used, in words for the person typing")
+    name = serializers.CharField(allow_null=True, help_text="Whose it is when it's taken, so the desk can see they're adding the right person")
+    suggestions = serializers.ListField(child=serializers.CharField(), help_text="Free usernames, closest first; empty when it's available")
+
+
+class UsernameThrottle(SimpleRateThrottle):
+    """Per signed-in person: the check says whether a username exists, so it mustn't be a way to list them."""
+
+    scope = "username"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": request.user.pk}
+
+
+class UsernameCheckView(APIView):
+    """Is this username free? If not, why, and some free ones made from what was typed, the email or the name.
+
+    For gym staff (Add Staff, a member's app login, their own username in More) and Dumbelo admins (the Console).
+    A taken username answers whose it is, so the desk adding someone who already signs in sees it's the right
+    person; never for a Dumbelo team login."""
+
+    throttle_classes = [UsernameThrottle]
+
+    @extend_schema(parameters=[
+        OpenApiParameter("username", str, description="What they typed; leave out for suggestions only"),
+        OpenApiParameter("email", str, description="Suggestions start from the part before the @"),
+        OpenApiParameter("name", str, description="Suggestions start from the name when there's no email"),
+    ], responses=UsernameCheckSerializer)
+    def get(self, request):
+        u = request.user
+        if not (is_dumbelo_admin(u) or GymRole.objects.filter(user=u, role__in=GymRole.STAFF_ROLES, is_active=True).exists()):
+            raise PermissionDenied("Only gym staff can check usernames")
+        p = request.query_params
+        wanted = usernames.clean(p.get("username", ""))[:60]
+        reason = usernames.problem(wanted) if wanted else "Choose a username"
+        owner = None
+        if reason is None:
+            owner = User.objects.filter(username=wanted).exclude(pk=u.pk).first()
+            reason = owner and "That username is taken"
+        return Response(UsernameCheckSerializer({
+            "username": wanted, "available": not reason, "problem": reason or None,
+            "name": owner.name if owner is not None and not owner.is_staff else None,
+            "suggestions": usernames.suggest(p.get("email"), p.get("name"), wanted) if reason else [],
+        }).data)

@@ -8,10 +8,11 @@
 
 export interface LoginRequest {
   /**
-   * Email (staff) or 10-digit mobile number (members)
+   * Everyone signs in with their username; capitals don't matter
    * @minLength 1
+   * @maxLength 60
    */
-  identifier: string;
+  username: string;
   /** @minLength 1 */
   password: string;
 }

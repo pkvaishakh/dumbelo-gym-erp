@@ -22,6 +22,16 @@ export function useSearch(text: string) {
   return value;
 }
 
+/** `value` once it has stopped changing for `ms`: for checks that run as someone types. */
+export function useDebounced<T>(value: T, ms = 300) {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return settled;
+}
+
 /** Run a change against the API, keep its error message, and refresh the lists it touches. */
 export function useAction() {
   const qc = useQueryClient();

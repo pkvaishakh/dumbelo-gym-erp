@@ -18,10 +18,10 @@ function StaffPage() {
   const [search, setSearch] = useState("");
   const q = useStaffList({ role: roleName, limit: 100 });
   const all = q.data?.data.results ?? [];
-  // The whole list is already here, so search runs in the browser: name, phone or email.
+  // The whole list is already here, so search runs in the browser: name, username, phone or email.
   const needle = search.trim().toLowerCase();
   const digits = needle.replace(/\D/g, "");
-  const matches = (s: (typeof all)[number]) => !needle || s.name.toLowerCase().includes(needle) || s.email.toLowerCase().includes(needle)
+  const matches = (s: (typeof all)[number]) => !needle || s.name.toLowerCase().includes(needle) || (s.username ?? "").includes(needle.replace(/^@/, "")) || (s.email ?? "").toLowerCase().includes(needle)
     || (digits.length > 0 && (s.phone ?? "").replace(/\D/g, "").includes(digits));
   const rows = all.filter((s) => (branch === "all" || s.branches.includes(Number(branch))) && matches(s));
   const title = roleName === "trainer" ? "Trainers" : "Receptionists";

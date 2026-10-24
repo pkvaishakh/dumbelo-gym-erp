@@ -180,8 +180,9 @@ Console → Leads (Home counts the new ones), you call them, and you mark it Con
 open (or Not now). For each new gym:
 
 1. **Prices exist** (Console → Prices). No gym opens without a price list.
-2. **Console → New Gym**: its name, short name, time zone, first branch, and the owner's email. A new owner gets a
-   first password to pass on; one who already signs in to Dumbelo keeps theirs. (`python manage.py create_gym` does
+2. **Console → New Gym**: its name, short name, time zone, first branch, and its owner: a new login (their name, a
+   username, made from their email or name if left empty, and a first password to pass on), or, for someone who
+   already signs in to Dumbelo, their username (they keep their password). (`python manage.py create_gym` does
    the same from the command line.)
 3. **Its Dumbelo plan** (the gym's screen → Dumbelo plan): the branch quota, the billing day, and the WhatsApp mode.
    Add one-time setup charges (WhatsApp, machines) as charges for the first invoice.

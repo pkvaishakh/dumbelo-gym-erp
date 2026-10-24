@@ -1,18 +1,20 @@
-from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError, transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.accounts import usernames
 from apps.accounts.models import normalize_phone
+from apps.accounts.services import find_by_username, new_login, set_password, shared_beyond
+from apps.audit.models import record
 from apps.core import clock
+from apps.core.errors import RuleBroken
 from apps.finance.models import Account
 from apps.gyms.models import Branch, GymRole
 
 from . import services
 from .models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Refund, Subscription
-
-User = get_user_model()
 
 
 class CurrentPlanSerializer(serializers.Serializer):
@@ -148,7 +150,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class MemberSerializer(serializers.ModelSerializer):
     """What the desk and admins see. On create the desk can also sell the first plan, take the first payment,
-    and set the member's app login (their phone + a password)."""
+    and give the member their app login: a new one (`username`, made up if left out, and `password`), or the one
+    they already have at another gym (`existing_username`). After that, logins change through set-login."""
 
     home_branch = GymPK(Branch)
     trainer = GymPK(GymRole, required=False, allow_null=True, extra={"role": GymRole.TRAINER, "is_active": True})
@@ -158,7 +161,11 @@ class MemberSerializer(serializers.ModelSerializer):
     balance_paise = serializers.SerializerMethodField()
     plan = serializers.SerializerMethodField()
     has_login = serializers.SerializerMethodField()
+    username = serializers.CharField(source="user.username", required=False, allow_null=True, allow_blank=True, max_length=60,
+                                     help_text="How they sign in to the app; null without a login. Set on create only")
     # create-only extras
+    existing_username = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=60,
+                                              help_text="Their login from another gym, instead of a new one")
     first_plan = GymPK(Plan, write_only=True, required=False, extra={"on_sale": True})
     offer = GymPK(Offer, write_only=True, required=False, allow_null=True)
     paid_paise = serializers.IntegerField(write_only=True, required=False, min_value=0)
@@ -170,7 +177,7 @@ class MemberSerializer(serializers.ModelSerializer):
         fields = [
             "id", "code", "name", "phone", "email", "home_branch", "trainer", "trainer_name", "goal", "joined_on",
             "device_user_id", "reminders_opted_out", "is_archived", "status", "balance_paise", "plan", "has_login",
-            "first_plan", "offer", "paid_paise", "method", "password",
+            "username", "existing_username", "first_plan", "offer", "paid_paise", "method", "password",
         ]
 
     @extend_schema_field(serializers.ChoiceField(STATUSES))
@@ -211,6 +218,8 @@ class MemberSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"method": "How did they pay?"})
         if (data.get("paid_paise") or data.get("offer")) and not data.get("first_plan"):
             raise serializers.ValidationError({"first_plan": "Choose a plan first"})
+        if self.instance is None and data.get("user", {}).get("username") and not data.get("password") and not data.get("existing_username"):
+            raise serializers.ValidationError({"password": "Set a password for their login"})
         return data
 
     @transaction.atomic
@@ -218,12 +227,13 @@ class MemberSerializer(serializers.ModelSerializer):
         req = self.context["request"]
         plan, offer = data.pop("first_plan", None), data.pop("offer", None)
         paid, method = data.pop("paid_paise", 0), data.pop("method", None)
-        password = data.pop("password", None)
+        password, existing = data.pop("password", None), data.pop("existing_username", "")
+        username = data.pop("user", {}).get("username")
         if not data.get("code"):
             data["code"] = services.next_code(req.gym)
         member = Member.objects.create(gym=req.gym, **data)
-        if password:
-            set_login(member, password)
+        if password or existing:
+            set_login(member, password, username=username, existing=existing)
         if plan:
             sub = services.sell(member, plan, by=req.gym_role, offer=offer)
             if paid:
@@ -231,35 +241,83 @@ class MemberSerializer(serializers.ModelSerializer):
         return member
 
     def update(self, member, data):
-        for k in ("first_plan", "offer", "paid_paise", "method"):
+        for k in ("first_plan", "offer", "paid_paise", "method", "existing_username", "user"):
             data.pop(k, None)
         password = data.pop("password", None)
+        was_archived = member.is_archived
         member = super().update(member, data)
         if password:
             set_login(member, password)
-        if member.user_id and member.user.phone != member.phone:
-            member.user.phone = member.phone
-            member.user.save(update_fields=["phone"])
+        if member.user_id:
+            sync_login(member)
+        if member.is_archived != was_archived:
+            record(self.context["request"], "member.archived" if member.is_archived else "member.restored", member)
         return member
 
 
+def owns_login(member) -> bool:
+    """The member's login is this gym's member login alone: not shared with another gym, nor a staff login here
+    (a receptionist must never reach a trainer's or admin's password through a member profile)."""
+    user = member.user
+    return not shared_beyond(user, member.gym) and not GymRole.objects.filter(user=user, gym=member.gym, role__in=GymRole.STAFF_ROLES).exists()
+
+
+def sync_login(member):
+    """Keep the member's role in step with their profile: switched off while archived, at their home branch. The
+    login's phone follows the profile only when the login is this gym's alone; elsewhere it's someone else's to change."""
+    role = GymRole.objects.filter(user=member.user, gym=member.gym, role=GymRole.MEMBER).first()
+    if role is not None:
+        if role.is_active == member.is_archived:
+            role.is_active = not member.is_archived
+            role.save(update_fields=["is_active", "updated_at"])
+        role.branches.set([member.home_branch])
+    if member.user.phone != member.phone and owns_login(member):
+        member.user.phone = member.phone
+        member.user.save(update_fields=["phone"])
+
+
 @transaction.atomic
-def set_login(member, password):
-    """The desk sets the member's app password. Their login is their phone number."""
-    user = member.user or User.objects.filter(phone=member.phone).first()
-    if user is None:
-        user = User.objects.create_user(phone=member.phone, password=password, name=member.name)
+def set_login(member, password=None, *, username=None, existing=None):
+    """The member's app login. Returns it and whether it was one they already had.
+
+    - `existing`: the login they have from another gym, by its username. It's linked as it is: this gym never
+      changes its password or username.
+    - Already linked: a new password (they're signed out everywhere) and/or a new username, only while the login
+      is this gym's member login alone; anyone else changes their own.
+    - Otherwise a new login with `username` (made from their email or name if left out) and `password`.
+    """
+    gym = member.gym
+    if existing:
+        user = find_by_username(existing)
+        taken = Member.objects.filter(gym=gym, user=user).exclude(pk=member.pk).first()
+        if taken is not None:
+            raise serializers.ValidationError({"existing_username": [f"@{user.username} is already {taken.name}'s login here"]})
+    elif member.user_id:
+        user = member.user
+        if not owns_login(member):
+            raise RuleBroken("shared_login", f"{member.name} also signs in to another gym or works here, so only they can change their login")
+        if username and usernames.clean(username) != user.username:
+            try:
+                user.username = usernames.validate(username, exclude=user)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError({"username": e.messages})
+            try:
+                with transaction.atomic():
+                    user.save(update_fields=["username"])
+            except IntegrityError:
+                raise serializers.ValidationError({"username": ["That username was just taken. Pick another."]})
+        if password:
+            set_password(user, password)
     else:
-        user.set_password(password)
-        user.save()
+        if not password:
+            raise serializers.ValidationError({"password": ["Set a password for their login"]})
+        user = new_login(username=username, password=password, name=member.name, email=member.email or None, phone=member.phone)
     if member.user_id != user.id:
         member.user = user
         member.save(update_fields=["user"])
-    role, _ = GymRole.objects.get_or_create(user=user, gym=member.gym, defaults={"role": GymRole.MEMBER})
-    if role.role == GymRole.MEMBER:
-        role.is_active = not member.is_archived
-        role.save()
-        role.branches.set([member.home_branch])
+    GymRole.objects.get_or_create(user=user, gym=gym, defaults={"role": GymRole.MEMBER, "is_active": not member.is_archived})
+    sync_login(member)
+    return user, bool(existing)
 
 
 class TrainerMemberSerializer(serializers.ModelSerializer):
@@ -435,8 +493,24 @@ class FreezeSerializer(serializers.Serializer):
     until = serializers.DateField()
 
 
-class PasswordSerializer(serializers.Serializer):
-    password = serializers.CharField(min_length=6)
+class SetLoginSerializer(serializers.Serializer):
+    """A new login (password, and a username or one made up), a new password or username for it, or
+    `existing_username` to link the login they already have at another gym."""
+
+    password = serializers.CharField(min_length=6, max_length=128, required=False, allow_blank=True)
+    username = serializers.CharField(max_length=60, required=False, allow_blank=True)
+    existing_username = serializers.CharField(max_length=60, required=False, allow_blank=True)
+
+    def validate(self, data):
+        if not any(data.get(k) for k in ("password", "username", "existing_username")):
+            raise serializers.ValidationError({"password": "Set a password for their login"})
+        return data
+
+
+class LoginSetSerializer(serializers.Serializer):
+    username = serializers.CharField(help_text="How they sign in")
+    name = serializers.CharField(help_text="Whose login it is: for a linked one, the name they gave Dumbelo")
+    linked = serializers.BooleanField(help_text="It's the login they already had: they use their own password")
 
 
 def today_ctx(view):

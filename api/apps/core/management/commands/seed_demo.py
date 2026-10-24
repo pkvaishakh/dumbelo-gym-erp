@@ -103,7 +103,7 @@ class Command(BaseCommand):
 
         staff = {}
         for i, (name, key, role, where, shift, spec) in enumerate(STAFF):
-            user = User.objects.filter(email=f"{key}@dumbelo.demo").first() or User.objects.create_user(email=f"{key}@dumbelo.demo", password=PASSWORD, name=name, phone=f"97000000{i:02d}")
+            user = User.objects.filter(username=key).first() or User.objects.create_user(username=key, email=f"{key}@dumbelo.demo", password=PASSWORD, name=name, phone=f"97000000{i:02d}")
             r = GymRole.objects.create(user=user, gym=gym, role=role, is_owner=key == "meera", shift=shift, specialities=spec, day_off="Sunday" if role != GymRole.ADMIN else "", device_user_id=str(900 + i))
             r.branches.set([branches[w] for w in where])
             staff[key] = r
@@ -228,8 +228,8 @@ class Command(BaseCommand):
 
     def _dumbelo_admin(self):
         """Dumbelo's own login for the Console. Kept across --reset: it belongs to no gym."""
-        if not User.objects.filter(email="dumbelo@dumbelo.demo").exists():
-            User.objects.create_superuser(email="dumbelo@dumbelo.demo", password=PASSWORD, name="Dumbelo Admin")
+        if not User.objects.filter(username="dumbelo.admin").exists():
+            User.objects.create_superuser(username="dumbelo.admin", email="dumbelo@dumbelo.demo", password=PASSWORD, name="Dumbelo Admin")
 
     def _prices(self):
         """Dumbelo's prices, kept across --reset like the Dumbelo admin: they belong to no gym."""
@@ -255,7 +255,7 @@ class Command(BaseCommand):
     def _dumbelo_invoices(self, gym, today):
         """Three months of Dumbelo invoices: the first two paid by bank transfer, this month's half paid, and the
         machine setup for the turnstiles waiting for the next invoice."""
-        ops = User.objects.get(email="dumbelo@dumbelo.demo")
+        ops = User.objects.get(username="dumbelo.admin")
         this_month = today.replace(day=1)
         for back in (2, 1, 0):
             inv = invoicing.write_invoice(gym, clock.add_months(this_month, -back))

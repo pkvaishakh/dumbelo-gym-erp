@@ -6,8 +6,8 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - SaaS for many gyms in India. Billed monthly: a base fee plus a fee per branch (see Dumbelo billing). Web app /
   PWA only (no native apps yet).
 - MVP in about 3 months with 2–3 developers; pilot at the current client from week 9.
-- One sign-in for every role; the account decides where you land. Staff sign in with email + password;
-  members with their phone number + a password the front desk sets.
+- One sign-in for every role; the account decides where you land. Everyone signs in with a **username** and
+  password. See "Logins" below.
 
 ## Roles
 - Admin, Receptionist, Trainer, Member. No branch manager role. Several admins per gym; one is the account owner
@@ -38,11 +38,35 @@ What was decided, so code and screens stay consistent. Change this file when a d
   card built from these. One summary (`/api/platform/summary/`) in a fixed number of queries; days and months are
   Dumbelo's (India). It shows counts and Dumbelo's own money only. Its tabs are Home, Gyms, Server and More; Prices,
   Branch requests, WhatsApp, WhatsApp log and Automation are in More.
-- Staff change their own name, email, mobile number and password (More). A member's details are changed by
-  the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and not for
-  someone who also signs in to another gym (one login covers every gym); for them, this gym can't change their
-  name, email or mobile number either. Any password change signs that person
+- Staff change their own username, name, email, mobile number and password (More). A member's details are
+  changed by the desk. An admin can reset a receptionist's or trainer's password, but not another admin's, and
+  not for someone who also belongs to another gym (one login covers every gym); for them, this gym can't change
+  their username, name, email or mobile number either. Any password change signs that person
   out on every other device. Resets are audited; the password never is.
+
+## Logins
+- **One login per person, across every gym.** It is a username and a password. A person's place in each gym is a
+  role there (one role per gym); a member also has a profile in each gym they train at, and a login opens at most
+  one member profile per gym.
+- **Usernames** are unique across Dumbelo and stored lowercase (capitals don't matter when signing in): 3 to 30
+  letters, numbers, full stops and underscores; not starting or ending with a full stop, no two in a row, not only
+  numbers, and not a reserved word (admin, dumbelo, support…). Left empty when a login is made, one is made from
+  the email (before the @) or the name, with a number added when it's taken. The forms check a username as it's
+  typed and offer free ones (`/api/usernames/check/`: staff and Dumbelo admins only, rate limited, since it says
+  whether a username exists).
+- **Email and phone are contact details, not sign-in names.** Several logins may share one (a family's phone). So
+  a login is never found, linked or changed by its email or phone.
+- **Someone who already signs in to Dumbelo** (at another gym) is added by their username: Add Staff, a member's
+  app login and the Console's New Gym and Add Admin all have "Already on Dumbelo". The form shows whose login it
+  is before it's added. Their password, username and details stay theirs. Never a Dumbelo team login.
+- **A gym changes a login only while it is that gym's alone**: not Dumbelo's team, and no role in any other gym,
+  even one switched off for now (it could be switched back on, and the login with it). The desk changes a
+  member's password or username only for a member login this gym made: never for a login that is also staff here,
+  so a receptionist can't reach a trainer's or admin's password through a member profile.
+- Archiving a member switches their login off for that gym (it still opens their other gyms); restoring them
+  switches it back on. Both are audited, however they're done.
+- A gym's member records still allow one member per phone number in a gym, so the desk can't add the same
+  person twice.
 
 ## Money
 - Record payments only (no payment gateway in the MVP). Part payments allowed; never more than what's owed.
