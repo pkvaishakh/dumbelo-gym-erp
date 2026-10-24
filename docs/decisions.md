@@ -382,6 +382,9 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Backend: Django 5 + DRF + Postgres, JWT (simplejwt), drf-spectacular for OpenAPI. Redis/Celery for jobs (later).
 - Frontend: Next.js 15 App Router, TypeScript, Serwist PWA, the design system's CSS, TanStack Query with an
   orval-generated client, date-fns, lucide icons, html5-qrcode, Vitest/Playwright.
+- A release reaches open apps by itself: built files carry a hash in their name, the service worker takes over as
+  soon as it's downloaded, the app looks for one when it comes back to the screen and every 30 minutes, and then
+  loads the next screen opened afresh (never mid-screen, so a form being filled isn't lost). No "Update" button.
 - Hosting: AWS Mumbai (ap-south-1) for the API and database — App Runner for the API, RDS Postgres,
   ElastiCache Redis, and the Celery worker and beat on ECS Fargate (App Runner runs HTTP services only).
   The web app on Vercel. Every step, and every setting a server needs, is in `docs/deploy.md`.
