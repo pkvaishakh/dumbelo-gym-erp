@@ -11,7 +11,7 @@ from rest_framework.decorators import action
 from apps.audit.models import record
 from apps.core import clock
 from apps.core.errors import RuleBroken
-from apps.core.params import int_param
+from apps.core.params import int_param, open_days
 from apps.core.tenancy import ADMIN, ALL, DESK, GymViewMixin
 from apps.gyms.models import Branch, GymRole
 from apps.members.models import Member
@@ -81,10 +81,14 @@ class CheckInViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
             return qs
         p = self.request.query_params
         member, staff = int_param(self.request, "member"), int_param(self.request, "staff")
-        if member is not None:  # one person's visits, any day (member profile, staff profile)
-            return qs.filter(member_id=member)
-        if staff is not None:
-            return qs.filter(staff_id=staff)
+        if member is not None or staff is not None:  # one person's visits, any day or between two (member, staff profile)
+            qs = qs.filter(member_id=member) if member is not None else qs.filter(staff_id=staff)
+            first, last = open_days(self.request)
+            if first:
+                qs = qs.filter(local_date__gte=first)
+            if last:
+                qs = qs.filter(local_date__lte=last)
+            return qs
         day = clock.parse_date(p.get("date"), clock.today(self.gym))
         qs = qs.filter(local_date=day)
         if (branch := int_param(self.request, "branch")) is not None:
@@ -108,6 +112,8 @@ class CheckInViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         OpenApiParameter("kind", str, enum=["member", "staff", "trainer", "receptionist", "admin"]),
         OpenApiParameter("session", str, description="Session name, e.g. Morning; Other for outside every session"), OpenApiParameter("source", str), OpenApiParameter("q", str),
         OpenApiParameter("member", int, description="One member's visits, any day"), OpenApiParameter("staff", int),
+        OpenApiParameter("from", str, description="With member or staff: YYYY-MM-DD, the first day"),
+        OpenApiParameter("to", str, description="With member or staff: YYYY-MM-DD, the last day"),
     ])
     def list(self, request, *args, **kwargs):
         session = request.query_params.get("session")

@@ -5,6 +5,7 @@
  * Gym management for many gyms. Send `X-Gym: <gym slug>` with every call inside a gym.
  * OpenAPI spec version: 0.1.0
  */
+import type { PaidBy } from './paidBy';
 
 export interface Subscription {
   readonly id: number;
@@ -14,8 +15,10 @@ export interface Subscription {
   /** @nullable */
   offer?: number | null;
   readonly offer_name: string;
+  /** Leave out: the day after the member's last plan ends, or today */
   starts?: string;
-  readonly ends: string;
+  /** Leave out: from the plan's length. Admins only */
+  ends?: string;
   /** The plan's price at sale */
   readonly list_price_paise: number;
   /** What the member owes for it, after the offer */
@@ -23,6 +26,8 @@ export interface Subscription {
   readonly paid_paise: number;
   /** Given back: the price and what was paid are both that much lower */
   readonly refunded_paise: number;
+  /** What was paid, by method, voided payments left out */
+  readonly paid_by: readonly PaidBy[];
   /** @nullable */
   readonly frozen_from: string | null;
   /** @nullable */

@@ -98,6 +98,11 @@ class OfferSerializer(serializers.ModelSerializer):
         return offer
 
 
+class PaidBySerializer(serializers.Serializer):
+    method = serializers.ChoiceField(choices=Payment.METHODS)
+    amount_paise = serializers.IntegerField()
+
+
 class SubscriptionSerializer(serializers.ModelSerializer):
     member = GymPK(Member)
     plan = GymPK(Plan, extra={"on_sale": True})
@@ -106,22 +111,39 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     offer_name = serializers.CharField(source="offer.name", read_only=True, default=None)
     paid_paise = serializers.SerializerMethodField()
     refunded_paise = serializers.SerializerMethodField(help_text="Given back: the price and what was paid are both that much lower")
-    starts = serializers.DateField(required=False)
+    paid_by = serializers.SerializerMethodField(help_text="What was paid, by method, voided payments left out")
+    starts = serializers.DateField(required=False, help_text="Leave out: the day after the member's last plan ends, or today")
+    ends = serializers.DateField(required=False, help_text="Leave out: from the plan's length. Admins only")
 
     class Meta:
         model = Subscription
         fields = ["id", "member", "plan", "plan_name", "offer", "offer_name", "starts", "ends", "list_price_paise", "price_paise", "paid_paise",
-                  "refunded_paise", "frozen_from", "frozen_until", "cancelled"]
-        read_only_fields = ["ends", "list_price_paise", "price_paise", "frozen_from", "frozen_until", "cancelled"]
+                  "refunded_paise", "paid_by", "frozen_from", "frozen_until", "cancelled"]
+        read_only_fields = ["list_price_paise", "price_paise", "frozen_from", "frozen_until", "cancelled"]
+
+    def validate_ends(self, ends):
+        if self.context["request"].gym_role.role != GymRole.ADMIN:
+            raise serializers.ValidationError("Only an admin can set the end date. It follows the plan's length.")
+        return ends
 
     def create(self, data):
-        return services.sell(data["member"], data["plan"], by=self.context["request"].gym_role, offer=data.get("offer"), starts=data.get("starts"))
+        return services.sell(data["member"], data["plan"], by=self.context["request"].gym_role, offer=data.get("offer"), starts=data.get("starts"),
+                             ends=data.get("ends"))
 
     def get_paid_paise(self, sub) -> int:
         return sub.paid_paise()
 
     def get_refunded_paise(self, sub) -> int:
         return sub.refunded_paise()
+
+    @extend_schema_field(PaidBySerializer(many=True))
+    def get_paid_by(self, sub):
+        """What was paid toward it, by method (cash ₹500, UPI ₹500), from the payments the list prefetches."""
+        totals = {}
+        for p in sub.payments.all():
+            if not p.voided:
+                totals[p.method] = totals.get(p.method, 0) + p.amount_paise
+        return [{"method": m, "amount_paise": totals[m]} for m, _ in Payment.METHODS if m in totals]
 
 
 class MemberSerializer(serializers.ModelSerializer):
@@ -326,6 +348,30 @@ class PaymentSerializer(serializers.ModelSerializer):
         )
 
 
+class PaymentPartSerializer(serializers.Serializer):
+    method = serializers.ChoiceField(choices=Payment.METHODS)
+    amount_paise = serializers.IntegerField(min_value=1)
+
+
+class PaymentSplitSerializer(serializers.Serializer):
+    """One amount paid more than one way: a payment is recorded for each part, together, with one receipt."""
+
+    member = GymPK(Member)
+    branch = GymPK(Branch, required=False)
+    note = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    parts = PaymentPartSerializer(many=True, min_length=2, max_length=len(Payment.METHODS))
+
+    def validate_branch(self, branch):
+        ids = self.context["request"].gym_role.branch_ids()
+        if ids is not None and branch.id not in ids:
+            raise serializers.ValidationError("You don't work at this branch")
+        return branch
+
+    def create(self, data):
+        parts = [(p["method"], p["amount_paise"]) for p in data["parts"]]
+        return services.take_split(data["member"], parts, by=self.context["request"].gym_role, branch=data.get("branch"), note=data.get("note", ""))
+
+
 class PaymentCorrectSerializer(serializers.ModelSerializer):
     """Admins may correct the amount, method or note. The change is audited."""
 
@@ -370,6 +416,17 @@ class RefundCreateSerializer(serializers.Serializer):
 
 
 class VoidSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=200)
+
+
+class SubscriptionCorrectSerializer(serializers.Serializer):
+    """An admin's correction of a plan already sold. Send only what changes, and why."""
+
+    plan = GymPK(Plan, required=False, help_text="Another plan: its price, and its length from the start date, unless given")
+    offer = GymPK(Offer, required=False, allow_null=True, help_text="Another offer, or null for none: the price is worked out again")
+    starts = serializers.DateField(required=False)
+    ends = serializers.DateField(required=False)
+    price_paise = serializers.IntegerField(required=False, min_value=0, help_text="What the member owes for it, set by hand")
     reason = serializers.CharField(max_length=200)
 
 

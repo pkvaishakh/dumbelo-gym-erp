@@ -70,9 +70,10 @@ def replay_webhook_calls(run_id: int | None = None):
 
 
 @shared_task
-def send_payment_receipt(payment_id: int):
-    """The member's receipt, queued once the payment is saved (`notify.after_commit`)."""
-    notify.payment_received(payment_id)
+def send_payment_receipt(payment_id: int, with_ids: list[int] | None = None):
+    """The member's receipt, queued once the payment is saved (`notify.after_commit`). `with_ids`: the other parts of
+    a split payment, so one receipt covers the total."""
+    notify.payment_received(payment_id, with_ids or [])
 
 
 @shared_task

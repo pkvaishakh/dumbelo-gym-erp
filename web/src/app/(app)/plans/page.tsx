@@ -8,7 +8,7 @@ import { useOffersList } from "@/api/gen/offers/offers";
 import { usePlansList } from "@/api/gen/plans/plans";
 import { PageBar } from "@/components/shell";
 import { Chips, Choices, ErrorText, Field, Icon, SearchField, Section, Seg, Sheet, SkeletonRows } from "@/components/ui";
-import { months } from "@/features/sell";
+import { planLength } from "@/features/sell";
 import { day, isoDate, rupees, toPaise } from "@/lib/format";
 import { fieldError, useAction, useSearch } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -63,7 +63,7 @@ function PlansPage() {
                 <li key={p.id}><button className="rl-mrow" type="button" disabled={!admin} onClick={() => setPlanSheet(p)}>
                   <span className="rl-chipicon" aria-hidden="true"><Icon as={Tag} size="sm" /></span>
                   <span className="rl-row__title rl-mrow__name">{p.name}</span>
-                  <span className="rl-row__meta rl-mrow__meta">{months(p)}{p.includes ? ` • ${p.includes}` : ""}{many ? ` • ${where(p.branches)}` : ""}{p.on_sale ? "" : " • Not on sale"}</span>
+                  <span className="rl-row__meta rl-mrow__meta">{planLength(p)}{p.includes ? ` • ${p.includes}` : ""}{many ? ` • ${where(p.branches)}` : ""}{p.on_sale ? "" : " • Not on sale"}</span>
                   <span className="rl-mrow__time">{rupees(p.price_paise)}</span>
                 </button></li>
               ))}
@@ -100,30 +100,45 @@ export default function Page() {
 
 function PlanSheet({ plan, onClose }: { plan: Plan | "new" | null; onClose: () => void }) {
   const edit = plan && plan !== "new" ? plan : null;
+  const { role } = useSession();
   const blank = { name: "", kind: "membership" as "membership" | "pt", months: "1", sessions: "12", price: "", includes: "", branches: [] as number[] };
   const [f, setF] = useState(blank);
   const [key, setKey] = useState<unknown>(null);
   if (plan !== key) { // reset the form when a different plan opens
     setKey(plan);
-    setF(edit ? { name: edit.name, kind: (edit.kind ?? "membership") as "membership" | "pt", months: String(edit.months ?? 1), sessions: String(edit.sessions ?? 12), price: String(edit.price_paise / 100), includes: edit.includes ?? "", branches: edit.branches ?? [] } : blank);
+    setF(edit ? {
+      name: edit.name, kind: (edit.kind ?? "membership") as "membership" | "pt", months: String(edit.months ?? 1),
+      sessions: String(edit.sessions ?? 12), price: String(edit.price_paise / 100), includes: edit.includes ?? "", branches: edit.branches ?? [],
+    } : blank);
   }
   const a = useAction();
+  const months = Number(f.months) || 0;
   async function save(extra?: object) {
-    const body = { name: f.name.trim(), kind: f.kind, months: Number(f.months) || 0, sessions: f.kind === "pt" ? Number(f.sessions) || 0 : 0, price_paise: toPaise(f.price), includes: f.includes, branches: f.branches, ...extra };
+    const body = {
+      name: f.name.trim(), kind: f.kind, months, sessions: f.kind === "pt" ? Number(f.sessions) || 0 : 0,
+      price_paise: toPaise(f.price), includes: f.includes, branches: f.branches, ...extra,
+    };
     try { await a.run(edit ? `/api/plans/${edit.id}/` : "/api/plans/", body, { method: edit ? "PATCH" : "POST", refresh: ["/api/plans/"] }); onClose(); } catch { /* shown */ }
   }
   return (
     <Sheet open={!!plan} onClose={onClose} title={edit ? "Edit Plan" : "Add Plan"}>
-      <Seg label="Kind" value={f.kind} onChange={(v) => setF({ ...f, kind: v })} options={[{ value: "membership", label: "Membership" }, { value: "pt", label: "Personal training" }]} />
-      <Field label="Name" error={fieldError(a.error, "name")}>{(id) => <input className="rl-field__input" id={id} value={f.name} placeholder="Quarterly" onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
-      <div className="rl-pair">
-        <Field label="Months" error={fieldError(a.error, "months")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.months} onChange={(e) => setF({ ...f, months: e.target.value })} />}</Field>
-        {f.kind === "pt" && <Field label="Sessions" error={fieldError(a.error, "sessions")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.sessions} onChange={(e) => setF({ ...f, sessions: e.target.value })} />}</Field>}
+      <div className="rl-form">
+        <Seg label="Kind" value={f.kind} onChange={(v) => setF({ ...f, kind: v })} options={[{ value: "membership", label: "Membership" }, { value: "pt", label: "Personal training" }]} />
+        <Field label="Name" error={fieldError(a.error, "name")}>{(id) => <input className="rl-field__input" id={id} value={f.name} placeholder="Quarterly" onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
+        <div className="rl-pair">
+          <Field label="Months" error={fieldError(a.error, "months")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.months} placeholder="3" onChange={(e) => setF({ ...f, months: e.target.value })} />}</Field>
+          {f.kind === "pt" && <Field label="Sessions" error={fieldError(a.error, "sessions")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} value={f.sessions} onChange={(e) => setF({ ...f, sessions: e.target.value })} />}</Field>}
+        </div>
+        <p className="rl-field__hint">
+          {role.month_days
+            ? `A month is ${role.month_days} days at your gym${months > 1 ? `, so ${months} months run ${months * role.month_days} days` : ""}. Change it in Settings.`
+            : "Calendar months: a month from 14 Oct runs to 13 Nov. Set a number of days instead in Settings."}
+        </p>
+        <Field label="Price" prefix="₹" error={fieldError(a.error, "price_paise")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" value={f.price} placeholder="4500" onChange={(e) => setF({ ...f, price: e.target.value })} />}</Field>
+        <Field label="Includes" optional>{(id) => <input className="rl-field__input" id={id} value={f.includes} placeholder="Gym floor, lockers" onChange={(e) => setF({ ...f, includes: e.target.value })} />}</Field>
+        <BranchChoice value={f.branches} onChange={(branches) => setF({ ...f, branches })} error={fieldError(a.error, "branches")} />
+        {edit && <p className="rl-field__hint">A new price applies to new sales. Members already on this plan keep what they bought.</p>}
       </div>
-      <Field label="Price" prefix="₹" error={fieldError(a.error, "price_paise")}>{(id) => <input className="rl-field__input" id={id} type="number" inputMode="numeric" value={f.price} placeholder="4500" onChange={(e) => setF({ ...f, price: e.target.value })} />}</Field>
-      <Field label="Includes" optional>{(id) => <input className="rl-field__input" id={id} value={f.includes} placeholder="Gym floor, lockers" onChange={(e) => setF({ ...f, includes: e.target.value })} />}</Field>
-      <BranchChoice value={f.branches} onChange={(branches) => setF({ ...f, branches })} error={fieldError(a.error, "branches")} />
-      {edit && <p className="rl-field__hint">A new price applies to new sales. Members already on this plan keep what they bought.</p>}
       <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
       <div className="rl-sheet__actions">
         <button className="rl-button rl-button--block" type="button" disabled={a.busy} onClick={() => save()}>{edit ? "Save Changes" : "Add Plan"}</button>

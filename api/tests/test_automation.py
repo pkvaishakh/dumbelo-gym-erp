@@ -102,6 +102,17 @@ def test_receipts_are_off_until_the_gym_turns_them_on_and_each_goes_once(w, djan
     assert Message.objects.count() == 1
 
 
+def test_a_split_payment_sends_one_receipt_for_the_total(w, django_capture_on_commit_callbacks):
+    switch(w.gym, NotificationRule.PAYMENT_RECEIVED, on=True)
+    sell(w.member, w.monthly, by=w.desk)
+    parts = [{"method": "cash", "amount_paise": 100000}, {"method": "upi", "amount_paise": 50000}]
+    with django_capture_on_commit_callbacks(execute=True):
+        r = w.client(w.desk).post("/api/payments/split/", {"member": w.member.id, "parts": parts}, format="json")
+    assert r.status_code == 201, r.content
+    receipt = Message.objects.get()
+    assert "received ₹1,500 from you" in receipt.text
+
+
 def test_a_voided_or_rolled_back_payment_sends_no_receipt(w, django_capture_on_commit_callbacks):
     switch(w.gym, NotificationRule.PAYMENT_RECEIVED, on=True)
     sell(w.member, w.monthly, by=w.desk)

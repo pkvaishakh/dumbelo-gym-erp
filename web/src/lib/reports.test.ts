@@ -9,18 +9,21 @@ import { changeSince, earliest, rangeError, rangeOf } from "./reports";
 describe("report periods", () => {
   const today = "2026-10-18";
   it("end on the gym's today", () => {
-    expect(rangeOf("7d", today)).toEqual(["2026-10-12", today]);
-    expect(rangeOf("30d", today)).toEqual(["2026-09-19", today]);
+    expect(rangeOf("today", today)).toEqual([today, today]);
+    expect(rangeOf("yesterday", today)).toEqual(["2026-10-17", "2026-10-17"]);
     expect(rangeOf("month", today)).toEqual(["2026-10-01", today]);
     expect(rangeOf("3m", today)).toEqual(["2026-07-19", today]);
   });
+  it("yesterday crosses a month's start", () => {
+    expect(rangeOf("yesterday", "2026-11-01")).toEqual(["2026-10-31", "2026-10-31"]);
+  });
   it("take the gym's day, not the device's: late evening in India is already tomorrow there", () => {
     const lateUtc = new Date("2026-10-18T20:00:00Z");
-    expect(rangeOf("7d", gymToday("Asia/Kolkata", lateUtc))).toEqual(["2026-10-13", "2026-10-19"]);
+    expect(rangeOf("today", gymToday("Asia/Kolkata", lateUtc))).toEqual(["2026-10-19", "2026-10-19"]);
   });
-  it("keep custom days, and fall back to 7 days for missing or broken ones", () => {
+  it("keep custom days, and fall back to today for missing or broken ones", () => {
     expect(rangeOf("custom", today, "2026-09-01", "2026-09-30")).toEqual(["2026-09-01", "2026-09-30"]);
-    expect(rangeOf("custom", today, null, "nonsense")).toEqual(["2026-10-12", today]);
+    expect(rangeOf("custom", today, null, "nonsense")).toEqual([today, today]);
   });
   it("3 months back clamps month ends the way the API does", () => {
     expect(earliest("2026-05-31")).toBe("2026-03-01"); // 31 Feb doesn't exist: 28 Feb, so from 1 Mar

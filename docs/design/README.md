@@ -8,7 +8,7 @@ exact markup the CSS expects. Icons in the markup are shown as `<Icon class="…
 **Project decisions that override older text below:** the gym records check-in time only. There is no
 check-out, no "who is still inside" and no time spent anywhere (ignore any mention of checking out).
 Branch opening hours are named sessions (Morning, Afternoon, Evening…) and attendance is grouped by them.
-The admin's bottom navigation is Home, Attendance, Create, Reports, More (Members lives in More).
+The admin's bottom navigation is Home, Members, Create, Reports, More (Attendance lives in More).
 The front desk sees its own branches' cash in hand (what each drawer should hold, today's cash in and out) on
 Receptionist Home and in More, and counts it at close (Count Cash). That is not a revenue total; the bank stays
 admin-only.

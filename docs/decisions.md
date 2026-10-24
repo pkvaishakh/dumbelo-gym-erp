@@ -16,6 +16,8 @@ What was decided, so code and screens stay consistent. Change this file when a d
   checks people in, adds members and sells plans. Expenses work like the day's payments: they see and add their
   branches' expenses one day at a time (today's total is on Home, `GET /api/expenses/today/`), so the desk can
   record cash paid out and square it at close. Only admins see longer spans or edit and remove expenses.
+  One member's payments are the exception: the desk sees all of them (the profile's See All), so it may narrow them
+  to any dates. The day's totals stay one day at a time.
   They see their branches' cash in hand, read-only: what each drawer should hold now and today's cash in and out
   (`GET /api/cash/`, on Home and in More), and count it at close. Never the bank: a bank account several branches
   share would show other branches' takings. No revenue totals, reports or staff data, no money moves, refunds or
@@ -44,6 +46,8 @@ What was decided, so code and screens stay consistent. Change this file when a d
 
 ## Money
 - Record payments only (no payment gateway in the MVP). Part payments allowed; never more than what's owed.
+- A split payment (part cash, part UPI…) is a payment for each way it was paid, saved together or not at all, so
+  each drawer and account gets its share; the member gets one receipt for the total. Each way is used once.
 - Discounts only through offers (percent or amount off, date range, optional plans). Admins correct or void
   payments, with a reason, audited. Nothing is deleted.
 - Refunds are money given back to a member for a plan, unlike a void ("the payment never happened"). Admins only,
@@ -54,9 +58,20 @@ What was decided, so code and screens stay consistent. Change this file when a d
   costs as much as what was paid, so a refund never makes anyone "payment due". Reports count it as negative
   revenue on the day it's given. A wrong refund is voided with a reason: the money counts as paid again and the plan
   gets its dates back. A plan can be cancelled once what was paid for it is refunded or voided.
+- Admins correct a plan already sold (Edit Membership), with a reason, audited: another plan (on sale at the
+  member's home branch), another offer or none, the dates, or the price. A new plan or offer works the price out
+  as a sale would, and a new plan or start date the end date, unless the admin sets them. Payments stay with the
+  plan, so its price can't go below what was paid for it (refund first). A frozen plan's dates wait for it to be
+  unfrozen, new dates can't overlap the member's other plan of the same kind, and a cancelled plan isn't edited.
 - Plans and offers are one list for the gym, made by admins. Each is given to some branches, or to none, which
   means every branch (including ones opened later). The desk sees and sells only what its branches have; a sale
   checks the plan and the offer against the member's home branch.
+- A plan sold starts the day after the member's last plan ends (the queue of renewals included), or today, unless
+  the desk picks another day; only an admin sets its end date by hand, otherwise it follows the plan's length. A
+  member's plans of one kind never overlap, at sale or when corrected.
+- A plan runs for a number of months. Each gym's admins set how long its month is (Settings): a calendar month
+  (from 14 Oct to 13 Nov), or a number of days, 1 to 60, that every plan counts its months in (28 days: a 3-month
+  plan runs 84 days, the first day counted). Changing it, or a plan's length, applies to new sales only; it's audited.
 
 ## Expenses and payroll (admins only)
 - Recurring expenses (rent, utilities, subscriptions) repeat weekly, monthly, every 3 months or yearly from their
@@ -125,9 +140,9 @@ What was decided, so code and screens stay consistent. Change this file when a d
 - Reports is a list of categories, each its own screen fetching only its own figures: Revenue, Expenses (salaries
   and bills paid are expenses, so payroll lives here, with what is still owed), Cash and bank, Members, Attendance and
   Tasks. The list shows each category's lead figure and its trend (`GET /api/reports/overview/`).
-- One period and one branch for every screen, kept in the URL: 7 days, 30 days, this month, 3 months or custom days.
+- One period and one branch for every screen, kept in the URL: today, yesterday, this month, 3 months or custom days.
   A range is at most 3 calendar months (19 Jul to 18 Oct, never 18 Jul; `MAX_MONTHS`) and ends on the gym's today
-  or earlier. Default: the last 7 days.
+  or earlier. Default: today.
 - Trends compare the same number of days just before. Refunds always reduce revenue, on the day they are given.
   Cash and bank compares balances with what they held before the first day; a shared bank account counts once and,
   for one branch, shows whole with the branches it is shared with.
@@ -278,6 +293,12 @@ What was decided, so code and screens stay consistent. Change this file when a d
   payment stands, a task message while the task is open and with the same person. Every Retry is audited.
 - Shared-number usage is shown to a gym's admins for its billing month so far (what goes on the invoice written on its
   next billing day), and to Dumbelo admins per gym per calendar month, each gym's days in its own time zone.
+- From a member's profile, the desk and their trainer can send a message by hand (WhatsApp): payment due, renewal,
+  next plan booked (instead of the renewal once one is sold), payment receipt, membership details, freeze, we miss you,
+  welcome, or their own words. Only the ones that fit the
+  member today are offered, the words filled in and editable, then the staff member's own WhatsApp opens with them
+  typed in (`wa.me`). It goes from their phone, not a Dumbelo number: it isn't a template, logged, billed or held back
+  by the gym's message switches or a member's opt-out. A trainer's never carries an amount.
 - SMS and email are not in the MVP.
 
 ## Stack and hosting

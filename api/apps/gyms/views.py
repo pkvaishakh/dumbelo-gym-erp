@@ -101,11 +101,22 @@ class SupportAccessViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMod
 
 
 class GymSettingsView(GymViewMixin, APIView):
-    """The gym as Dumbelo set it up (name, slug, time zone), for More → Settings. Admins only. Nothing here
-    changes: the gym's message switches are `/api/gym/messages/`."""
+    """The gym as Dumbelo set it up (name, slug, time zone), for More → Settings, and how long its plans' months
+    run, which admins change here (audited; plans already sold keep their dates). Admins only. The gym's message
+    switches are `/api/gym/messages/`."""
 
     roles = {"*": ADMIN}
 
     @extend_schema(responses=GymSettingsSerializer)
     def get(self, request):
         return Response(GymSettingsSerializer(self.gym).data)
+
+    @extend_schema(request=GymSettingsSerializer, responses=GymSettingsSerializer)
+    def patch(self, request):
+        s = GymSettingsSerializer(self.gym, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        before = {"month_days": self.gym.month_days}
+        gym = s.save()
+        if before["month_days"] != gym.month_days:
+            record(request, "gym.settings_changed", gym, before, {"month_days": gym.month_days})
+        return Response(GymSettingsSerializer(gym).data)

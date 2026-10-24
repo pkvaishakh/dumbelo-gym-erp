@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay, parseISO, subMonths } from "date-fns";
+import { addDays, addMonths, differenceInCalendarDays, format, formatDistanceToNowStrict, isSameDay, parseISO, subMonths } from "date-fns";
 
 /** ₹3,05,340 — Indian grouping, no paise unless there are some. */
 export function rupees(paise: number | null | undefined) {
@@ -16,6 +16,14 @@ export const d = (iso: string) => parseISO(iso);
 export const day = (iso: string) => format(parseISO(iso), "d MMM yyyy");
 export const dayShort = (iso: string) => format(parseISO(iso), "d MMM");
 export const isoDate = (date: Date) => format(date, "yyyy-MM-dd");
+
+/** A plan's last day from its first, as the API works it out (clock.plan_end). In calendar months (`monthDays` 0)
+ *  1 month from 14 Oct ends 13 Nov, and from 31 Jan ends 27 Feb (no 31 Feb, so 28 Feb less a day); at a gym whose
+ *  month is 28 days, 1 month from 14 Oct ends 10 Nov. */
+export function planEnd(starts: string, months: number | undefined, monthDays: number) {
+  const s = parseISO(starts);
+  return isoDate(monthDays ? addDays(s, (months || 3) * monthDays - 1) : addDays(addMonths(s, months || 3), -1));
+}
 /** The gym's own day ("2026-10-18") in its time zone: what the API calls today, wherever this device is set. */
 export function gymToday(timeZone: string, now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
@@ -91,10 +99,11 @@ export function rangeLabel(from: string, to: string, now = new Date()) {
   return from === to ? format(a, f) : `${format(a, f)} to ${format(b, f)}`;
 }
 
-/** A figure against the same number of days just before: "+9% vs previous 7 days". */
+/** A figure against the same number of days just before: "+9% vs previous 7 days", "+9% vs the day before". */
 export function trend(now: number, before: number, days: number): { dir: "up" | "down" | "flat"; text: string } {
-  const vs = `vs previous ${plural(days, "day")}`;
-  if (now === before) return { dir: "flat", text: `Same as previous ${plural(days, "day")}` };
+  const prior = days === 1 ? "the day before" : `previous ${plural(days, "day")}`;
+  const vs = `vs ${prior}`;
+  if (now === before) return { dir: "flat", text: `Same as ${prior}` };
   if (before === 0) return { dir: "up", text: `Up from 0 ${vs}` };
   const pct = Math.round(((now - before) / before) * 100);
   const dir = now > before ? "up" : "down";

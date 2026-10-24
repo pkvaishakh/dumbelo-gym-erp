@@ -53,8 +53,9 @@ def owner_of(gym: Gym) -> GymRole | None:
 
 # ---- The gym's own messages ----
 
-def payment_received(payment_id: int) -> Message | None:
-    """The member's receipt for a payment just recorded. Off until the gym turns it on; never for a voided one."""
+def payment_received(payment_id: int, with_ids: list[int] = ()) -> Message | None:
+    """The member's receipt for a payment just recorded, with the other parts of a split payment (`with_ids`) in its
+    amount. Off until the gym turns it on; never for a voided one."""
     pay = Payment.objects.select_related("gym__billing", "member", "subscription__plan").filter(pk=payment_id).first()
     if pay is None or pay.voided:
         return None
@@ -64,7 +65,8 @@ def payment_received(payment_id: int) -> Message | None:
     paid_on = clock.local(gym, pay.taken_at).date()
     row = Message(gym=gym, member=member, kind=NotificationRule.PAYMENT_RECEIVED, dedupe_key=f"payment:{pay.pk}",
                   to=member.phone, for_date=paid_on)
-    values = {"first_name": first_name(member.name), "amount": rupees(pay.amount_paise), "plan": plan_label(pay.subscription),
+    amount = pay.amount_paise + sum(Payment.objects.filter(pk__in=with_ids, member=member, voided=False).values_list("amount_paise", flat=True))
+    values = {"first_name": first_name(member.name), "amount": rupees(amount), "plan": plan_label(pay.subscription),
               "gym": gym.name, "paid_on": clock.date_label(paid_on)}
     return send_one(gym, row, values, Route(gym))
 

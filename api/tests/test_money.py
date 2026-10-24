@@ -69,6 +69,21 @@ def test_receptionist_sees_one_day_at_a_time(w):
         r = c.get(url, week)
         assert r.status_code == 409 and r.json()["error"]["code"] == "not_allowed"
 
+
+def test_receptionist_narrows_one_members_payments_to_any_dates(w):
+    old = Payment.objects.get()  # the member's one payment, moved back 20 days
+    old.taken_at -= timedelta(days=20)
+    old.save(update_fields=["taken_at"])
+    c = w.client(w.desk)
+    month = {"from": str(w.today - timedelta(days=30)), "to": str(w.today)}
+    r = c.get("/api/payments/", {**month, "member": w.member.id})
+    assert r.status_code == 200 and [p["id"] for p in r.json()["results"]] == [old.id]
+    week = {"from": str(w.today - timedelta(days=6)), "to": str(w.today), "member": w.member.id}
+    assert c.get("/api/payments/", week).json()["count"] == 0
+    # The totals still go one day at a time, member or not.
+    assert c.get("/api/payments/collection/", week).json()["error"]["code"] == "not_allowed"
+
+
 def test_only_admin_corrects_or_voids_and_it_is_audited(w):
     p = Payment.objects.get()
     assert w.client(w.desk).post(f"/api/payments/{p.id}/void/", {"reason": "x"}, format="json").status_code == 403
@@ -125,3 +140,68 @@ def test_profile_plan_says_when_it_is_frozen(w):
     w.client(w.desk).post(f"/api/subscriptions/{sub.id}/freeze/", {"until": str(until)}, format="json")
     plan = w.client(w.desk).get(f"/api/members/{w.member.id}/").json()["plan"]
     assert plan["id"] == sub.id and plan["frozen_from"] == str(w.today) and plan["frozen_until"] == str(until)
+
+
+def test_a_sale_can_start_on_a_chosen_day_and_never_overlaps_the_queue(w):
+    cur = w.member.current_subscription()
+    c = w.client(w.desk)
+    later = cur.ends + timedelta(days=10)  # a gap after the current plan is fine
+    r = c.post("/api/subscriptions/", {"member": w.member.id, "plan": w.monthly.id, "starts": str(later)}, format="json")
+    assert r.status_code == 201 and r.json()["starts"] == str(later)
+    r = c.post("/api/subscriptions/", {"member": w.member.id, "plan": w.monthly.id, "starts": str(cur.ends)}, format="json")
+    assert r.status_code == 409 and r.json()["error"]["code"] == "plans_overlap"
+    assert r.json()["error"]["message"].startswith("These dates overlap Monthly, ")
+    # Left out, it starts after the last plan in the queue, not after the current one.
+    r = c.post("/api/subscriptions/", {"member": w.member.id, "plan": w.monthly.id}, format="json")
+    assert r.status_code == 201 and r.json()["starts"] > str(later)
+
+
+def test_only_an_admin_sets_a_sales_end_date(w):
+    cur = w.member.current_subscription()
+    starts, ends = cur.ends + timedelta(days=1), cur.ends + timedelta(days=45)
+    body = {"member": w.member.id, "plan": w.monthly.id, "starts": str(starts), "ends": str(ends)}
+    r = w.client(w.desk).post("/api/subscriptions/", body, format="json")
+    assert r.status_code == 400 and "ends" in r.json()["error"]["fields"]
+    r = w.client(w.admin).post("/api/subscriptions/", body, format="json")
+    assert r.status_code == 201 and r.json()["ends"] == str(ends)
+    r = w.client(w.admin).post("/api/subscriptions/", {**body, "starts": str(ends + timedelta(days=5)), "ends": str(ends + timedelta(days=1))}, format="json")
+    assert r.json()["error"]["code"] == "dates_invalid"
+
+
+def test_a_split_payment_records_each_part_together(w):
+    sell(w.member, w.monthly, by=w.desk)  # ₹1,500 due
+    c = w.client(w.desk)
+    r = c.post("/api/payments/split/", {"member": w.member.id, "note": "Half and half",
+                                         "parts": [{"method": "cash", "amount_paise": 100000}, {"method": "upi", "amount_paise": 50000}]}, format="json")
+    assert r.status_code == 201, r.content
+    assert sorted((p["method"], p["amount_paise"]) for p in r.json()) == [("cash", 100000), ("upi", 50000)]
+    assert all(p["note"] == "Half and half" for p in r.json())
+    col = c.get("/api/payments/collection/").json()["by_method"]
+    assert col["cash"] == 100000 and col["upi"] == 150000 + 50000  # the morning's UPI payment and this part
+
+
+def test_a_split_payment_is_all_or_nothing(w):
+    sell(w.member, w.monthly, by=w.desk)
+    c = w.client(w.desk)
+    before = Payment.objects.count()
+    too_much = [{"method": "cash", "amount_paise": 100000}, {"method": "upi", "amount_paise": 60000}]
+    r = c.post("/api/payments/split/", {"member": w.member.id, "parts": too_much}, format="json")
+    assert r.status_code == 409 and r.json()["error"]["message"] == "Asha owes ₹1,500. The parts add up to ₹1,600."
+    same = [{"method": "cash", "amount_paise": 1000}, {"method": "cash", "amount_paise": 1000}]
+    assert c.post("/api/payments/split/", {"member": w.member.id, "parts": same}, format="json").json()["error"]["code"] == "split_same_method"
+    one = [{"method": "cash", "amount_paise": 1000}]
+    assert c.post("/api/payments/split/", {"member": w.member.id, "parts": one}, format="json").status_code == 400
+    assert Payment.objects.count() == before
+
+
+def test_a_plan_shows_what_was_paid_by_each_method(w):
+    sub = sell(w.member, w.monthly, by=w.desk)
+    parts = [{"method": "upi", "amount_paise": 50000}, {"method": "cash", "amount_paise": 70000}]
+    w.client(w.desk).post("/api/payments/split/", {"member": w.member.id, "parts": parts}, format="json")
+    voided = take_payment(w.member, 30000, "card", by=w.desk)
+    voided.voided = True
+    voided.save(update_fields=["voided"])
+    body = w.client(w.desk).get(f"/api/subscriptions/{sub.id}/").json()
+    assert body["paid_by"] == [{"method": "cash", "amount_paise": 70000}, {"method": "upi", "amount_paise": 50000}]
+    listed = w.client(w.desk).get(f"/api/subscriptions/?member={w.member.id}").json()["results"]
+    assert next(s for s in listed if s["id"] == sub.id)["paid_by"] == body["paid_by"]

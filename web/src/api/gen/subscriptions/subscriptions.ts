@@ -28,6 +28,7 @@ import type {
   FreezeRequest,
   PaginatedSubscriptionList,
   Subscription,
+  SubscriptionCorrectRequest,
   SubscriptionRequest,
   SubscriptionsListParams,
   VoidRequest
@@ -41,8 +42,8 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 /**
- * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-`?member=` is a member's plans, newest first, a page at a time (the member profile).
+ * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsListResponse200 = {
   data: PaginatedSubscriptionList
@@ -158,8 +159,8 @@ export function useSubscriptionsList<TData = Awaited<ReturnType<typeof subscript
 
 
 /**
- * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-`?member=` is a member's plans, newest first, a page at a time (the member profile).
+ * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsCreateResponse201 = {
   data: Subscription
@@ -239,8 +240,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-`?member=` is a member's plans, newest first, a page at a time (the member profile).
+ * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsRetrieveResponse200 = {
   data: Subscription
@@ -349,8 +350,8 @@ export function useSubscriptionsRetrieve<TData = Awaited<ReturnType<typeof subsc
 
 
 /**
- * Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-`?member=` is a member's plans, newest first, a page at a time (the member profile).
+ * Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile).
  */
 export type subscriptionsCancelCreateResponse200 = {
   data: Subscription
@@ -427,6 +428,87 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getSubscriptionsCancelCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Change a plan already sold: another plan, offer, price or dates. Admins only, with a reason; audited.
+ */
+export type subscriptionsCorrectCreateResponse200 = {
+  data: Subscription
+  status: 200
+}
+    
+export type subscriptionsCorrectCreateResponseSuccess = (subscriptionsCorrectCreateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type subscriptionsCorrectCreateResponse = (subscriptionsCorrectCreateResponseSuccess)
+
+export const getSubscriptionsCorrectCreateUrl = (id: number,) => {
+
+
+  
+
+  return `/api/subscriptions/${id}/correct/`
+}
+
+export const subscriptionsCorrectCreate = async (id: number,
+    subscriptionCorrectRequest: SubscriptionCorrectRequest, options?: RequestInit): Promise<subscriptionsCorrectCreateResponse> => {
+  
+  return apiFetch<subscriptionsCorrectCreateResponse>(getSubscriptionsCorrectCreateUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      subscriptionCorrectRequest,)
+  }
+);}
+
+
+
+
+export const getSubscriptionsCorrectCreateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscriptionsCorrectCreate>>, TError,{id: number;data: SubscriptionCorrectRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof subscriptionsCorrectCreate>>, TError,{id: number;data: SubscriptionCorrectRequest}, TContext> => {
+
+const mutationKey = ['subscriptionsCorrectCreate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof subscriptionsCorrectCreate>>, {id: number;data: SubscriptionCorrectRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  subscriptionsCorrectCreate(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubscriptionsCorrectCreateMutationResult = NonNullable<Awaited<ReturnType<typeof subscriptionsCorrectCreate>>>
+    export type SubscriptionsCorrectCreateMutationBody = SubscriptionCorrectRequest
+    export type SubscriptionsCorrectCreateMutationError = unknown
+
+    export const useSubscriptionsCorrectCreate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof subscriptionsCorrectCreate>>, TError,{id: number;data: SubscriptionCorrectRequest}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof subscriptionsCorrectCreate>>,
+        TError,
+        {id: number;data: SubscriptionCorrectRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getSubscriptionsCorrectCreateMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

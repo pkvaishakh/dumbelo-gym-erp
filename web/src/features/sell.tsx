@@ -8,7 +8,7 @@ import type { Member, Offer, Plan } from "@/api/gen/model";
 import { useOffersList } from "@/api/gen/offers/offers";
 import { usePlansList } from "@/api/gen/plans/plans";
 import { Choices, Photo, SearchField, Status } from "@/components/ui";
-import { rupees } from "@/lib/format";
+import { plural, rupees } from "@/lib/format";
 import { useSearch } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 
@@ -60,9 +60,17 @@ export function MemberCard({ m, onChange }: { m: Member; onChange?: () => void }
   );
 }
 
-export function months(p: Plan) {
+/** Back to the page a task was opened from (the member's page), so it isn't in the history twice; to `fallback`
+ *  when there's nothing to go back to (the task was opened on its own, in a new tab). */
+export function backTo(router: { back: () => void; replace: (href: string) => void }, fallback: string) {
+  if (window.history.length > 1) router.back();
+  else router.replace(fallback);
+}
+
+/** "3 months", or a personal training plan's "12 sessions". */
+export function planLength(p: Plan) {
   if (p.kind === "pt") return `${p.sessions} sessions`;
-  return p.months === 1 ? "1 month" : p.months === 12 ? "12 months" : `${p.months} months`;
+  return plural(p.months ?? 0, "month");
 }
 
 export function offerApplies(o: Offer, plan: Plan | undefined) {
@@ -75,7 +83,7 @@ export function discount(o: Offer | undefined, price: number) {
 }
 
 /** What `branch` (the member's home branch) can sell: plans and offers given to it or to every branch. */
-function useSoldAt(branch: number | null) {
+export function useSoldAt(branch: number | null) {
   const at = branch ? { branch } : {};
   return { plans: usePlansList({ on_sale: true, limit: 100, ...at }), offers: useOffersList({ current: true, limit: 100, ...at }) };
 }
@@ -91,7 +99,7 @@ export function PlanPicker({ branch, plan, setPlan, offer, setOffer }: {
     <>
       <fieldset className="rl-fieldset"><legend>Plan</legend>
         <Choices name="plan" value={plan} onChange={(v) => { setPlan(v); setOffer(null); }}
-          options={list.map((p) => ({ value: p.id, title: p.name, meta: [months(p), p.includes].filter(Boolean).join(", "), price: rupees(p.price_paise) }))} />
+          options={list.map((p) => ({ value: p.id, title: p.name, meta: [planLength(p), p.includes].filter(Boolean).join(", "), price: rupees(p.price_paise) }))} />
       </fieldset>
       {chosen && usable.length > 0 && (
         <fieldset className="rl-fieldset"><legend>Offer <span className="rl-optional">(optional)</span></legend>

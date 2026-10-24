@@ -13,6 +13,10 @@ branch?: number;
  * YYYY-MM-DD, today by default
  */
 date?: string;
+/**
+ * With member or staff: YYYY-MM-DD, the first day
+ */
+from?: string;
 kind?: CheckinsListKind;
 /**
  * Number of results to return per page.
@@ -33,4 +37,8 @@ q?: string;
 session?: string;
 source?: string;
 staff?: number;
+/**
+ * With member or staff: YYYY-MM-DD, the last day
+ */
+to?: string;
 };

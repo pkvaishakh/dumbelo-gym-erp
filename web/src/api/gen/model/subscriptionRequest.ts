@@ -11,5 +11,8 @@ export interface SubscriptionRequest {
   plan: number;
   /** @nullable */
   offer?: number | null;
+  /** Leave out: the day after the member's last plan ends, or today */
   starts?: string;
+  /** Leave out: from the plan's length. Admins only */
+  ends?: string;
 }

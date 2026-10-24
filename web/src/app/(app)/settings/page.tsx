@@ -1,12 +1,13 @@
 "use client";
 import { Activity, AlertCircle, MessageCircle, Phone } from "lucide-react";
+import { useState } from "react";
 
 import { useGymMessagesList, useGymWhatsappRetrieve } from "@/api/gen/gym/gym";
 import type { GymWhatsApp } from "@/api/gen/model";
 import { PageBar } from "@/components/shell";
-import { Details, Empty, ErrorText, Section, Setting, SkeletonRows } from "@/components/ui";
+import { Details, Empty, ErrorText, Field, Section, Setting, SkeletonRows } from "@/components/ui";
 import { ago, WHATSAPP_STATUS } from "@/lib/format";
-import { useAction } from "@/lib/hooks";
+import { fieldError, useAction } from "@/lib/hooks";
 import { MESSAGE_TO, whenLabel } from "@/lib/messages";
 import { useSession } from "@/lib/session";
 
@@ -71,7 +72,46 @@ function MessageSwitches() {
   );
 }
 
-/** The gym's own rules, for admins: which WhatsApp messages it sends, and how WhatsApp is set up. */
+const MONTHS = [{ value: "0", label: "A calendar month" }, { value: "28", label: "28 days" }, { value: "30", label: "30 days" }, { value: "other", label: "Another number of days" }];
+
+/** How long a plan's month runs at this gym: calendar months, or a number of days that every plan's months count in. */
+function MonthLength({ days }: { days: number }) {
+  const known = MONTHS.some((m) => m.value === String(days));
+  const [pick, setPick] = useState(known ? String(days) : "other");
+  const [other, setOther] = useState(known ? "" : String(days));
+  const a = useAction();
+  const chosen = pick === "other" ? Number(other) || 0 : Number(pick);
+  async function save() {
+    try { await a.run("/api/gym/settings/", { month_days: chosen }, { method: "PATCH" }); } catch { /* shown */ }
+  }
+  return (
+    <div className="rl-card rl-card--pad">
+      <div className="rl-form">
+        <Field label="A month is">{(id) => (
+          <select className="rl-field__input" id={id} value={pick} onChange={(e) => { setPick(e.target.value); a.clearError(); }}>
+            {MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        )}</Field>
+        {pick === "other" && (
+          <Field label="Days in a month" error={fieldError(a.error, "month_days")}>{(id) => (
+            <input className="rl-field__input" id={id} type="number" inputMode="numeric" min={1} max={60} value={other} placeholder="31" onChange={(e) => setOther(e.target.value)} />
+          )}</Field>
+        )}
+        <p className="rl-field__hint" style={{ margin: 0 }}>
+          {chosen ? `A 3-month plan runs ${3 * chosen} days.` : "A month from 14 Oct runs to 13 Nov."} Plans sold from now on follow it; plans already sold keep their dates.
+        </p>
+      </div>
+      <ErrorText>{a.error && !a.error.fields ? a.error.message : undefined}</ErrorText>
+      <div className="rl-sheet__actions">
+        <button className="rl-button rl-button--secondary rl-button--block" type="button" disabled={a.busy || chosen === days || (pick === "other" && !chosen)} onClick={save}>
+          {a.busy ? "Saving…" : "Save Month Length"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The gym's own rules, for admins: how long a plan's month runs, which WhatsApp messages it sends, and how WhatsApp is set up. */
 export default function SettingsPage() {
   const { role } = useSession();
   const wa = useGymWhatsappRetrieve().data?.data;
@@ -80,6 +120,9 @@ export default function SettingsPage() {
     <div className="rl-app rl-root">
       <PageBar title="Settings" sub={role.branches.length > 1 ? `For all ${role.branches.length} branches` : role.gym_name} back="/more" />
       <main className="rl-app__main">
+        <Section title="Plans">
+          <MonthLength key={role.month_days} days={role.month_days} />
+        </Section>
         <Section title="Messages" aside={<span className="rl-row__meta">Times set by Dumbelo</span>}>
           <MessageSwitches />
         </Section>

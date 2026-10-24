@@ -17,10 +17,11 @@ from apps.finance.models import StatementTick
 from apps.finance.services import before_change
 from apps.gyms.models import GymRole
 
+from .. import services
 from ..models import STATUSES, Member, MemberNote, Offer, Payment, Plan, Subscription
 from ..serializers import (
     FreezeSerializer, MemberSelfSerializer, MemberSerializer, NoteSerializer, OfferSerializer, PasswordSerializer, PaymentCorrectSerializer,
-    PaymentSerializer, PlanSerializer, SubscriptionSerializer, TrainerMemberSerializer, VoidSerializer, set_login,
+    PaymentSerializer, PaymentSplitSerializer, PlanSerializer, SubscriptionCorrectSerializer, SubscriptionSerializer, TrainerMemberSerializer, VoidSerializer, set_login,
 )
 
 class SoldAtMixin:
@@ -185,15 +186,16 @@ class MemberViewSet(GymViewMixin, viewsets.ModelViewSet):
 
 
 class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    """Selling a plan (new member or renewal), freezing, and cancelling. A renewal starts after the current plan ends.
-    `?member=` is a member's plans, newest first, a page at a time (the member profile)."""
+    """Selling a plan (new member or renewal), freezing, correcting and cancelling. A renewal starts after the current
+    plan ends. `?member=` is a member's plans, newest first, a page at a time (the member profile)."""
 
     serializer_class = SubscriptionSerializer
-    roles = {"cancel": ADMIN, "*": DESK}
+    roles = {"cancel": ADMIN, "correct": ADMIN, "*": DESK}
     filterset_fields = ["member", "plan"]
 
     def get_queryset(self):
-        qs = Subscription.objects.filter(member__gym=self.gym).select_related("plan", "offer", "member").with_paid().order_by("-starts", "-id")
+        qs = (Subscription.objects.filter(member__gym=self.gym).select_related("plan", "offer", "member").with_paid()
+              .prefetch_related("payments").order_by("-starts", "-id"))
         return self.in_my_branches(qs, "member__home_branch")
 
     @extend_schema(request=FreezeSerializer, responses=SubscriptionSerializer)
@@ -232,6 +234,22 @@ class SubscriptionViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListMode
         sub.frozen_from = sub.frozen_until = None
         sub.save()
         record(request, "subscription.unfrozen", sub)
+        return Response(self.get_serializer(sub).data)
+
+    @extend_schema(request=SubscriptionCorrectSerializer, responses=SubscriptionSerializer)
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def correct(self, request, pk=None):
+        """Change a plan already sold: another plan, offer, price or dates. Admins only, with a reason; audited."""
+        sub = self.get_object()
+        s = SubscriptionCorrectSerializer(data=request.data, context=self.get_serializer_context())
+        s.is_valid(raise_exception=True)
+        changes = dict(s.validated_data)
+        reason = changes.pop("reason")
+        before = services.correct(sub, changes)
+        sub = self.get_queryset().get(pk=sub.pk)
+        record(request, "subscription.corrected", sub, before, {"plan": sub.plan_id, "offer": sub.offer_id, "starts": str(sub.starts),
+                                                                "ends": str(sub.ends), "price_paise": sub.price_paise, "reason": reason})
         return Response(self.get_serializer(sub).data)
 
     @extend_schema(request=VoidSerializer)
@@ -277,8 +295,11 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         return qs
 
     def _days(self):
-        """Receptionists see one day's money at a time; totals over longer spans are for admins."""
-        return day_range(self.request, clock.today(self.gym), many_days=self.me.role in (GymRole.ADMIN, "support"), what="collection")
+        """Receptionists see one day's money at a time; totals over longer spans are for admins. One member's payments
+        are the exception: the desk already sees all of them on the profile, so it may narrow them to any dates."""
+        one_member = self.action == "list" and bool(self.request.query_params.get("member"))
+        many = self.me.role in (GymRole.ADMIN, "support") or one_member
+        return day_range(self.request, clock.today(self.gym), many_days=many, what="collection")
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -292,6 +313,15 @@ class PaymentViewSet(GymViewMixin, mixins.CreateModelMixin, mixins.ListModelMixi
         reason = serializer.validated_data.pop("reason")
         p = serializer.save()
         record(self.request, "payment.corrected", p, before, {"amount_paise": p.amount_paise, "method": p.method, "note": p.note, "reason": reason})
+
+    @extend_schema(request=PaymentSplitSerializer, responses={201: PaymentSerializer(many=True)})
+    @action(detail=False, methods=["post"])
+    def split(self, request):
+        """One amount paid more than one way (part cash, part UPI): a payment for each part, saved together."""
+        s = PaymentSplitSerializer(data=request.data, context=self.get_serializer_context())
+        s.is_valid(raise_exception=True)
+        payments = s.save()
+        return Response(PaymentSerializer(payments, many=True, context=self.get_serializer_context()).data, status=201)
 
     @extend_schema(request=VoidSerializer, responses=PaymentSerializer)
     @action(detail=True, methods=["post"])

@@ -41,26 +41,40 @@ export default function MorePage() {
           </Section>
         )}
         {admin && (
-          <Section title="Your gym">
-            <ul className="rl-card rl-remind">
-              <MenuRow icon={Users} title="Members" href="/members" value={summary.data ? plural(summary.data.members.total, "member") : undefined} />
-              <MenuRow icon={Dumbbell} title="Trainers" href="/staff?role=trainer" />
-              <MenuRow icon={UserRound} title="Receptionists" href="/staff?role=receptionist" />
-              <MenuRow icon={ClipboardList} title="Tasks" href="/tasks" />
-              <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={summary.data ? `${rupees(summary.data.expenses_month_paise)} this month` : undefined} />
-              <MenuRow icon={CalendarClock} title="Dues" href="/expenses/dues" value={summary.data ? (summary.data.expense_dues.count ? `${rupees(summary.data.expense_dues.total_paise)} to pay` : "All paid") : undefined} />
-              <MenuRow icon={Banknote} title="Payroll" href="/payroll" />
-              <MenuRow icon={Landmark} title="Cash and bank" href="/money" value={funds ? rupees(funds.total_paise) : undefined} />
-              <MenuRow icon={Wallet} title="Payments" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
-              <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
-              <MenuRow icon={ScanLine} title="Devices" href="/devices" />
-              <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
-              <MenuRow icon={MessageCircle} title="Messages" href="/messages" />
-              <MenuRow icon={SlidersHorizontal} title="Settings" href="/settings" />
-              <MenuRow icon={BadgeIndianRupee} title="Dumbelo plan" href="/dumbelo-plan" />
-              <MenuRow icon={LifeBuoy} title="Support access" href="/support" />
-            </ul>
-          </Section>
+          <>
+            <Section title="Members and staff">
+              <ul className="rl-card rl-remind">
+                <MenuRow icon={CalendarCheck} title="Attendance" href="/attendance" value={summary.data ? `${plural(summary.data.checkins.total, "check-in")} today` : undefined} />
+                <MenuRow icon={Dumbbell} title="Trainers" href="/staff?role=trainer" />
+                <MenuRow icon={UserRound} title="Receptionists" href="/staff?role=receptionist" />
+                <MenuRow icon={ClipboardList} title="Tasks" href="/tasks" />
+              </ul>
+            </Section>
+            <Section title="Money">
+              <ul className="rl-card rl-remind">
+                <MenuRow icon={Wallet} title="Payments" href="/collection" value={col.data ? rupees(col.data.total_paise) : undefined} />
+                <MenuRow icon={Receipt} title="Expenses" href="/expenses" value={summary.data ? `${rupees(summary.data.expenses_month_paise)} this month` : undefined} />
+                <MenuRow icon={CalendarClock} title="Dues" href="/expenses/dues" value={summary.data ? (summary.data.expense_dues.count ? `${rupees(summary.data.expense_dues.total_paise)} to pay` : "All paid") : undefined} />
+                <MenuRow icon={Banknote} title="Payroll" href="/payroll" />
+                <MenuRow icon={Landmark} title="Cash and bank" href="/money" value={funds ? rupees(funds.total_paise) : undefined} />
+              </ul>
+            </Section>
+            <Section title="Gym setup">
+              <ul className="rl-card rl-remind">
+                <MenuRow icon={Building2} title="Branches" href="/branches" value={role.branches.length} />
+                <MenuRow icon={Tag} title="Plans and offers" href="/plans" />
+                <MenuRow icon={ScanLine} title="Devices" href="/devices" />
+                <MenuRow icon={MessageCircle} title="Messages" href="/messages" />
+                <MenuRow icon={SlidersHorizontal} title="Settings" href="/settings" />
+              </ul>
+            </Section>
+            <Section title="Your Dumbelo account">
+              <ul className="rl-card rl-remind">
+                <MenuRow icon={BadgeIndianRupee} title="Dumbelo plan" href="/dumbelo-plan" />
+                <MenuRow icon={LifeBuoy} title="Support access" href="/support" />
+              </ul>
+            </Section>
+          </>
         )}
         {r === "receptionist" && (
           <Section title="Front desk">

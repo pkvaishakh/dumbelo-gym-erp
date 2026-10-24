@@ -21,6 +21,8 @@ export interface Role {
   readonly gym_status: GymStatusEnum;
   /** The gym's time zone, like Asia/Kolkata: its days start and end there */
   readonly timezone: string;
+  /** How long a plan's month runs: 0 for calendar months, else that many days */
+  readonly month_days: number;
   role: RoleEnum;
   /** The admin who handles Dumbelo billing; other admins can't remove them */
   is_owner?: boolean;

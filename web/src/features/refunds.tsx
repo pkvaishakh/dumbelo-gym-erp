@@ -21,8 +21,8 @@ const notStarted = (s: Subscription, today: string) => (s.starts ?? today) > tod
 /** What ending the plan does, in words, before anything is saved. */
 function endLine(s: Subscription, left: number, today: string) {
   if (notStarted(s, today)) return `It hasn't started, so it's cancelled. Refund all ${rupees(left)} to end it.`;
-  if (s.ends <= today) return "It has ended already.";
-  return `Check-in stops after today: it ends today instead of ${day(s.ends)}.`;
+  if (s.ends! <= today) return "It has ended already.";
+  return `Check-in stops after today: it ends today instead of ${day(s.ends!)}.`;
 }
 
 export function RefundSheet({ member, name, onClose }: { member: number; name: string; onClose: () => void }) {
@@ -71,7 +71,7 @@ export function RefundSheet({ member, name, onClose }: { member: number; name: s
           <fieldset className="rl-fieldset"><legend>For</legend>
             <Choices name="refund-plan" value={sub?.id ?? null} onChange={(v) => { setPick(v); setErrs({ ...errs, plan: "" }); }} options={subs.map((s) => ({
               value: s.id, title: s.plan_name, price: rupees(refundable(s)),
-              meta: `${s.starts ? `${day(s.starts)} to ` : "Until "}${day(s.ends)} • Paid ${rupees(s.paid_paise)}${s.refunded_paise ? `, ${rupees(s.refunded_paise)} refunded` : ""}`,
+              meta: `${s.starts ? `${day(s.starts)} to ` : "Until "}${day(s.ends!)} • Paid ${rupees(s.paid_paise)}${s.refunded_paise ? `, ${rupees(s.refunded_paise)} refunded` : ""}`,
             }))} />
             <ErrorText>{errs.plan}</ErrorText>
           </fieldset>

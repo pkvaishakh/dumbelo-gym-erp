@@ -18,9 +18,9 @@ export type Category = (typeof CATEGORIES)[number]["slug"];
 export const isCategory = (s: string): s is Category => CATEGORIES.some((c) => c.slug === s);
 export const categoryName = (slug: Category) => CATEGORIES.find((c) => c.slug === slug)!.name;
 
-export type Period = "7d" | "30d" | "month" | "3m" | "custom";
+export type Period = "today" | "yesterday" | "month" | "3m" | "custom";
 export const PERIODS: { value: Period; label: string }[] = [
-  { value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }, { value: "month", label: "This month" },
+  { value: "today", label: "Today" }, { value: "yesterday", label: "Yesterday" }, { value: "month", label: "This month" },
   { value: "3m", label: "3 months" }, { value: "custom", label: "Custom" },
 ];
 export const isPeriod = (s: string | null): s is Period => PERIODS.some((p) => p.value === s);
@@ -37,11 +37,11 @@ export function earliest(to: string) {
 /** The first and last day a period covers, ending on the gym's `today` unless the range is custom. */
 export function rangeOf(period: Period, today: string, from?: string | null, to?: string | null): [string, string] {
   const t = parseISO(today);
-  if (period === "30d") return [iso(addDays(t, -29)), today];
+  if (period === "yesterday") { const y = iso(addDays(t, -1)); return [y, y]; }
   if (period === "month") return [iso(startOfMonth(t)), today];
   if (period === "3m") return [earliest(today), today];
-  if (period === "custom") return [isDay(from) ? from : iso(addDays(t, -6)), isDay(to) ? to : today];
-  return [iso(addDays(t, -6)), today];
+  if (period === "custom") return [isDay(from) ? from : today, isDay(to) ? to : today];
+  return [today, today];
 }
 
 /** What's wrong with a custom range, in the API's words and on the field it names, or null when it's fine. */

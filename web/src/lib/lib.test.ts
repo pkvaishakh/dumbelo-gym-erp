@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { branchesOf, countDifference, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, took, trend, until } from "./format";
+import { branchesOf, countDifference, gymToday, INVOICE_STATUS, invoiceState, lastDigits, monthLabel, moveLabel, ordinal, planEnd, plural, rangeLabel, recentMonths, rupees, rupeesShort, seen, SLUG_RULE, slugify, toPaise, took, trend, until } from "./format";
 import { plainRupees, statementCsv, toCsv } from "./csv";
 import { paged, pages } from "./hooks";
 import { keyUrl } from "./query";
@@ -20,6 +20,17 @@ describe("money", () => {
   it("counts in words", () => {
     expect(plural(1, "member")).toBe("1 member");
     expect(plural(1200, "member")).toBe("1,200 members");
+  });
+});
+
+describe("a plan's last day, as the API works it out", () => {
+  it("counts calendar months to the day before, clamping short months", () => {
+    expect(planEnd("2026-10-14", 1, 0)).toBe("2026-11-13");
+    expect(planEnd("2026-01-31", 1, 0)).toBe("2026-02-27");
+  });
+  it("counts a gym's own month in days, the first one included", () => {
+    expect(planEnd("2026-10-14", 1, 28)).toBe("2026-11-10");
+    expect(planEnd("2026-10-14", 3, 30)).toBe("2027-01-11");
   });
 });
 
@@ -102,6 +113,8 @@ describe("reports", () => {
     expect(trend(5, 0, 7)).toEqual({ dir: "up", text: "Up from 0 vs previous 7 days" });
     expect(trend(0, 0, 7)).toEqual({ dir: "flat", text: "Same as previous 7 days" });
     expect(trend(1001, 1000, 7).text).toBe("+0% vs previous 7 days");
+    expect(trend(109, 100, 1).text).toBe("+9% vs the day before");
+    expect(trend(4, 4, 1).text).toBe("Same as the day before");
   });
 });
 

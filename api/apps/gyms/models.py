@@ -21,6 +21,7 @@ class Gym(TimeStamped):
     status_reason = models.CharField(max_length=200, blank=True, help_text="Why a Dumbelo admin last suspended or activated it")
     status_changed_at = models.DateTimeField(null=True, blank=True)
     timezone = models.CharField(max_length=40, default="Asia/Kolkata")
+    month_days = models.PositiveSmallIntegerField(default=0, help_text="How long a plan's month runs: 0 for calendar months, else that many days (28, 30)")
     billing_email = models.EmailField(blank=True)
 
     def __str__(self):
